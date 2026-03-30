@@ -54,11 +54,12 @@ from sedge.agents.brand_scout.skills.category_benchmarks import detect_category,
 
 def discover_brands(state: BrandScoutState) -> dict:
     """Search retailer new-arrivals via Tavily and return deduplicated brand list."""
+    cli_brand_early = state.get("brand_name", "")
     found: list[dict] = []
-    found.extend(scrape_whole_foods_new_arrivals())
-    found.extend(scrape_target_new_arrivals())
+    found.extend(scrape_whole_foods_new_arrivals(brand_name=cli_brand_early))
+    found.extend(scrape_target_new_arrivals(brand_name=cli_brand_early))
     found.extend(scrape_walmart_new_arrivals())
-    found.extend(scrape_sprouts_new_arrivals())
+    found.extend(scrape_sprouts_new_arrivals(brand_name=cli_brand_early))
 
     valid: list[dict] = []
     seen_names: set[str] = set()
@@ -72,7 +73,7 @@ def discover_brands(state: BrandScoutState) -> dict:
 
     errors = [b for b in found if "error" in b]
 
-    cli_brand = state.get("brand_name", "")
+    cli_brand = cli_brand_early
     cli_url = state.get("website_url", "")
     if cli_brand:
         return {
@@ -275,8 +276,10 @@ def score_brand(state: BrandScoutState) -> dict:
     }
 
     total = score["total"]
-    if total >= SCORE_THRESHOLDS["promising"]:
+    if total >= SCORE_THRESHOLDS["broker_ready"]:
         graph_verdict = "above_threshold"
+    elif total >= SCORE_THRESHOLDS["promising"]:
+        graph_verdict = "promising"
     else:
         graph_verdict = "below_threshold"
 
@@ -435,7 +438,7 @@ def build_graph():
     builder.add_conditional_edges(
         "store_memory",
         _route_after_score,
-        {"above_threshold": "draft_outreach", "below_threshold": END},
+        {"above_threshold": "draft_outreach", "promising": END, "below_threshold": END},
     )
 
     builder.add_edge("draft_outreach", "human_approval")

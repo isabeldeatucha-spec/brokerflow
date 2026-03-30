@@ -1,2 +1,11 @@
 node_modules/
 .DS_Store
+.env
+__pycache__/
+*.pyc
+*.egg-info/
+dist/
+build/
+.langgraph_cache/
+mem0/
+*.db

@@ -98,20 +98,24 @@ def _tavily_discovery_search(query: str, retailer: str) -> list[dict[str, Any]]:
     return brands if brands else [{"error": f"No brand names extracted for '{retailer}'"}]
 
 
-def scrape_whole_foods_new_arrivals() -> list[dict[str, Any]]:
+def scrape_whole_foods_new_arrivals(brand_name: str = "") -> list[dict[str, Any]]:
     """Search for Whole Foods new arrivals via Tavily and extract brand names."""
-    return _tavily_discovery_search(
-        "whole foods new arrivals 2026 food beverage brand",
-        retailer="Whole Foods",
+    query = (
+        f"{brand_name} whole foods"
+        if brand_name
+        else "whole foods new arrivals 2026 food beverage brand"
     )
+    return _tavily_discovery_search(query, retailer="Whole Foods")
 
 
-def scrape_target_new_arrivals() -> list[dict[str, Any]]:
+def scrape_target_new_arrivals(brand_name: str = "") -> list[dict[str, Any]]:
     """Search for Target new food/beverage brands via Tavily."""
-    return _tavily_discovery_search(
-        "target new food beverage brands 2026",
-        retailer="Target",
+    query = (
+        f"{brand_name} target"
+        if brand_name
+        else "target new food beverage brands 2026"
     )
+    return _tavily_discovery_search(query, retailer="Target")
 
 
 def scrape_walmart_new_arrivals() -> list[dict[str, Any]]:
@@ -119,12 +123,14 @@ def scrape_walmart_new_arrivals() -> list[dict[str, Any]]:
     return []
 
 
-def scrape_sprouts_new_arrivals() -> list[dict[str, Any]]:
+def scrape_sprouts_new_arrivals(brand_name: str = "") -> list[dict[str, Any]]:
     """Search for Sprouts new products via Tavily."""
-    return _tavily_discovery_search(
-        "sprouts farmers market new products 2026",
-        retailer="Sprouts",
+    query = (
+        f"{brand_name} sprouts"
+        if brand_name
+        else "sprouts farmers market new products 2026"
     )
+    return _tavily_discovery_search(query, retailer="Sprouts")
 
 
 # ── Brand research scraping ───────────────────────────────────────────────────
