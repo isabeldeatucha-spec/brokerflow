@@ -98,6 +98,19 @@ CATEGORY_BENCHMARKS: dict[str, dict[str, Any]] = {
         "broker_red_flags": ["oat milk without differentiation", "no cold chain", "SRP above $10 without functional premium"],
         "broker_green_flags": ["probiotic or fermentation story", "barista line", "foodservice validation"],
     },
+    "meat_snack_protein": {
+        "viable_srp_min": 2.00,
+        "viable_srp_max": 5.00,
+        "concern_below": 1.50,
+        "typical_amazon_reviews_early": 200,
+        "typical_amazon_reviews_established": 2000,
+        "typical_broker_sweet_spot_doors": "500-5000",
+        "key_retailers": ["Whole Foods", "Target", "Walmart", "Costco", "Sprouts", "CVS", "7-Eleven"],
+        "key_distributors": ["UNFI", "KeHE", "McLane"],
+        "category_notes": "High velocity category. Costco placement is a major signal. Grass-fed and clean label positioning drives premium pricing. Keto and paleo tailwinds strong. Amazon reviews matter more here than most categories.",
+        "broker_red_flags": ["single flavor", "no certifications", "SRP below $1.50", "no Amazon presence"],
+        "broker_green_flags": ["Costco presence", "grass-fed or clean label", "Subscribe & Save", "keto/paleo certified"],
+    },
     "unknown": {
         "viable_srp_min": 6.00,
         "viable_srp_max": 20.00,
@@ -117,6 +130,8 @@ CATEGORY_BENCHMARKS: dict[str, dict[str, Any]] = {
 def detect_category(brand_name: str, signals: dict) -> str:
     """Detect product category from scraped signals. Returns a CATEGORY_BENCHMARKS key."""
     text = (str(signals) + " " + brand_name).lower()
+    if any(w in text for w in ["meat stick", "beef stick", "jerky", "meat snack", "chomps", "epic bar", "grass-fed beef", "protein stick"]):
+        return "meat_snack_protein"
     if any(w in text for w in ["olive oil", "cooking oil", "evoo"]):
         return "olive_oil_cooking_oil"
     if any(w in text for w in ["sauce", "condiment", "hot sauce", "dressing", "salsa", "vinegar", "ketchup", "mustard"]):

@@ -3,15 +3,16 @@ Memory layer for all Sedge agents.
 
 Two distinct systems:
   1. LangGraph checkpointer (MemorySaver) — in-process thread state for graph interrupts.
-     Exported as `memory` and `get_config`. Used by graph.compile(checkpointer=memory).
-
-  2. Mem0 persistent memory — cross-run brand evaluation history.
-     Exported as store_brand_evaluation, retrieve_similar_brands, retrieve_brand_history.
-     Falls back gracefully if OPENAI_API_KEY (required by Mem0's default embedder) is absent.
+  2. Supabase persistent memory — cross-run brand evaluation history.
 """
+import os
 from datetime import datetime
 
+from dotenv import load_dotenv
 from langgraph.checkpoint.memory import MemorySaver
+from supabase import create_client, Client
+
+load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
 # ── LangGraph checkpointer ────────────────────────────────────────────────────
 
@@ -19,26 +20,17 @@ memory = MemorySaver()
 
 
 def get_config(thread_id: str) -> dict:
-    """Return a LangGraph-compatible config dict for the given thread."""
     return {"configurable": {"thread_id": thread_id}}
 
 
-# ── Mem0 persistent memory ────────────────────────────────────────────────────
+# ── Supabase ──────────────────────────────────────────────────────────────────
 
-_mem0_client = None
-
-
-def _get_mem0():
-    """Lazy-init Mem0 client. Returns None if unavailable."""
-    global _mem0_client
-    if _mem0_client is not None:
-        return _mem0_client
-    try:
-        from mem0 import Memory
-        _mem0_client = Memory()
-        return _mem0_client
-    except Exception:
-        return None
+def _get_client() -> Client:
+    url = os.getenv("SUPABASE_URL")
+    key = os.getenv("SUPABASE_KEY")
+    if not url or not key:
+        raise ValueError(f"Missing credentials — SUPABASE_URL={url!r} SUPABASE_KEY={'set' if key else 'NOT SET'}")
+    return create_client(url, key)
 
 
 def store_brand_evaluation(
@@ -48,94 +40,90 @@ def store_brand_evaluation(
     category: str,
     key_signals: dict,
     key_gaps: list,
+    broker_brief: str = "",
+    score_breakdown: dict = {},
+    reflection_notes: list = [],
+    email_draft: str = "",
+    founder_name: str = "",
+    founder_email: str = "",
 ) -> None:
-    """Persist the outcome of a brand evaluation for future reference."""
-    m = _get_mem0()
-    if m is None:
-        return
-    content = (
-        f"Brand: {brand_name}\n"
-        f"Category: {category}\n"
-        f"Score: {score}/100\n"
-        f"Verdict: {verdict}\n"
-        f"Key signals: {key_signals}\n"
-        f"Key gaps: {key_gaps}\n"
-        f"Evaluated: {datetime.now().isoformat()}"
-    )
     try:
-        m.add(content, user_id="broker_memory")
-    except Exception:
-        pass
+        client = _get_client()
+        client.table("brand_evaluations").upsert({
+            "brand_name":       brand_name,
+            "score":            score,
+            "verdict":          verdict,
+            "category":         category,
+            "key_gaps":         key_gaps,
+            "key_signals":      key_signals,
+            "broker_brief":     broker_brief,
+            "score_breakdown":  score_breakdown,
+            "reflection_notes": reflection_notes,
+            "email_draft":      email_draft,
+            "founder_name":     founder_name,
+            "founder_email":    founder_email,
+            "evaluated_at":     datetime.now().isoformat(),
+        }, on_conflict="brand_name").execute()
+        print(f"[Memory] Stored {brand_name} {score}/100 to Supabase")
+    except Exception as e:
+        print(f"[Memory] Store failed: {e}")
 
 
-def retrieve_similar_brands(category: str, score_range: tuple) -> str:
-    """Return previously evaluated brands in the same category and score range."""
-    m = _get_mem0()
-    if m is None:
-        return ""
-    query = (
-        f"brands evaluated in {category} category "
-        f"with scores between {score_range[0]} and {score_range[1]}"
-    )
+def retrieve_all_evaluations() -> list:
     try:
-        results = m.search(query, user_id="broker_memory")
-        memories = (results or {}).get("results", [])
-        if not memories:
-            return ""
-        return "\n".join(r["memory"] for r in memories[:3])
-    except Exception:
-        return ""
+        client = _get_client()
+        result = (
+            client.table("brand_evaluations")
+            .select("*")
+            .order("score", desc=True)
+            .limit(20)
+            .execute()
+        )
+        return result.data or []
+    except Exception as e:
+        print(f"[Memory] retrieve_all_evaluations failed: {e}")
+        return []
 
 
 def retrieve_brand_history(brand_name: str) -> str:
-    """Check if this brand has been evaluated before. Returns memory string or empty."""
-    m = _get_mem0()
-    if m is None:
-        return ""
     try:
-        results = m.search(f"brand evaluation for {brand_name}", user_id="broker_memory")
-        memories = (results or {}).get("results", [])
-        return memories[0]["memory"] if memories else ""
-    except Exception:
+        client = _get_client()
+        result = (
+            client.table("brand_evaluations")
+            .select("*")
+            .ilike("brand_name", brand_name)
+            .limit(1)
+            .execute()
+        )
+        if result.data:
+            item = result.data[0]
+            return (
+                f"Previously evaluated on {item['evaluated_at'][:10]} — "
+                f"Score: {item['score']}/100, Verdict: {item['verdict']}"
+            )
+        return ""
+    except Exception as e:
+        print(f"[Memory] History lookup failed: {e}")
         return ""
 
 
-def retrieve_all_evaluations() -> list[dict]:
-    """
-    Return all stored brand evaluations as structured dicts.
-    Each dict has keys: brand_name, score, verdict, category, evaluated_at, raw.
-    Returns empty list if Mem0 is unavailable or no evaluations exist.
-    """
-    m = _get_mem0()
-    if m is None:
-        return []
+def retrieve_similar_brands(category: str, score_range: tuple) -> str:
     try:
-        results = m.search("brand evaluation score verdict category", user_id="broker_memory")
-        memories = (results or {}).get("results", [])
+        client = _get_client()
+        result = (
+            client.table("brand_evaluations")
+            .select("brand_name, score, verdict")
+            .eq("category", category)
+            .gte("score", score_range[0])
+            .lte("score", score_range[1])
+            .limit(3)
+            .execute()
+        )
+        if not result.data:
+            return "No comparable brands evaluated yet."
+        return "\n".join(
+            f"{d['brand_name']}: {d['score']}/100 ({d['verdict']})"
+            for d in result.data
+        )
     except Exception:
-        return []
-
-    evaluations = []
-    for mem in memories:
-        raw = mem.get("memory", "")
-        entry = {"raw": raw, "brand_name": "", "score": 0, "verdict": "", "category": "", "evaluated_at": ""}
-        for line in raw.splitlines():
-            line = line.strip()
-            if line.startswith("Brand:"):
-                entry["brand_name"] = line.split(":", 1)[1].strip()
-            elif line.startswith("Score:"):
-                try:
-                    entry["score"] = int(line.split(":", 1)[1].strip().split("/")[0])
-                except (ValueError, IndexError):
-                    pass
-            elif line.startswith("Verdict:"):
-                entry["verdict"] = line.split(":", 1)[1].strip()
-            elif line.startswith("Category:"):
-                entry["category"] = line.split(":", 1)[1].strip()
-            elif line.startswith("Evaluated:"):
-                entry["evaluated_at"] = line.split(":", 1)[1].strip()
-        if entry["brand_name"]:
-            evaluations.append(entry)
-
-    evaluations.sort(key=lambda e: e["score"], reverse=True)
-    return evaluations
+        return "No comparable brands evaluated yet."

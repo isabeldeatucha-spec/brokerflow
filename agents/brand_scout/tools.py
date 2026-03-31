@@ -1,41 +1,97 @@
 """
 All external tool calls for the Brand Scout agent — scraping, search, and email.
 
+Uses Parallel AI Python SDK (parallel-web) for all data gathering.
+
 Real implementations:
-  scrape_whole_foods_new_arrivals  — Tavily search
-  scrape_sprouts_new_arrivals      — Tavily search
-  scrape_target_new_arrivals       — Tavily search
-  scrape_brand_website             — requests + BeautifulSoup
-  scrape_amazon_listing            — Tavily search
+  scrape_whole_foods_new_arrivals  — Parallel Extract + Search fallback
+  scrape_target_new_arrivals       — Parallel Extract + Search fallback
+  scrape_sprouts_new_arrivals      — Parallel Extract + Search fallback
+  scrape_walmart_new_arrivals      — Parallel Search
+  scrape_brand_website             — Parallel Extract
+  scrape_amazon_listing            — Parallel Extract
+  scrape_faire_listing             — Parallel Extract + Search fallback
+  search / search_velocity_signals
+  search_press_and_story
+  search_funding_and_team          — Parallel Search
+  find_founder_contact             — Parallel Search (real, not stub)
 
 Stubs remaining:
-  scrape_faire_listing, search, find_founder_contact, send_email
+  send_email                       — Gmail OAuth not wired
 """
 import os
 import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
-from urllib.parse import urljoin, urlparse
 
-import requests
-from bs4 import BeautifulSoup
 from dotenv import load_dotenv
+from parallel import Parallel
 
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", "..", ".env"))
 
-_HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/124.0.0.0 Safari/537.36"
-    ),
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "Accept-Language": "en-US,en;q=0.5",
-}
+# Reads PARALLEL_API_KEY from env automatically
+parallel_client = Parallel()
 
 
-# ── Discovery via Tavily search ───────────────────────────────────────────────
+# ── Parallel AI helpers ───────────────────────────────────────────────────────
 
-# Words that look like proper nouns but are not CPG brand names
+def parallel_extract(url: str, objective: str) -> str:
+    """
+    Extract content from a URL using Parallel Extract SDK.
+    Returns full_content markdown, or joined excerpts, or error string.
+    """
+    try:
+        response = parallel_client.beta.extract(
+            urls=[url],
+            objective=objective,
+            full_content=True,
+        )
+        if response.results:
+            r = response.results[0]
+            if r.full_content:
+                return r.full_content
+            if r.excerpts:
+                return "\n\n".join(r.excerpts)
+        if response.errors:
+            return f"extract_error: {response.errors[0]}"
+        return "extract_error: no content returned"
+    except Exception as e:
+        return f"extract_error: {e}"
+
+
+def _parallel_search_raw(query: str, num_results: int = 5) -> list:
+    """
+    Run a Parallel web search. Returns list of WebSearchResult objects.
+    Internal helper — callers use search() or parallel_search_text().
+    """
+    try:
+        response = parallel_client.beta.search(
+            objective=query,
+            search_queries=[query],
+            max_results=num_results,
+            mode="fast",
+        )
+        return response.results or []
+    except Exception as e:
+        return []
+
+
+def parallel_search_text(query: str, num_results: int = 5) -> str:
+    """Search the web and return concatenated excerpts as a single string."""
+    try:
+        results = _parallel_search_raw(query, num_results)
+        parts = []
+        for r in results:
+            title = r.title or ""
+            excerpt = " ".join(r.excerpts) if r.excerpts else ""
+            parts.append(f"{title}: {excerpt}".strip(": "))
+        return "\n\n".join(parts)
+    except Exception as e:
+        return f"search_error: {e}"
+
+
+# ── Brand name extraction helpers ─────────────────────────────────────────────
+
 _NOISE_WORDS = {
     "whole", "foods", "sprouts", "target", "walmart", "kroger", "amazon",
     "new", "arrivals", "products", "january", "february", "march", "april",
@@ -48,7 +104,6 @@ _NOISE_WORDS = {
     "thursday", "friday", "saturday", "sunday",
 }
 
-# Matches 1–4 consecutive Title-Cased words (typical CPG brand name shape)
 _BRAND_NAME_RE = re.compile(r"\b([A-Z][a-z]+(?:\s+[A-Z][a-z&']+){0,3})\b")
 
 
@@ -59,7 +114,6 @@ def _extract_brands_from_text(text: str, retailer: str) -> list[dict[str, Any]]:
     for m in _BRAND_NAME_RE.finditer(text):
         name = m.group(1).strip()
         words = name.lower().split()
-        # Skip if all words are noise or the name is just one common word
         if all(w in _NOISE_WORDS for w in words):
             continue
         if len(name) < 3 or name in seen:
@@ -69,420 +123,316 @@ def _extract_brands_from_text(text: str, retailer: str) -> list[dict[str, Any]]:
     return [{"brand_name": b, "retailer": retailer} for b in candidates]
 
 
-def _tavily_discovery_search(query: str, retailer: str) -> list[dict[str, Any]]:
-    """Run one Tavily query and return extracted brand candidates."""
-    api_key = os.environ.get("TAVILY_API_KEY", "")
-    if not api_key:
-        return [{"error": f"TAVILY_API_KEY not set (query: {query})"}]
-    try:
-        from tavily import TavilyClient
-        client = TavilyClient(api_key=api_key)
-        response = client.search(query=query, max_results=8, include_raw_content=False)
-    except Exception as exc:
-        return [{"error": f"Tavily search failed for '{retailer}': {exc}"}]
-
-    results = response.get("results", [])
-    if not results:
-        return [{"error": f"No Tavily results for '{retailer}' query"}]
-
-    # Combine titles + snippets from all results into one text block
-    combined = " ".join(
-        (r.get("title") or "") + " " + (r.get("content") or "")
-        for r in results
-    )
-    brands = _extract_brands_from_text(combined, retailer)
-    # Attach source URLs to the first few brands for traceability
-    source_urls = [r.get("url", "") for r in results[:3]]
-    for brand in brands:
-        brand["source_urls"] = source_urls
-    return brands if brands else [{"error": f"No brand names extracted for '{retailer}'"}]
-
+# ── Discovery via Parallel Extract / Search ───────────────────────────────────
 
 def scrape_whole_foods_new_arrivals(brand_name: str = "") -> list[dict[str, Any]]:
-    """Search for Whole Foods new arrivals via Tavily and extract brand names."""
-    query = (
-        f"{brand_name} whole foods"
-        if brand_name
-        else "whole foods new arrivals 2026 food beverage brand"
+    """Discover new Whole Foods brands via Parallel Extract, with Search fallback."""
+    if brand_name:
+        results = _parallel_search_raw(f"{brand_name} whole foods", 8)
+        content = " ".join(
+            f"{r.title or ''} {' '.join(r.excerpts or [])}" for r in results
+        )
+        brands = _extract_brands_from_text(content, "Whole Foods")
+        sources = [r.url for r in results[:3]]
+        for b in brands:
+            b["source_urls"] = sources
+        return brands or [{"error": f"No brands found for '{brand_name}' at Whole Foods"}]
+
+    content = parallel_extract(
+        "https://www.wholefoodsmarket.com/products/new-arrivals",
+        "Extract all brand names and product names from new arrivals listings",
     )
-    return _tavily_discovery_search(query, retailer="Whole Foods")
+    if "extract_error" in content:
+        content = parallel_search_text("whole foods new arrivals 2026 new food beverage brands", 8)
+    brands = _extract_brands_from_text(content, "Whole Foods")
+    return brands if brands else [{"error": "No brand names extracted from Whole Foods"}]
 
 
 def scrape_target_new_arrivals(brand_name: str = "") -> list[dict[str, Any]]:
-    """Search for Target new food/beverage brands via Tavily."""
-    query = (
-        f"{brand_name} target"
-        if brand_name
-        else "target new food beverage brands 2026"
+    """Discover new Target food/beverage brands via Parallel Extract, with Search fallback."""
+    if brand_name:
+        results = _parallel_search_raw(f"{brand_name} target", 8)
+        content = " ".join(
+            f"{r.title or ''} {' '.join(r.excerpts or [])}" for r in results
+        )
+        brands = _extract_brands_from_text(content, "Target")
+        sources = [r.url for r in results[:3]]
+        for b in brands:
+            b["source_urls"] = sources
+        return brands or [{"error": f"No brands found for '{brand_name}' at Target"}]
+
+    content = parallel_extract(
+        "https://www.target.com/c/food/-/N-5xt1a?Nrpp=24&sortBy=newest",
+        "Extract all brand names from new food and beverage product listings",
     )
-    return _tavily_discovery_search(query, retailer="Target")
+    if "extract_error" in content:
+        content = parallel_search_text("target new food beverage brands 2026", 8)
+    brands = _extract_brands_from_text(content, "Target")
+    return brands if brands else [{"error": "No brand names extracted from Target"}]
 
 
 def scrape_walmart_new_arrivals() -> list[dict[str, Any]]:
-    """Scrape Walmart new arrivals — STUB."""
-    return []
+    """Discover new Walmart food/beverage brands via Parallel Search."""
+    content = parallel_search_text("walmart new food beverage brands 2026 new arrivals", 8)
+    brands = _extract_brands_from_text(content, "Walmart")
+    return brands if brands else []
 
 
 def scrape_sprouts_new_arrivals(brand_name: str = "") -> list[dict[str, Any]]:
-    """Search for Sprouts new products via Tavily."""
-    query = (
-        f"{brand_name} sprouts"
-        if brand_name
-        else "sprouts farmers market new products 2026"
+    """Discover new Sprouts brands via Parallel Extract, with Search fallback."""
+    if brand_name:
+        results = _parallel_search_raw(f"{brand_name} sprouts", 8)
+        content = " ".join(
+            f"{r.title or ''} {' '.join(r.excerpts or [])}" for r in results
+        )
+        brands = _extract_brands_from_text(content, "Sprouts")
+        sources = [r.url for r in results[:3]]
+        for b in brands:
+            b["source_urls"] = sources
+        return brands or [{"error": f"No brands found for '{brand_name}' at Sprouts"}]
+
+    content = parallel_extract(
+        "https://www.sprouts.com/new-products/",
+        "Extract all brand names from new product listings",
     )
-    return _tavily_discovery_search(query, retailer="Sprouts")
+    if "extract_error" in content:
+        content = parallel_search_text("sprouts farmers market new products 2026", 8)
+    brands = _extract_brands_from_text(content, "Sprouts")
+    return brands if brands else [{"error": "No brand names extracted from Sprouts"}]
 
 
-# ── Brand research scraping ───────────────────────────────────────────────────
-
-_RETAIL_KEYWORDS = [
-    "whole foods", "sprouts", "target", "walmart", "kroger", "costco",
-    "trader joe", "publix", "wegmans", "safeway", "albertsons", "cvs",
-    "walgreens", "amazon", "thrive market", "fresh market", "erewhon",
-]
-_WHERE_TO_BUY_PATTERNS = re.compile(
-    r"(find us|where to buy|store locator|retailers|stockists|available at)",
-    re.IGNORECASE,
-)
-_SOCIAL_PATTERNS = {
-    "instagram": re.compile(r"instagram\.com/([A-Za-z0-9_.]+)", re.IGNORECASE),
-    "tiktok": re.compile(r"tiktok\.com/@([A-Za-z0-9_.]+)", re.IGNORECASE),
-}
-_PRICE_PATTERN = re.compile(r"\$\s*(\d+(?:\.\d{1,2})?)")
-
+# ── Brand research ────────────────────────────────────────────────────────────
 
 def scrape_brand_website(url: str) -> dict[str, Any]:
-    """Scrape a brand's own website for description, retailers, SKUs, prices, social."""
+    """Extract brand signals with fallback chain for cart-template failures."""
     if not url:
-        return {"error": "No URL provided"}
+        return {"error": "no_url_provided"}
     if not url.startswith("http"):
         url = "https://" + url
+    base = url.rstrip("/")
 
-    try:
-        resp = requests.get(url, headers=_HEADERS, timeout=15, allow_redirects=True)
-        resp.raise_for_status()
-    except Exception as exc:
-        return {"url": url, "error": f"Request failed: {exc}"}
+    def _is_bad_extract(content: str) -> bool:
+        if not content or len(content) < 200:
+            return True
+        bad_signals = ["cart", "checkout", "your bag", "shopping bag", "add to cart"]
+        return sum(1 for s in bad_signals if s in content.lower()) >= 2
 
-    soup = BeautifulSoup(resp.text, "html.parser")
-    base_url = f"{urlparse(url).scheme}://{urlparse(url).netloc}"
+    objective = (
+        "Extract: brand tagline and description, hero product name and format, "
+        "target consumer, retail partners listed, all product names and prices, "
+        "certifications (USDA Organic, Non-GMO, Keto, Paleo, B Corp, Gluten Free), "
+        "subscription or DTC purchase option, Instagram handle, TikTok handle"
+    )
 
-    # ── Description / about text ──────────────────────────────────────────────
-    description = ""
-    for sel in ["meta[name='description']", "meta[property='og:description']"]:
-        tag = soup.select_one(sel)
-        if tag and tag.get("content"):
-            description = tag["content"].strip()
-            break
-    if not description:
-        for tag in soup.select("p"):
-            text = tag.get_text(strip=True)
-            if len(text) > 80:
-                description = text[:300]
-                break
+    def _get_homepage() -> str:
+        content = parallel_extract(base, objective)
+        if _is_bad_extract(content):
+            for path in ["/about", "/about-us", "/our-story", "/pages/about", "/pages/our-story"]:
+                result = parallel_extract(base + path, objective)
+                if not _is_bad_extract(result):
+                    return result
+            # All page extractions failed — fall back to search
+            brand_slug = base.replace("https://", "").replace("http://", "").replace("www.", "").split(".")[0]
+            return parallel_search_text(
+                f'"{brand_slug}" brand story mission products certifications', 5
+            )
+        return content
 
-    # ── Social links ──────────────────────────────────────────────────────────
-    page_text = resp.text
-    social_links: dict[str, str] = {}
-    for platform, pattern in _SOCIAL_PATTERNS.items():
-        m = pattern.search(page_text)
-        if m:
-            handle = m.group(1).rstrip("/")
-            if platform == "instagram":
-                social_links["instagram"] = f"https://instagram.com/{handle}"
-            else:
-                social_links["tiktok"] = f"https://tiktok.com/@{handle}"
+    def _get_retail_page() -> str:
+        for path in ["/pages/where-to-buy", "/stockists", "/where-to-buy", "/find-us"]:
+            result = parallel_extract(
+                base + path,
+                "Extract all retailer names and store counts mentioned",
+            )
+            if not _is_bad_extract(result):
+                return result[:1000]
+        return ""
 
-    # ── Retail partners ───────────────────────────────────────────────────────
-    retailers_found: list[str] = []
-    full_text = soup.get_text(" ", strip=True).lower()
-    for retailer in _RETAIL_KEYWORDS:
-        if retailer in full_text:
-            retailers_found.append(retailer.title())
-
-    # Also follow "where to buy" / "find us" links one level deep
-    wtb_links = [
-        a["href"] for a in soup.find_all("a", href=True)
-        if _WHERE_TO_BUY_PATTERNS.search(a.get_text()) or
-           _WHERE_TO_BUY_PATTERNS.search(str(a.get("href", "")))
-    ]
-    has_store_locator = bool(wtb_links)
-    for rel_link in wtb_links[:2]:
-        wtb_url = urljoin(base_url, rel_link)
-        if urlparse(wtb_url).netloc != urlparse(base_url).netloc:
-            continue
-        try:
-            sub = requests.get(wtb_url, headers=_HEADERS, timeout=10)
-            sub_text = sub.text.lower()
-            for retailer in _RETAIL_KEYWORDS:
-                if retailer in sub_text and retailer.title() not in retailers_found:
-                    retailers_found.append(retailer.title())
-        except Exception:
-            pass
-
-    # ── Price points ──────────────────────────────────────────────────────────
-    prices = sorted(set(float(p) for p in _PRICE_PATTERN.findall(page_text)
-                        if 0.5 < float(p) < 200))
-    price_range = ""
-    if prices:
-        lo, hi = prices[0], prices[-1]
-        price_range = f"${lo:.2f}" if lo == hi else f"${lo:.2f} – ${hi:.2f}"
-
-    # ── SKU count (distinct product names) ────────────────────────────────────
-    product_names: list[str] = []
-    for sel in [
-        "[class*='product'] [class*='title']",
-        "[class*='product'] [class*='name']",
-        "[class*='ProductCard'] h2",
-        "[class*='ProductCard'] h3",
-        ".product-title", ".product-name",
-        "h2[class*='product']", "h3[class*='product']",
-    ]:
-        els = soup.select(sel)
-        if els:
-            product_names = list(dict.fromkeys(e.get_text(strip=True) for e in els if e.get_text(strip=True)))
-            break
-
-    # Fallback: look for /products/ links (Shopify pattern)
-    if not product_names:
-        seen: set[str] = set()
-        for a in soup.find_all("a", href=True):
-            href = a["href"]
-            if "/products/" in href:
-                label = a.get_text(strip=True)
-                if label and label not in seen:
-                    seen.add(label)
-                    product_names.append(label)
-        product_names = [n for n in product_names if len(n) > 2][:40]
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        hp_future = pool.submit(_get_homepage)
+        rp_future = pool.submit(_get_retail_page)
+        homepage    = hp_future.result()
+        retail_page = rp_future.result()
 
     return {
-        "url": url,
-        "description": description,
-        "retail_partners": list(dict.fromkeys(retailers_found)),
-        "has_store_locator": has_store_locator,
-        "sku_count": len(product_names),
-        "product_names_sample": product_names[:10],
-        "price_range": price_range,
-        "social_links": social_links,
+        "homepage":    homepage[:3000],
+        "retail_page": retail_page,
+        "source":      "parallel_extract_website",
+        "url":         base,
     }
-
-
-_REVIEW_COUNT_PATTERN = re.compile(r"([\d,]+)\s*(ratings?|reviews?)", re.IGNORECASE)
-_RATING_PATTERN = re.compile(r"(\d\.\d)\s*out of\s*5", re.IGNORECASE)
-_PRICE_EXTRACT = re.compile(r"\$\s*(\d+(?:\.\d{1,2})?)")
-_ASIN_PATTERN = re.compile(r"/dp/([A-Z0-9]{10})")
 
 
 def scrape_amazon_listing(brand_name: str) -> dict[str, Any]:
-    """Search Amazon via Tavily and extract presence, pricing, ratings, SKU count."""
-    api_key = os.environ.get("TAVILY_API_KEY", "")
-    if not api_key:
-        return {"brand_name": brand_name, "error": "TAVILY_API_KEY not set"}
-
-    try:
-        from tavily import TavilyClient
-        client = TavilyClient(api_key=api_key)
-        response = client.search(
-            query=f"{brand_name} site:amazon.com",
-            max_results=8,
-            include_raw_content=True,
-        )
-    except Exception as exc:
-        return {"brand_name": brand_name, "error": f"Tavily search failed: {exc}"}
-
-    results = response.get("results", [])
-    if not results:
-        return {"brand_name": brand_name, "on_amazon": False}
-
-    # Aggregate across all result snippets
-    all_text = " ".join(
-        (r.get("content") or "") + " " + (r.get("raw_content") or "")
-        for r in results
-    )
-
-    # Review count
-    review_count = 0
-    m = _REVIEW_COUNT_PATTERN.search(all_text)
-    if m:
-        review_count = int(m.group(1).replace(",", ""))
-
-    # Average rating
-    average_rating = 0.0
-    m = _RATING_PATTERN.search(all_text)
-    if m:
-        average_rating = float(m.group(1))
-
-    # Price — take the median of all found prices to avoid outliers
-    raw_prices = [float(p) for p in _PRICE_EXTRACT.findall(all_text) if 0.5 < float(p) < 500]
-    price = 0.0
-    if raw_prices:
-        raw_prices.sort()
-        mid = len(raw_prices) // 2
-        price = raw_prices[mid]
-
-    # ASIN / SKU count — count unique ASINs across result URLs
-    asins: set[str] = set()
-    for r in results:
-        for asin in _ASIN_PATTERN.findall(r.get("url", "")):
-            asins.add(asin)
-
-    has_subscribe_save = "subscribe" in all_text.lower() and "save" in all_text.lower()
+    """Get Amazon signals via targeted search queries — Amazon blocks direct extraction."""
+    queries = {
+        "reviews":   f"{brand_name} amazon.com reviews rating stars \"global ratings\"",
+        "product":   f"{brand_name} amazon.com price subscribe save best seller rank",
+        "presence":  f"site:amazon.com {brand_name} grocery snack",
+    }
+    results: dict[str, str] = {}
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        futures = {pool.submit(parallel_search_text, q, 4): k for k, q in queries.items()}
+        for f in as_completed(futures):
+            results[futures[f]] = f.result()
 
     return {
-        "brand_name": brand_name,
-        "on_amazon": True,
-        "review_count": review_count,
-        "average_rating": average_rating,
-        "price": price,
-        "sku_count": len(asins),
-        "asin_sample": list(asins)[:5],
-        "has_subscribe_and_save": has_subscribe_save,
-        "sources": [r.get("url") for r in results[:3]],
+        "review_data":   results.get("reviews", "")[:600],
+        "product_data":  results.get("product", "")[:600],
+        "presence_data": results.get("presence", "")[:400],
+        "source":        "parallel_search_amazon",
+        "brand":         brand_name,
     }
 
 
-_REORDER_RATE_RE = re.compile(r"(\d+)\s*%\s*reorder", re.IGNORECASE)
-_DOOR_COUNT_RE = re.compile(r"([\d,]+)\s*(retailers?|stores?|doors?|accounts?)", re.IGNORECASE)
-
-
 def scrape_faire_listing(brand_name: str) -> dict[str, Any]:
-    """Search for Faire wholesale presence via Tavily."""
-    results = search(f"{brand_name} faire.com wholesale", max_results=5)
-    if results and "error" in results[0]:
-        return {"brand_name": brand_name, "error": results[0]["error"]}
+    """Extract Faire wholesale presence for a brand using Parallel Extract."""
+    faire_url = f"https://www.faire.com/search?q={brand_name.replace(' ', '+')}"
 
-    all_text = " ".join(r.get("content", "") for r in results)
-    on_faire = any("faire" in r.get("url", "").lower() for r in results)
+    content = parallel_extract(
+        faire_url,
+        f"For brand {brand_name}: extract whether they have a Faire presence, "
+        "wholesale price, minimum order quantity, reorder rate, number of retail doors, "
+        "bestseller or trending badge, retailer reviews",
+    )
 
-    reorder_rate = ""
-    m = _REORDER_RATE_RE.search(all_text)
-    if m:
-        reorder_rate = f"{m.group(1)}%"
-
-    retailers_carrying = 0
-    m = _DOOR_COUNT_RE.search(all_text)
-    if m:
-        retailers_carrying = int(m.group(1).replace(",", ""))
+    if "extract_error" in content:
+        content = parallel_search_text(f"{brand_name} faire.com wholesale reorder rate", 3)
 
     return {
-        "brand_name": brand_name,
-        "on_faire": on_faire,
-        "reorder_rate": reorder_rate,
-        "retailers_carrying": retailers_carrying,
-        "sources": [r.get("url") for r in results[:3]],
+        "brand_name":  brand_name,
+        "raw_content": content[:1500],
+        "source":      "parallel_extract_faire",
     }
 
 
 # ── Web search ────────────────────────────────────────────────────────────────
 
 def search(query: str, max_results: int = 5) -> list[dict[str, Any]]:
-    """Run a Tavily web search. Returns list of result dicts or a single error dict."""
-    api_key = os.environ.get("TAVILY_API_KEY", "")
-    if not api_key:
-        return [{"error": "TAVILY_API_KEY not set", "query": query}]
-    try:
-        from tavily import TavilyClient
-        client = TavilyClient(api_key=api_key)
-        response = client.search(query=query, max_results=max_results)
-    except Exception as exc:
-        return [{"error": f"Tavily search failed: {exc}", "query": query}]
-    return response.get("results", [])
+    """
+    Run a Parallel web search.
+    Returns list of result dicts with keys: title, url, content.
+    (Normalised for backward compatibility with graph follow-up research nodes.)
+    """
+    raw = _parallel_search_raw(query, num_results=max_results)
+    normalized = []
+    for r in raw:
+        normalized.append({
+            "title":   r.title or "",
+            "url":     r.url or "",
+            "content": " ".join(r.excerpts or []),
+        })
+    return normalized
 
 
 def search_velocity_signals(brand_name: str) -> dict[str, Any]:
-    """Search for SPINS/NIQ velocity data, press sell-through mentions, Instacart presence."""
-    spins_results = search(f"{brand_name} SPINS velocity NIQ scan data units per store", max_results=4)
-    instacart_results = search(f"{brand_name} site:instacart.com", max_results=4)
-    press_velocity = search(f"{brand_name} sell-through restock NOSH \"New Hope Network\"", max_results=4)
+    """Check Instacart via Extract, SPINS and Faire via search — in parallel."""
+    def _instacart():
+        return parallel_extract(
+            f"https://www.instacart.com/store/s?k={brand_name.replace(' ', '+')}",
+            f"For {brand_name}: which store banners carry this product, "
+            "how many stores, is it available for delivery",
+        )
 
-    all_spins = " ".join(r.get("content", "") for r in spins_results if "error" not in r)
-    all_instacart = " ".join(r.get("content", "") for r in instacart_results if "error" not in r)
+    def _spins():
+        return parallel_search_text(
+            f"{brand_name} velocity SPINS NIQ scan data units per store", 3
+        )
 
-    instacart_banners: list[str] = []
-    for keyword in ["whole foods", "sprouts", "kroger", "safeway", "publix", "target", "costco"]:
-        if keyword in all_instacart.lower():
-            instacart_banners.append(keyword.title())
+    def _faire():
+        return parallel_search_text(
+            f"{brand_name} faire.com wholesale reorder rate retailers", 3
+        )
+
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        fi = pool.submit(_instacart)
+        fs = pool.submit(_spins)
+        ff = pool.submit(_faire)
+        instacart_raw = fi.result()
+        spins_raw     = fs.result()
+        faire_raw     = ff.result()
 
     return {
-        "spins_mentions": [r.get("title") for r in spins_results if "error" not in r][:3],
-        "spins_snippets": all_spins[:600],
-        "instacart_banners": instacart_banners,
-        "instacart_sources": [r.get("url") for r in instacart_results if "error" not in r][:3],
-        "press_velocity_snippets": [r.get("content", "")[:200] for r in press_velocity if "error" not in r][:3],
+        "instacart":    instacart_raw[:1000],
+        "spins_search": spins_raw[:500],
+        "faire_search": faire_raw[:500],
+        "source":       "mixed_extract_search",
     }
 
 
 def search_press_and_story(brand_name: str) -> dict[str, Any]:
-    """Search trade and consumer press for brand story, awards, Expo West presence."""
-    trade_results = search(
-        f"{brand_name} site:nosh.com OR site:foodnavigator-usa.com OR site:newhope.com OR site:grocerydive.com",
-        max_results=4,
-    )
-    consumer_results = search(
-        f"{brand_name} Forbes \"Bon Appetit\" NYT Food52 \"Serious Eats\"",
-        max_results=4,
-    )
-    expo_results = search(
-        f"{brand_name} \"expo west\" OR \"expo east\" 2024 2025",
-        max_results=3,
-    )
-    social_results = search(
-        f"{brand_name} instagram followers tiktok viral",
-        max_results=4,
-    )
+    """Search trade press, consumer press, social, and Expo — in parallel."""
+    queries = {
+        "trade":    f'"{brand_name}" site:nosh.com OR site:foodnavigator-usa.com OR site:grocerydive.com',
+        "consumer": f'"{brand_name}" review OR featured OR "best" food beverage 2024 OR 2025 OR 2026',
+        "social":   f'"{brand_name}" instagram followers OR tiktok followers OR social media',
+        "expo":     f'"{brand_name}" expo west OR expo east OR natural products',
+    }
+    results: dict[str, str] = {}
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        futures = {pool.submit(parallel_search_text, q, 3): k for k, q in queries.items()}
+        for f in as_completed(futures):
+            results[futures[f]] = f.result()
 
-    trade_hits = [{"title": r.get("title"), "url": r.get("url"), "snippet": r.get("content", "")[:200]}
-                  for r in trade_results if "error" not in r]
-    consumer_hits = [{"title": r.get("title"), "url": r.get("url")}
-                     for r in consumer_results if "error" not in r]
-    expo_hits = [{"title": r.get("title"), "url": r.get("url")}
-                 for r in expo_results if "error" not in r]
-
-    social_text = " ".join(r.get("content", "") for r in social_results if "error" not in r)
+    social_text    = results.get("social", "")
     follower_match = re.search(r"([\d.,]+[Kk]?)\s*followers", social_text)
-    follower_count = follower_match.group(1) if follower_match else ""
-
     return {
-        "trade_press_hits": trade_hits,
-        "consumer_press_hits": consumer_hits,
-        "expo_west_hits": expo_hits,
-        "instagram_follower_signal": follower_count,
-        "social_snippets": social_text[:400],
+        "trade_press":    results.get("trade", "")[:800],
+        "consumer_press": results.get("consumer", "")[:800],
+        "social_signals": social_text[:500],
+        "expo":           results.get("expo", "")[:300],
+        "source":         "parallel_search_press",
     }
 
 
 def search_funding_and_team(brand_name: str) -> dict[str, Any]:
-    """Search for funding rounds, team hires, and promo dependency signals."""
-    funding_results = search(
-        f"{brand_name} funding raised seed series crunchbase",
-        max_results=4,
-    )
-    promo_results = search(
-        f"{brand_name} promotion discount sale BOGO coupon",
-        max_results=3,
-    )
-
-    funding_text = " ".join(r.get("content", "") for r in funding_results if "error" not in r)
-    amount_match = re.search(r"\$\s*([\d,.]+)\s*(million|M\b|thousand|K\b)", funding_text, re.IGNORECASE)
-    raised = amount_match.group(0).strip() if amount_match else ""
-
-    promo_text = " ".join(r.get("content", "") for r in promo_results if "error" not in r)
+    """Search for funding rounds and founder background — in parallel."""
+    queries = {
+        "funding": f'"{brand_name}" raised funding million seed series investment',
+        "founder": f'"{brand_name}" founder CEO co-founder background story',
+    }
+    results: dict[str, str] = {}
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        futures = {pool.submit(parallel_search_text, q, 3): k for k, q in queries.items()}
+        for f in as_completed(futures):
+            results[futures[f]] = f.result()
 
     return {
-        "funding_raised": raised,
-        "funding_snippets": funding_text[:400],
-        "funding_sources": [r.get("url") for r in funding_results if "error" not in r][:3],
-        "promo_dependency_snippets": promo_text[:300],
+        "funding": results.get("funding", "")[:600],
+        "founder": results.get("founder", "")[:600],
+        "source":  "parallel_search_funding",
     }
 
 
-def find_founder_contact(brand_name: str, website_url: str) -> dict[str, str]:
-    """Search for founder name and email — STUB."""
+# ── Founder contact ───────────────────────────────────────────────────────────
+
+def find_founder_contact(brand_name: str, website_url: str = "") -> dict[str, str]:
+    """
+    Search for founder name and email via Parallel Search.
+    Returns founder_name (best guess) and founder_email (blank if not found).
+    """
+    results = _parallel_search_raw(f"{brand_name} founder CEO name contact LinkedIn", 5)
+    content = " ".join(
+        f"{r.title or ''} {' '.join(r.excerpts or [])}" for r in results
+    )
+
+    founder_name = ""
+    for pattern in [
+        r"([A-Z][a-z]+ [A-Z][a-z]+),?\s+(?:founder|co-founder|ceo)",
+        r"(?:founder|co-founder|ceo)[,\s]+([A-Z][a-z]+ [A-Z][a-z]+)",
+    ]:
+        m = re.search(pattern, content, re.IGNORECASE)
+        if m:
+            founder_name = m.group(1).strip()
+            break
+
+    email_match = re.search(r"[\w.+-]+@[\w-]+\.[a-z]{2,}", content)
+    founder_email = email_match.group(0) if email_match else ""
+
     return {
-        "founder_name": "Jane Smith",
-        "founder_email": "jane@oatandhonor.com",
-        "linkedin_url": "https://linkedin.com/in/janesmith",
-        "source": "mock",
+        "founder_name":  founder_name or f"{brand_name} Founder",
+        "founder_email": founder_email,
+        "source":        "parallel_search",
+        "raw_content":   content[:800],
     }
 
 
@@ -503,3 +453,18 @@ def get_gmail_service():
         "Swap in real OAuth flow. See: "
         "https://developers.google.com/gmail/api/quickstart/python"
     )
+
+
+# ── Quick SDK smoke test ──────────────────────────────────────────────────────
+
+if __name__ == "__main__":
+    print("Testing Parallel Extract...")
+    result = parallel_extract(
+        "https://www.chomps.com",
+        "Extract brand description, products, and retail partners",
+    )
+    print(result[:500])
+
+    print("\nTesting Parallel Search...")
+    result = parallel_search_text("Chomps meat snacks Amazon reviews rating")
+    print(result[:500])

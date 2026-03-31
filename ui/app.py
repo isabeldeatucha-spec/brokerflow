@@ -33,7 +33,35 @@ st.markdown("""
 * { font-family: 'Inter', sans-serif !important; }
 
 .stApp { background: #F7F5F2; }
-section[data-testid="stSidebar"] { background: #FFFFFF; border-right: 1px solid #EBEBEB; }
+
+/* Scroll fix */
+.main { overflow-y: auto !important; }
+.block-container {
+    overflow-y: auto !important;
+    max-height: none !important;
+    padding-bottom: 120px !important;
+}
+section[data-testid="stMain"] { overflow-y: auto !important; }
+section[data-testid="stMain"] > div { overflow-y: auto !important; }
+.element-container { overflow: visible !important; }
+section[data-testid="stSidebar"] {
+    background: #FFFFFF !important;
+    border-right: 1px solid #E5E5E5 !important;
+    min-width: 260px !important;
+}
+section[data-testid="stSidebar"] > div {
+    background: #FFFFFF !important;
+    padding: 24px 16px 80px 16px !important;
+}
+/* Keep sidebar always on-screen regardless of viewport width or user toggle */
+section[data-testid="stSidebar"] {
+    transform: none !important;
+    left: 0 !important;
+    visibility: visible !important;
+}
+/* Hide both the collapse (×) button inside the expanded sidebar
+   AND the expand (›) button shown when collapsed */
+[data-testid="stSidebarCollapseButton"],
 [data-testid="collapsedControl"] { display: none !important; }
 
 #MainMenu, footer, header { visibility: hidden; }
@@ -73,34 +101,68 @@ p, li { color: #4A4A4A !important; font-size: 14px !important; line-height: 1.6 
 .progress-fill-yellow  { background: #F59E0B; border-radius: 99px; height: 6px; }
 .progress-fill-red     { background: #EF4444; border-radius: 99px; height: 6px; }
 
-.stButton > button {
+/* Force all buttons navy with white text */
+.stButton > button,
+div[data-testid="stButton"] button {
     background: #1B4F72 !important;
-    color: white !important;
-    border-radius: 10px !important;
+    background-color: #1B4F72 !important;
+    color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
     border: none !important;
-    padding: 10px 20px !important;
+    border-radius: 10px !important;
     font-weight: 600 !important;
     font-size: 14px !important;
+    padding: 12px 16px !important;
     width: 100% !important;
-    transition: opacity 0.2s !important;
+    cursor: pointer !important;
 }
-.stButton > button:hover { opacity: 0.85 !important; }
+.stButton > button:hover,
+div[data-testid="stButton"] button:hover {
+    background: #154360 !important;
+    background-color: #154360 !important;
+}
+.stButton > button *,
+div[data-testid="stButton"] button *,
+.stButton > button p,
+div[data-testid="stButton"] button p,
+.stButton > button span,
+div[data-testid="stButton"] button span {
+    color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
+}
 
 .approve-btn > button { background: #10B981 !important; }
 
-.stTextInput > div > div > input {
+/* Input text color */
+.stTextInput input {
+    color: #111111 !important;
+    -webkit-text-fill-color: #111111 !important;
+    background-color: #FFFFFF !important;
+    caret-color: #111111 !important;
     border-radius: 10px !important;
     border: 1.5px solid #E5E7EB !important;
     padding: 10px 14px !important;
     font-size: 14px !important;
-    background: #FAFAFA !important;
 }
-.stTextInput > div > div > input:focus {
+.stTextInput input::placeholder {
+    color: #9CA3AF !important;
+    -webkit-text-fill-color: #9CA3AF !important;
+}
+.stTextInput input:focus {
+    color: #111111 !important;
+    -webkit-text-fill-color: #111111 !important;
+    background-color: #FFFFFF !important;
     border-color: #1B4F72 !important;
     box-shadow: 0 0 0 3px rgba(27,79,114,0.08) !important;
 }
+section[data-testid="stSidebar"] .stTextInput input {
+    color: #111111 !important;
+    -webkit-text-fill-color: #111111 !important;
+    background: #FAFAFA !important;
+}
 
-.stRadio label { font-size: 14px !important; color: #4A4A4A !important; }
+div[data-testid="stRadio"] input[type="radio"] { accent-color: #1B4F72 !important; }
+div[data-testid="stRadio"] label { font-size: 14px !important; color: #4A4A4A !important; }
 
 .gap-item {
     background: #FFFBEB;
@@ -139,7 +201,146 @@ p, li { color: #4A4A4A !important; font-size: 14px !important; line-height: 1.6 
 .score-big   { font-size: 56px; font-weight: 700; color: #1A1A1A; line-height: 1; }
 .score-label { font-size: 13px; color: #9CA3AF; font-weight: 500; margin-top: 4px; }
 
+.email-panel {
+    background: #FFFFFF;
+    border: 1px solid #E5E5E5;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    margin-bottom: 12px;
+}
+.email-to {
+    font-size: 13px;
+    color: #4A4A4A;
+    padding: 8px 0;
+    border-bottom: 1px solid #F3F4F6;
+    margin-bottom: 8px;
+}
+.email-subject {
+    font-size: 13px;
+    font-weight: 600;
+    color: #111111;
+    padding: 8px 0;
+    border-bottom: 1px solid #F3F4F6;
+    margin-bottom: 12px;
+}
+
 .recent-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #F3F4F6; font-size: 13px; }
+
+/* Suppress keyboard_arrow_right and other Material Icons glyph names
+   that render as literal text when the icon font fails to load.
+   Targets the raw text node inside the expander summary arrow span. */
+.material-icons, .material-symbols-rounded, .material-symbols-outlined,
+[class*="material-icon"] { font-size: 0 !important; line-height: 0 !important; }
+
+/* Hide the literal "keyboard_arrow_right" text Streamlit injects
+   into st.expander toggle icons via Material Icons <span> elements.
+   Targets both the stable Emotion hash class and the structural pattern. */
+span.ejhh0er0,
+[data-testid="stExpanderToggleIcon"],
+details > summary > span:first-child > span:first-child > span:first-child {
+    font-size: 0 !important;
+    width: 0 !important;
+    overflow: hidden !important;
+    display: inline-block !important;
+}
+
+/* Hide Streamlit's built-in sidebar collapse arrow and any stray
+   navigation / shortcut-hint UI chrome we don't want */
+[data-testid="collapsedControl"],
+[data-testid="stSidebarCollapsedControl"],
+[data-testid="stTextAreaResizeHandle"] ~ span { display: none !important; }
+
+/* Hide textarea keyboard shortcut badge (⌘⏎ / Ctrl+Enter hint) */
+.stTextArea [data-baseweb="textarea"] ~ div[aria-label],
+.stTextArea div[class*="shortcut"] { display: none !important; }
+
+/* Approve / reject button colours */
+button[data-testid="approve_btn"] { background: #1B7A4A !important; }
+button[data-testid="reject_btn"]  { background: #C0392B !important; }
+
+/* Criterion card buttons — look like cards, not buttons */
+div[data-testid^="stButton"] button {
+    background: #FFFFFF !important;
+    color: #111111 !important;
+    -webkit-text-fill-color: #111111 !important;
+    border: 1px solid #F0EDEA !important;
+    border-radius: 12px !important;
+    box-shadow: 0 1px 8px rgba(0,0,0,0.05) !important;
+    padding: 16px !important;
+    text-align: center !important;
+    font-weight: 400 !important;
+    white-space: pre-line !important;
+}
+div[data-testid^="stButton"] button:hover {
+    background: #F7F5F2 !important;
+    border-color: #1B4F72 !important;
+    color: #111111 !important;
+    -webkit-text-fill-color: #111111 !important;
+}
+div[data-testid^="stButton"] button p {
+    color: #111111 !important;
+    -webkit-text-fill-color: #111111 !important;
+}
+
+/* Force action buttons (Run, Approve, Reject, New Search) to stay navy — must be last */
+button[kind="primary"],
+div[data-testid="stButton-run_btn"] button,
+div[data-testid="stButton-new_search_btn"] button,
+div[data-testid="stButton-approve_btn"] button,
+div[data-testid="stButton-reject_btn"] button,
+div[data-testid="stButton-reminder_btn"] button {
+    background: #1B4F72 !important;
+    color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
+    font-weight: 600 !important;
+}
+div[data-testid="stButton-approve_btn"] button { background: #1B7A4A !important; }
+div[data-testid="stButton-reject_btn"] button  { background: #C0392B !important; }
+div[data-testid="stButton-run_btn"] button p,
+div[data-testid="stButton-new_search_btn"] button p,
+div[data-testid="stButton-approve_btn"] button p,
+div[data-testid="stButton-reject_btn"] button p,
+div[data-testid="stButton-reminder_btn"] button p {
+    color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
+}
+
+/* Run Brand Scout button — force navy background white text */
+section[data-testid="stSidebar"] .stButton > button {
+    background: #1B4F72 !important;
+    background-color: #1B4F72 !important;
+    color: white !important;
+    -webkit-text-fill-color: white !important;
+    border: none !important;
+    border-radius: 10px !important;
+    font-weight: 600 !important;
+    width: 100% !important;
+}
+section[data-testid="stSidebar"] .stButton > button:hover {
+    background: #154360 !important;
+    background-color: #154360 !important;
+}
+section[data-testid="stSidebar"] .stButton > button p,
+section[data-testid="stSidebar"] .stButton > button span,
+section[data-testid="stSidebar"] .stButton > button div {
+    color: white !important;
+    -webkit-text-fill-color: white !important;
+}
+
+/* Radio buttons — fix black filled circle */
+section[data-testid="stSidebar"] .stRadio > div {
+    gap: 8px !important;
+}
+section[data-testid="stSidebar"] .stRadio input[type="radio"] {
+    accent-color: #1B4F72 !important;
+    width: 16px !important;
+    height: 16px !important;
+}
+section[data-testid="stSidebar"] .stRadio label {
+    color: #4A4A4A !important;
+    font-size: 14px !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -153,6 +354,8 @@ if "interrupt_data" not in st.session_state:
     st.session_state.interrupt_data = None
 if "final_state" not in st.session_state:
     st.session_state.final_state = None
+if "selected_criterion" not in st.session_state:
+    st.session_state.selected_criterion = None
 
 
 def reset():
@@ -160,10 +363,16 @@ def reset():
     st.session_state.phase = "idle"
     st.session_state.interrupt_data = None
     st.session_state.final_state = None
+    st.session_state.selected_criterion = None
 
 
 def run_graph_to_completion(brand_name: str, website_url: str):
-    """Stream the graph. Stops at human_approval interrupt or runs to END."""
+    """
+    Stream the graph, showing live node progress.
+    After streaming ends, checks for an interrupt (human_approval does not emit
+    a chunk — it only pauses the graph, so we must check state post-loop).
+    Returns (interrupt_data | None, final_state).
+    """
     config = get_config(st.session_state.thread_id)
     initial_state = {
         "brand_name": brand_name,
@@ -184,8 +393,6 @@ def run_graph_to_completion(brand_name: str, website_url: str):
         "rejection_reason": None,
     }
 
-    interrupt_data = None
-    progress_slot = st.empty()
     _NODE_LABELS = {
         "discover_brands":      "🔍 Discovering brands…",
         "research_brand":       "📊 Researching signals…",
@@ -196,25 +403,38 @@ def run_graph_to_completion(brand_name: str, website_url: str):
         "draft_outreach":       "✍️ Drafting email…",
     }
 
+    progress_slot = st.empty()
+    completed_labels: list[str] = []
+
     for chunk in graph.stream(initial_state, config=config, stream_mode="updates"):
         for node in chunk:
             label = _NODE_LABELS.get(node, f"⚙️ {node}…")
-            progress_slot.markdown(
-                f'<div class="sedge-card" style="text-align:center;padding:16px;">'
-                f'<p style="color:#1B4F72;font-weight:500;margin:0;">{label}</p>'
-                f'</div>',
-                unsafe_allow_html=True,
+            completed_labels.append(label)
+            cards_html = "".join(
+                f'<div style="background:#FFFFFF;border-radius:12px;padding:12px 20px;'
+                f'box-shadow:0 1px 6px rgba(0,0,0,0.05);border:1px solid #F0EDEA;'
+                f'margin-bottom:8px;display:flex;align-items:center;gap:10px;">'
+                f'<span style="color:#10B981;font-size:16px;">✓</span>'
+                f'<p style="color:#4A4A4A;font-weight:500;margin:0;font-size:14px;">{lbl}</p>'
+                f'</div>'
+                for lbl in completed_labels
             )
+            progress_slot.markdown(cards_html, unsafe_allow_html=True)
 
-        state_snapshot = graph.get_state(config)
-        if state_snapshot.next and "human_approval" in state_snapshot.next:
-            for task in (state_snapshot.tasks or []):
-                if hasattr(task, "interrupts") and task.interrupts:
-                    interrupt_data = task.interrupts[0].value
-            break
-
+    # Stream exhausted — now check if graph paused at an interrupt.
+    # human_approval calls interrupt() which stops the stream without emitting
+    # a chunk, so this check must happen outside the loop.
     progress_slot.empty()
-    final = graph.get_state(config).values
+    state_snapshot = graph.get_state(config)
+    final = state_snapshot.values
+
+    interrupt_data = None
+    if state_snapshot.next:
+        for task in (state_snapshot.tasks or []):
+            if hasattr(task, "interrupts") and task.interrupts:
+                interrupt_data = task.interrupts[0].value
+                break
+
     return interrupt_data, final
 
 
@@ -228,13 +448,30 @@ def resume_graph(approved: bool, rejection_reason: str = ""):
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("### 🔍 Evaluate a Brand")
-    brand_name_input = st.text_input("Brand name", placeholder="e.g. Sourmilk", key="brand_input")
-    brand_url_input = st.text_input("Website URL", placeholder="optional but faster", key="url_input")
-    mode = st.radio("Mode", ["Manual — enter a brand", "Auto-discover new arrivals"], key="mode_radio")
+    st.markdown('<p style="font-size:11px; font-weight:700; color:#9CA3AF; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:16px;">Brand Scout</p>', unsafe_allow_html=True)
 
-    if st.button("Run Brand Scout", key="run_btn"):
-        if mode.startswith("Manual") and not brand_name_input.strip():
+    mode = st.radio(
+        "Mode",
+        ["🔍  Research a brand", "🌐  Discover new brands"],
+        key="mode_radio",
+        label_visibility="collapsed",
+    )
+
+    if mode == "🔍  Research a brand":
+        brand_name_input = st.text_input("Brand name", placeholder="Brand name", key="brand_input")
+        brand_url_input = st.text_input("Website URL", placeholder="Website URL — speeds up research", key="url_input")
+    else:
+        brand_name_input = ""
+        brand_url_input = ""
+        st.markdown("""
+<div style="background:#EBF5FB; border-radius:8px; padding:12px; font-size:13px; color:#1B4F72; line-height:1.5;">
+    Scans Whole Foods, Sprouts, Target and Walmart for brands just hitting shelves.
+    Evaluates the top picks and surfaces the ones worth your time.
+</div>
+""", unsafe_allow_html=True)
+
+    if st.button("▶ Run", key="run_btn", use_container_width=True):
+        if mode == "🔍  Research a brand" and not brand_name_input.strip():
             st.warning("Enter a brand name first.")
         else:
             st.session_state["_brand_name"] = brand_name_input.strip()
@@ -243,46 +480,78 @@ with st.sidebar:
             st.rerun()
 
     st.markdown("<hr style='border:none;border-top:1px solid #EBEBEB;margin:20px 0'>", unsafe_allow_html=True)
-    st.markdown("### 📋 Recent Evaluations")
+    st.markdown("<p style='font-size:11px; font-weight:700; color:#9CA3AF; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:8px;'>Recent Evaluations</p>", unsafe_allow_html=True)
 
     try:
-        recent = retrieve_all_evaluations()[:5]
-    except Exception:
-        recent = []
-
-    if recent:
-        for ev in recent:
-            total = ev["score"]
-            emoji = "🟢" if total >= 70 else "🟡" if total >= 45 else "🔴"
-            st.markdown(
-                f'<div class="recent-item">'
-                f'<span>{emoji} <strong>{ev["brand_name"]}</strong></span>'
-                f'<span style="color:#9CA3AF;">{total}/100</span>'
-                f'</div>',
-                unsafe_allow_html=True,
-            )
-    else:
-        st.markdown('<p style="color:#9CA3AF;font-size:13px;">No evaluations yet.</p>', unsafe_allow_html=True)
+        recent = retrieve_all_evaluations()
+        if recent:
+            for item in recent[:5]:
+                score = item.get("score", 0)
+                name  = item.get("brand_name", "Unknown")
+                dot   = "🟢" if score >= 70 else "🟡" if score >= 45 else "🔴"
+                if st.button(
+                    f"{dot} {name}   {score}/100",
+                    key=f"recent_{name}",
+                    use_container_width=True,
+                ):
+                    detail = item.get("score_breakdown", {})
+                    st.session_state.phase          = "awaiting_approval" if score >= 70 else "promising"
+                    st.session_state.final_state     = {
+                        "brand_name":       name,
+                        "score":            {"total": score, **{
+                            k: (detail.get(k, {}).get("score", 0) if isinstance(detail.get(k), dict) else 0)
+                            for k in ("velocity_proof", "distribution_density", "margin_viability",
+                                      "brand_story_clarity", "promotional_independence")
+                        }},
+                        "verdict":          item.get("verdict", ""),
+                        "category":         item.get("category", ""),
+                        "reflection_notes": item.get("reflection_notes") or [],
+                        "email_draft":      item.get("email_draft", ""),
+                        "founder_name":     item.get("founder_name", ""),
+                        "founder_email":    item.get("founder_email", ""),
+                        "signals_found":    {
+                            "score_detail": {
+                                **detail,
+                                "broker_brief": item.get("broker_brief", ""),
+                                "key_gaps":     item.get("key_gaps") or [],
+                            }
+                        },
+                    }
+                    st.session_state.interrupt_data  = st.session_state.final_state
+                    st.rerun()
+        else:
+            st.markdown("<p style='font-size:13px; color:#9CA3AF;'>No evaluations yet.</p>", unsafe_allow_html=True)
+    except Exception as _e:
+        st.markdown(f"<p style='font-size:11px; color:#EF4444;'>Error: {_e}</p>", unsafe_allow_html=True)
 
     st.markdown("<hr style='border:none;border-top:1px solid #EBEBEB;margin:20px 0'>", unsafe_allow_html=True)
     if st.session_state.phase != "idle":
+        st.markdown('<div style="margin-top:8px; padding-bottom:40px;">', unsafe_allow_html=True)
         if st.button("↺ New Search", key="new_search_btn"):
             reset()
             st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
 
 # ── Shared result renderer (defined before phase chain) ───────────────────────
 
 def render_results(state: dict, show_outreach: bool = True):
     """Render the full scorecard UI for a completed evaluation."""
-    brand_name = state.get("brand_name", "Unknown")
-    category   = state.get("category", "unknown").replace("_", " ").title()
-    score_obj  = state.get("score", {})
-    total      = score_obj.get("total", 0)
-    detail     = state.get("signals_found", {}).get("score_detail", {})
-    broker_brief       = detail.get("broker_brief", "No brief available.")
-    key_gaps           = detail.get("key_gaps", [])
-    reflection_notes   = state.get("reflection_notes", [])
+    brand_name   = state.get("brand_name", "Unknown")
+    display_name = brand_name.strip().title()
+    category     = state.get("category", "unknown").replace("_", " ").title()
+    score_obj    = state.get("score", {})
+    total        = score_obj.get("total", 0)
+    detail       = state.get("signals_found", {}).get("score_detail", {})
+    broker_brief     = detail.get("broker_brief", "No brief available.")
+    key_gaps         = detail.get("key_gaps", [])
+    reflection_notes = state.get("reflection_notes", [])
+
+    # Clearbit logo
+    brand_url  = state.get("website_url", "")
+    domain     = (brand_url.replace("https://", "").replace("http://", "")
+                  .replace("www.", "").split("/")[0]) if brand_url else ""
+    logo_url   = f"https://logo.clearbit.com/{domain}" if domain else ""
 
     def pts(key: str) -> int:
         entry = detail.get(key, {})
@@ -297,12 +566,16 @@ def render_results(state: dict, show_outreach: bool = True):
     # ── Brand header ──────────────────────────────────────────────────────────
     col1, col2, col3 = st.columns([3, 1, 1])
     with col1:
-        st.markdown(f"""
-        <div>
-            <h1 style="margin-bottom:6px;">{brand_name}</h1>
-            <span class="category-pill">{category}</span>
-        </div>
-        """, unsafe_allow_html=True)
+        logo_img = f'<img src="https://logo.clearbit.com/{domain}" style="width:40px;height:40px;border-radius:8px;object-fit:contain;background:#F3F4F6;">' if domain else ""
+        st.markdown(
+            f'<div style="display:flex;align-items:center;gap:12px;margin-bottom:4px;">'
+            f'{logo_img}'
+            f'<div>'
+            f'<h1 style="margin:0 0 4px 0;font-size:32px;font-weight:700;color:#111111;">{display_name}</h1>'
+            f'<span class="category-pill">{category}</span>'
+            f'</div></div>',
+            unsafe_allow_html=True,
+        )
     with col2:
         st.markdown(f"""
         <div style="text-align:center;">
@@ -320,30 +593,64 @@ def render_results(state: dict, show_outreach: bool = True):
 
     st.markdown("<div style='margin:24px 0 8px;'></div>", unsafe_allow_html=True)
 
-    # ── Scorecard row ─────────────────────────────────────────────────────────
-    criteria = [
-        ("Velocity Proof",     velocity,     25),
-        ("Distribution",       distribution, 20),
-        ("Margin Viability",   margin,       20),
-        ("Brand Story",        story,        20),
-        ("Promo Independence", promo,        15),
+    # ── Scorecard row — compact cards, detail panel below ────────────────────
+    criteria_data = [
+        ("Velocity Proof",     velocity,     25, "velocity_proof"),
+        ("Distribution",       distribution, 20, "distribution_density"),
+        ("Margin Viability",   margin,       20, "margin_viability"),
+        ("Brand Story",        story,        20, "brand_story_clarity"),
+        ("Promo Independence", promo,        15, "promotional_independence"),
     ]
     cols = st.columns(5)
-    for i, (name, score, max_score) in enumerate(criteria):
-        pct   = score / max_score
-        color = "green" if pct >= 0.7 else "yellow" if pct >= 0.4 else "red"
+    for i, (cname, cscore, cmax, ckey) in enumerate(criteria_data):
+        pct   = cscore / cmax if cmax else 0
+        color = "#10B981" if pct >= 0.7 else "#F59E0B" if pct >= 0.4 else "#EF4444"
         with cols[i]:
+            if st.button(f"{cname}\n{cscore}/{cmax}", key=f"card_{ckey}", use_container_width=True):
+                if st.session_state.get("selected_criterion") == ckey:
+                    st.session_state.selected_criterion = None
+                else:
+                    st.session_state.selected_criterion = ckey
             st.markdown(f"""
-            <div class="criterion-card">
-                <div style="font-size:12px;color:#9CA3AF;font-weight:500;margin-bottom:4px;">{name}</div>
-                <div style="font-size:22px;font-weight:700;color:#1A1A1A;">{score}<span style="font-size:13px;color:#9CA3AF;">/{max_score}</span></div>
-                <div class="progress-track">
-                    <div class="progress-fill-{color}" style="width:{int(pct*100)}%"></div>
-                </div>
+            <div style="height:4px; background:#F3F4F6; border-radius:99px; margin-top:-8px;">
+                <div style="height:4px; width:{int(pct*100)}%; background:{color}; border-radius:99px;"></div>
             </div>
             """, unsafe_allow_html=True)
 
-    st.markdown("<div style='margin-top:24px;'></div>", unsafe_allow_html=True)
+    # Detail panel — renders below the row when a card is selected
+    selected = st.session_state.get("selected_criterion")
+    if selected:
+        crit_detail = detail.get(selected, {})
+        name_map = {
+            "velocity_proof":           "Velocity Proof",
+            "distribution_density":     "Distribution Density",
+            "margin_viability":         "Margin Viability",
+            "brand_story_clarity":      "Brand Story Clarity",
+            "promotional_independence": "Promotional Independence",
+        }
+        reasoning = crit_detail.get("reasoning", "No detail available.") if isinstance(crit_detail, dict) else "No detail available."
+        signals   = crit_detail.get("signals_used", []) if isinstance(crit_detail, dict) else []
+        sentences = [s.strip() for s in reasoning.replace(". ", ".|").split("|") if s.strip() and len(s.strip()) > 10]
+        bullets_html = "".join(
+            f'<p style="font-size:13px; color:#4A4A4A; margin:4px 0; padding-left:12px; border-left:2px solid #E5E5E5;">• {s}</p>'
+            for s in sentences[:4]
+        )
+        sources_html = (
+            f'<p style="font-size:11px; color:#9CA3AF; margin-top:10px;">Sources: {" · ".join([s.replace("_", " ") for s in signals[:5]])}</p>'
+            if signals else ""
+        )
+        st.markdown(f"""
+        <div style="background:#FFFFFF; border:1px solid #E5E5E5; border-radius:12px; padding:20px; margin:8px 0 16px 0; box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <p style="font-weight:600; font-size:14px; color:#111111; margin:0;">{name_map.get(selected, selected)}</p>
+                <p style="font-size:12px; color:#9CA3AF; margin:0;">Click card again to close</p>
+            </div>
+            {bullets_html}
+            {sources_html}
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("<div style='margin-top:16px;'></div>", unsafe_allow_html=True)
 
     # ── Bottom two-column section ─────────────────────────────────────────────
     left, right = st.columns([1.5, 1])
@@ -353,15 +660,15 @@ def render_results(state: dict, show_outreach: bool = True):
         gaps_html = "".join(f'<div class="gap-item">⚠️ {g}</div>' for g in key_gaps) or "<p style='color:#9CA3AF;margin:0;'>None identified.</p>"
         st.markdown(f"""
         <div class="sedge-card">
-            <h3>📝 Broker Brief</h3>
+            <h3>Broker Brief</h3>
             <p style="margin-bottom:0;">{broker_brief}</p>
             <hr style="border:none;border-top:1px solid #F0EDEA;margin:16px 0;">
-            <h3>🚨 Key Gaps</h3>
+            <h3>Key Gaps</h3>
             {gaps_html}
         </div>
         """, unsafe_allow_html=True)
 
-        with st.expander("🧠 Agent Reasoning Chain"):
+        with st.expander("Agent Reasoning"):
             if reflection_notes:
                 for i, note in enumerate(reflection_notes):
                     st.markdown(f"""
@@ -375,22 +682,68 @@ def render_results(state: dict, show_outreach: bool = True):
 
     with right:
         if show_outreach and total >= 70:
-            founder_name  = state.get("founder_name", "")
+            founder_name  = state.get("founder_name", "") or "Founder"
             founder_email = state.get("founder_email", "")
             email_draft   = state.get("email_draft", "")
 
-            st.markdown('<div class="sedge-card"><h3>💌 Outreach Draft</h3>', unsafe_allow_html=True)
-            st.markdown(f'<p style="font-size:12px;color:#9CA3AF;">To: {founder_name} &lt;{founder_email}&gt;</p>', unsafe_allow_html=True)
-            edited_draft = st.text_area("", value=email_draft, height=280, key="email_draft_area", label_visibility="collapsed")
-            col_a, col_b = st.columns(2)
-            with col_a:
-                st.markdown('<div class="approve-btn">', unsafe_allow_html=True)
-                approve = st.button("Approve & Send", key="approve_btn")
-                st.markdown('</div>', unsafe_allow_html=True)
-            with col_b:
-                reject = st.button("Reject", key="reject_btn")
-            st.markdown('</div>', unsafe_allow_html=True)
-            return {"approve": approve, "reject": reject, "edited_draft": edited_draft}
+            # Parse subject from draft (first "Subject: " line) or default
+            email_subject = f"Partnership Opportunity — {display_name}"
+            email_body    = email_draft
+            for line in email_draft.splitlines():
+                if line.lower().startswith("subject:"):
+                    email_subject = line.split(":", 1)[1].strip()
+                    email_body = email_draft[email_draft.index(line) + len(line):].lstrip("\n")
+                    break
+
+            st.markdown(f"""
+            <div class="email-panel">
+                <div style="font-size:11px; font-weight:700; color:#9CA3AF; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:12px;">Outreach Draft</div>
+                <div class="email-to">
+                    <span style="color:#9CA3AF; font-size:12px;">To</span>
+                    <span style="margin-left:16px; font-weight:500;">{founder_name}</span>
+                    <span style="color:#9CA3AF; font-size:12px; margin-left:8px;">— verify email before sending</span>
+                </div>
+                <div class="email-subject">
+                    <span style="color:#9CA3AF; font-size:12px;">Subject</span>
+                    <span style="margin-left:16px;">{email_subject}</span>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            edited_body = st.text_area(
+                "",
+                value=email_body,
+                height=220,
+                key="email_draft_area",
+                label_visibility="collapsed",
+            )
+
+            copy_js = edited_body.replace("`", "\\`").replace("\n", "\\n")
+            st.markdown(f"""
+            <script>
+            function copyDraft() {{
+                navigator.clipboard.writeText(`{copy_js}`).then(function() {{
+                    document.getElementById('copy-btn').innerText = '✓ Copied to clipboard';
+                    document.getElementById('copy-btn').style.background = '#1B7A4A';
+                    setTimeout(() => {{
+                        document.getElementById('copy-btn').innerText = '📋 Copy to clipboard';
+                        document.getElementById('copy-btn').style.background = '#1B4F72';
+                    }}, 2500);
+                }});
+            }}
+            </script>
+            <div style="margin-top:8px;">
+                <button id="copy-btn" onclick="copyDraft()" style="
+                    width:100%; background:#1B4F72; color:#FFFFFF; border:none;
+                    border-radius:8px; padding:11px 16px; font-size:14px;
+                    font-weight:600; cursor:pointer; font-family:Inter,sans-serif;
+                    margin-bottom:8px;
+                ">📋 Copy to clipboard</button>
+            </div>
+            """, unsafe_allow_html=True)
+
+            reject = st.button("✗ Discard", key="reject_btn", use_container_width=True)
+            return {"approve": False, "reject": reject, "edited_draft": edited_body}
 
         else:
             memory_previous   = state.get("signals_found", {}).get("brand_history", "") or "None"
@@ -419,23 +772,23 @@ def render_results(state: dict, show_outreach: bool = True):
 
 # ── Header ────────────────────────────────────────────────────────────────────
 st.markdown("""
-<div style="display:flex; align-items:center; gap:10px; margin-bottom:4px;">
-    <h1 style="margin:0;">Brand Scout</h1>
-    <span style="color:#9CA3AF; font-size:14px; margin-left:4px;">by Sedge</span>
+<div style="padding: 8px 0 4px 0;">
+    <span style="font-size:26px; font-weight:700; color:#111111; font-family:Inter,sans-serif;">Brand Scout</span>
+    <span style="font-size:14px; color:#9CA3AF; margin-left:8px; font-family:Inter,sans-serif;">by Sedge</span>
 </div>
-<p style="color:#9CA3AF; margin-top:0; margin-bottom:24px;">AI-powered brand evaluation for CPG brokers</p>
-<hr style="border:none; border-top:1px solid #EBEBEB; margin-bottom:32px;">
+<p style="color:#9CA3AF; font-size:13px; margin-top:2px; margin-bottom:0;">AI-powered brand evaluation for CPG brokers</p>
+<hr style="border:none; border-top:1px solid #EBEBEB; margin-top:16px; margin-bottom:32px;">
 """, unsafe_allow_html=True)
 
 
 # ── Phase: idle ───────────────────────────────────────────────────────────────
 if st.session_state.phase == "idle":
     st.markdown("""
-    <div style="text-align:center; padding:80px 40px;">
-        <h2 style="color:#1A1A1A;">Ready to scout brands</h2>
-        <p style="color:#9CA3AF; max-width:360px; margin:0 auto;">
-            Enter a brand name to research across 10+ sources and get a full
-            broker-readiness scorecard in under 60 seconds.
+    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:100px 40px; text-align:center;">
+        <div style="font-size:13px; font-weight:600; letter-spacing:0.1em; color:#9CA3AF; text-transform:uppercase; margin-bottom:12px;">BRAND SCOUT</div>
+        <h2 style="font-size:24px; font-weight:700; color:#111111; margin:0 0 12px 0;">Ready to evaluate brands</h2>
+        <p style="color:#9CA3AF; font-size:14px; max-width:320px; line-height:1.6; margin:0;">
+            Enter a brand name to research across 10+ sources and get a full broker-readiness scorecard in under 60 seconds.
         </p>
     </div>
     """, unsafe_allow_html=True)
@@ -477,13 +830,7 @@ elif st.session_state.phase == "awaiting_approval":
 
     actions = render_results(merged, show_outreach=True)
 
-    if actions.get("approve"):
-        with st.spinner("Sending email…"):
-            resume_graph(approved=True)
-        st.session_state.phase = "done"
-        st.rerun()
-    elif actions.get("reject"):
-        resume_graph(approved=False, rejection_reason="Rejected via UI")
+    if actions.get("reject"):
         st.session_state.phase = "rejected"
         st.rerun()
 

@@ -227,6 +227,13 @@ Funding / team signals (search "{{brand}} team" or "{{brand}} marketing"):
 BROKER BRIEF FORMAT:
 Write a 3–4 sentence brief a broker could read in 20 seconds. Lead with what the brand does and who it's for. Include the strongest signal you found and the biggest gap. End with a clear recommendation: take a meeting, watch for 6 months, or pass.
 
+IMPORTANT: If the brand shows signs of being beyond the broker sweet spot (1000+ doors, all major nationals, large funding round, public company, or in-house sales team signals), add a final sentence flagging this. Examples:
+- "At this scale, they likely already have broker relationships in place — worth verifying before outreach."
+- "Brand appears to have direct retailer relationships — confirm they are actively seeking broker representation before investing time."
+- "Given national distribution footprint, verify whether they have an in-house sales team before broker outreach."
+
+This saves the broker from wasting time on a brand that doesn't need them.
+
 KEY GAPS:
 List 2–3 specific things a broker would need to verify before signing this brand. Be specific — not "more data needed" but "no Faire presence found — unclear if wholesale pricing is viable" or "SRP at $3.99 may not survive UNFI markup + 5% commission — verify landed cost."
 

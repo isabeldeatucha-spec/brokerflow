@@ -9,3 +9,7 @@ build/
 .langgraph_cache/
 mem0/
 *.db
+.playwright-mcp/
+.dave-run.md
+done_state.png
+empty_state.png
