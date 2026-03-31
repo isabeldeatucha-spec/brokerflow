@@ -30,10 +30,10 @@ import anthropic
 from langgraph.graph import StateGraph, END
 from langgraph.types import interrupt, Command
 
-from sedge.state import BrandScoutState, ScoreBreakdown
-from sedge.memory import memory, get_config, store_brand_evaluation, retrieve_similar_brands, retrieve_brand_history
-from sedge.agents.brand_scout.prompts import SCORE_THRESHOLDS, SCORING_PROMPT, DRAFT_PROMPT, REFLECTION_PROMPT
-from sedge.agents.brand_scout.tools import (
+from state import BrandScoutState, ScoreBreakdown
+from memory import memory, get_config, store_brand_evaluation, retrieve_similar_brands, retrieve_brand_history
+from agents.brand_scout.prompts import SCORE_THRESHOLDS, SCORING_PROMPT, DRAFT_PROMPT, REFLECTION_PROMPT
+from agents.brand_scout.tools import (
     scrape_whole_foods_new_arrivals,
     scrape_target_new_arrivals,
     scrape_walmart_new_arrivals,
@@ -48,7 +48,7 @@ from sedge.agents.brand_scout.tools import (
     find_founder_contact,
     send_email,
 )
-from sedge.agents.brand_scout.skills.category_benchmarks import detect_category, get_benchmark
+from agents.brand_scout.skills.category_benchmarks import detect_category, get_benchmark
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────

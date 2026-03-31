@@ -8,14 +8,14 @@ Run:
 import sys
 import os
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import uuid
 import streamlit as st
 from langgraph.types import Command
 
-from sedge.agents.brand_scout.graph import graph
-from sedge.memory import get_config, retrieve_all_evaluations
+from agents.brand_scout.graph import graph
+from memory import get_config, retrieve_all_evaluations
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(

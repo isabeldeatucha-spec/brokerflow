@@ -12,8 +12,8 @@ import uuid
 
 from langgraph.types import Command
 
-from sedge.agents.brand_scout.graph import graph
-from sedge.memory import get_config
+from agents.brand_scout.graph import graph
+from memory import get_config
 
 
 def run(brand_name: str = "", website_url: str = ""):
