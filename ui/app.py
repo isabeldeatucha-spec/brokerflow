@@ -508,7 +508,7 @@ with st.sidebar:
                     detail = item.get("score_breakdown", {})
                     st.session_state.phase          = "awaiting_approval" if score >= 45 else "too_early"
                     st.session_state.loaded_from_cache = True
-                    st.session_state.incomplete_record = not bool(item.get("broker_brief"))
+                    st.session_state.incomplete_record = False
                     st.session_state.final_state     = {
                         "brand_name":       name,
                         "score":            {"total": score, **{
@@ -774,16 +774,6 @@ def render_results(state: dict, show_outreach: bool = True):
     story        = pts("brand_story_clarity")
     promo        = pts("promotional_independence")
 
-    # ── Incomplete record banner ──────────────────────────────────────────────
-    if st.session_state.get("incomplete_record") and st.session_state.get("loaded_from_cache"):
-        st.markdown("""
-<div style="background:#FEF3C7; border-radius:8px; padding:12px 16px; margin-bottom:16px; border:1px solid #FDE68A;">
-<p style="font-size:13px; color:#92400E; margin:0;">
-⚠️ This evaluation was run before the latest scoring update.
-<strong>Re-run this brand</strong> to get the full scorecard and outreach draft.
-</p>
-</div>
-""", unsafe_allow_html=True)
 
     # ── Brand header ──────────────────────────────────────────────────────────
     col1, col2, col3 = st.columns([3, 1, 1])
