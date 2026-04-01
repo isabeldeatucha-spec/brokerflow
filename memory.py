@@ -72,14 +72,18 @@ def store_brand_evaluation(
 
 def retrieve_all_evaluations() -> list:
     try:
+        url = os.getenv("SUPABASE_URL")
+        key = os.getenv("SUPABASE_KEY")
+        print(f"[Memory] SUPABASE_URL set: {bool(url)}, SUPABASE_KEY set: {bool(key)}")
         client = _get_client()
         result = (
             client.table("brand_evaluations")
-            .select("*")
+            .select("brand_name, score, verdict, category, evaluated_at")
             .order("score", desc=True)
             .limit(20)
             .execute()
         )
+        print(f"[Memory] Retrieved {len(result.data or [])} evaluations")
         return result.data or []
     except Exception as e:
         print(f"[Memory] retrieve_all_evaluations failed: {e}")
