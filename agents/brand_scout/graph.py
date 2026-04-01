@@ -579,6 +579,9 @@ def score_brand(state: BrandScoutState) -> dict:
 
     # ── Deterministic score ────────────────────────────────────────────────────
     result = calculate_score(state.get("extracted_fields") or {})
+    print(f"[score_brand] extracted_fields keys: {list((state.get('extracted_fields') or {}).keys())}")
+    print(f"[score_brand] Formula result: {result}")
+    print(f"[score_brand] Storing to state: score={result['total']}, scores={result['scores']}")
     scores      = result["scores"]
     total       = result["total"]
     verdict_key = result["verdict"]
