@@ -289,10 +289,11 @@ Rules:
 """
 
 
-DRAFT_PROMPT = """You are a senior food & beverage broker drafting a cold outreach email to a CPG brand founder.
+DRAFT_PROMPT = """You are a senior food & beverage broker drafting a cold outreach email to a CPG brand.
 
 Brand: {brand_name}
-Founder: {founder_name}
+Recipient: {founder_name}
+Recipient context: {recipient_context}
 Verdict: {verdict}
 Outreach angle: {outreach_angle}
 Score: {total}/100

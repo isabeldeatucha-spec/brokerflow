@@ -389,12 +389,19 @@ def scrape_retail_partners(brand_url: str) -> dict[str, Any]:
         except Exception:
             continue
 
-    # Fallback — search for retailer presence
+    # Strong search fallback for brands with dynamic store locators
     brand_slug = base_url.replace("https://", "").replace("http://", "").replace("www.", "").split(".")[0]
     retailer_search = parallel_search_text(
-        f"{brand_slug} sold at retailers whole foods target walmart sprouts", 5
+        f'"{brand_slug}" sold at walmart target "whole foods" kroger costco sprouts grocery retail', 5
     )
-    return {"source": "parallel_fallback", "retailer_search": retailer_search[:800]}
+    product_page_search = parallel_search_text(
+        f"where to buy {brand_slug} grocery stores retail locations", 3
+    )
+    return {
+        "source": "parallel_search_fallback",
+        "retailer_search": retailer_search[:1200],
+        "product_search": product_page_search[:600],
+    }
 
 
 def scrape_brand_certifications(brand_url: str) -> dict[str, Any]:

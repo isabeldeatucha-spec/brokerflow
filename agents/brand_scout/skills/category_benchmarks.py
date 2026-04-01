@@ -86,17 +86,17 @@ CATEGORY_BENCHMARKS: dict[str, dict[str, Any]] = {
         "broker_green_flags": ["single origin", "squeeze bottle or innovative format", "polyphenol content cited", "chef partnerships"],
     },
     "dairy_alternative": {
-        "viable_srp_min": 5.00,
-        "viable_srp_max": 12.00,
-        "concern_below": 4.00,
-        "typical_amazon_reviews_early": 30,
-        "typical_amazon_reviews_established": 300,
-        "typical_broker_sweet_spot_doors": "50-500",
-        "key_retailers": ["Whole Foods", "Sprouts", "Target", "Kroger", "Trader Joes"],
-        "key_distributors": ["UNFI", "KeHE"],
-        "category_notes": "Oat milk has peaked. Greek-style and probiotic dairy alternatives are growing. Cold chain required. Refrigerated category has better velocity than shelf-stable alternatives. Sourmilk (fermented oat milk) fits here.",
-        "broker_red_flags": ["oat milk without differentiation", "no cold chain", "SRP above $10 without functional premium"],
-        "broker_green_flags": ["probiotic or fermentation story", "barista line", "foodservice validation"],
+        "viable_srp_min": 1.50,
+        "viable_srp_max": 8.00,
+        "concern_below": 1.00,
+        "typical_amazon_reviews_early": 50,
+        "typical_amazon_reviews_established": 1000,
+        "typical_broker_sweet_spot_doors": "100-2000",
+        "key_retailers": ["Whole Foods", "Target", "Walmart", "Kroger", "Sprouts", "Costco", "Stop & Shop"],
+        "key_distributors": ["UNFI", "KeHE", "DPI"],
+        "category_notes": "Greek yogurt and dairy alternatives have wide SRP range from $1.50 single cups to $8+ for specialty items. Large national brands (Oikos, Chobani) are Danone/corporate-owned. Independent emerging brands in this space are rare but valuable — look for probiotic positioning, specialty diets (keto, paleo), or unique formats. Amazon is secondary channel; grocery velocity is primary signal.",
+        "broker_red_flags": ["single SKU", "SRP below $1.50", "no cold chain", "no grocery presence"],
+        "broker_green_flags": ["probiotic claim", "specialty diet certification", "independent brand", "regional traction", "barista line"],
     },
     "meat_snack_protein": {
         "viable_srp_min": 2.00,
@@ -127,29 +127,25 @@ CATEGORY_BENCHMARKS: dict[str, dict[str, Any]] = {
 }
 
 
-def detect_category(brand_name: str, signals: dict) -> str:
-    """Detect product category from scraped signals. Returns a CATEGORY_BENCHMARKS key."""
-    text = (str(signals) + " " + brand_name).lower()
-    if any(w in text for w in ["meat stick", "beef stick", "jerky", "meat snack", "chomps", "epic bar", "grass-fed beef", "protein stick"]):
+def detect_category_from_keywords(text: str) -> str:
+    """Fallback only — used if LLM detection fails."""
+    text = text.lower()
+    if any(w in text for w in ["meat stick", "beef stick", "jerky", "meat snack"]):
         return "meat_snack_protein"
     if any(w in text for w in ["olive oil", "cooking oil", "evoo"]):
         return "olive_oil_cooking_oil"
-    if any(w in text for w in ["sauce", "condiment", "hot sauce", "dressing", "salsa", "vinegar", "ketchup", "mustard"]):
-        return "condiment_sauce"
-    if any(w in text for w in ["supplement", "vitamin", "adaptogen", "mushroom powder", "nootropic"]):
-        return "supplement_functional"
-    # dairy check first — must come before beverage to catch fermented/milk products
-    if any(w in text for w in ["milk", "dairy", "yogurt", "oat milk", "almond milk", "sourmilk", "fermented milk", "drinkourmilk"]):
+    if any(w in text for w in ["yogurt", "kefir", "dairy", "oat milk", "almond milk", "coconut milk", "greek yogurt"]):
         return "dairy_alternative"
-    # beverage check — explicit brand/product terms that won't collide with dairy
-    if any(w in text for w in ["coconut water", "vita coco", "energy drink", "rtd", "juice", "coffee", "tea", "soda", "sparkling", "kombucha", "kefir water", "beverage"]):
-        return "beverage_rtd"
-    if any(w in text for w in ["bar", "granola bar", "protein bar", "snack bar", "energy bar", "cereal bar"]):
+    if any(w in text for w in ["supplement", "vitamin", "probiotic", "adaptogen", "mushroom", "protein powder"]):
+        return "supplement_functional"
+    if any(w in text for w in ["bar", "granola", "protein bar", "snack bar"]):
         return "snack_bar"
-    if any(w in text for w in ["water", "coconut", "drink"]):
-        return "beverage_rtd"
-    if any(w in text for w in ["frozen", "freeze-dried", "ice cream", "popsicle", "frozen meal"]):
+    if any(w in text for w in ["sauce", "condiment", "hot sauce", "dressing", "salsa", "vinegar", "seasoning"]):
+        return "condiment_sauce"
+    if any(w in text for w in ["frozen", "freeze", "ice cream"]):
         return "frozen_food"
+    if any(w in text for w in ["beverage", "drink", "rtd", "juice", "water", "coffee", "tea", "soda", "coconut water", "kombucha"]):
+        return "beverage_rtd"
     return "unknown"
 
 

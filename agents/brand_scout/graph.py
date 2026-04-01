@@ -51,7 +51,7 @@ from agents.brand_scout.tools import (
     find_founder_contact,
     send_email,
 )
-from agents.brand_scout.skills.category_benchmarks import detect_category, get_benchmark
+from agents.brand_scout.skills.category_benchmarks import detect_category_from_keywords, get_benchmark
 
 
 # ── Extraction + brief prompts ────────────────────────────────────────────────
@@ -80,6 +80,11 @@ IMPORTANT EXTRACTION RULES:
   If you only see a number of retail chains/banners (like "available at Whole Foods, Target, Sprouts") with no store count, return null.
   Only return a number if it explicitly refers to individual store or location count.
 - For faire_listed: set true if the brand appears on faire.com or is described as listed/available on Faire wholesale platform
+- For whole_foods_confirmed, target_confirmed, walmart_confirmed, sprouts_confirmed, costco_confirmed:
+  Check ALL signal sections including RETAIL PARTNERS. For large corporate brands, these confirmations
+  often appear in press articles, Wikipedia, or product pages rather than a where-to-buy page.
+  If signals say "available at major grocery retailers nationwide" or list major chains anywhere, set the appropriate flags to true.
+  For well-known national brands (Oikos, Chobani, Dannon, etc.), if you see any grocery retail presence, assume major chain distribution.
 
 Fields to extract:
 {{
@@ -126,6 +131,26 @@ Fields to extract:
 
 Research signals:
 {signals}
+"""
+
+CATEGORY_DETECTION_PROMPT = """
+You are a CPG category expert. Based on the brand signals below, identify which single category this brand belongs to.
+
+Choose exactly one:
+- meat_snack_protein (beef sticks, jerky, meat snacks, protein bars, meat-based snacks)
+- snack_bar (granola bars, energy bars, oat bars, trail mix, cereal bars)
+- beverage_rtd (drinks, juices, waters, coffee, tea, kombucha, energy drinks, coconut water, smoothies)
+- condiment_sauce (hot sauce, dressings, condiments, oils, vinegars, seasonings, spreads, pasta sauce)
+- frozen_food (frozen meals, frozen snacks, ice cream, frozen pizza, frozen burritos)
+- supplement_functional (vitamins, supplements, protein powder, adaptogens, functional mushrooms, collagen, creatine)
+- olive_oil_cooking_oil (olive oil, avocado oil, cooking oils — oil-specific brands only)
+- dairy_alternative (yogurt, greek yogurt, kefir, milk, oat milk, almond milk, dairy products, cheese, butter)
+- unknown (cannot determine)
+
+Brand: {brand_name}
+Signals: {signals_summary}
+
+Return ONLY the category key. Example: dairy_alternative
 """
 
 BRIEF_PROMPT = """
@@ -364,9 +389,44 @@ def reflect_and_decide(state: BrandScoutState) -> dict:
 
 
 def detect_category_node(state: BrandScoutState) -> dict:
-    """Detect product category and load benchmark — runs once before scoring."""
-    category = detect_category(state["brand_name"], state["signals_found"])
+    """LLM-based category detection with keyword fallback."""
+    brand_name = state.get("brand_name", "")
+    signals = state.get("signals_found", {})
+
+    signals_text = " ".join([
+        str(signals.get("website", {}).get("homepage", ""))[:500],
+        str(signals.get("amazon", {}).get("extracted_page", ""))[:300],
+        str(signals.get("press", {}).get("trade_press", ""))[:200],
+    ])
+
+    valid_categories = [
+        "meat_snack_protein", "snack_bar", "beverage_rtd", "condiment_sauce",
+        "frozen_food", "supplement_functional", "olive_oil_cooking_oil",
+        "dairy_alternative", "unknown"
+    ]
+
+    try:
+        client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+        response = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=20,
+            messages=[{
+                "role": "user",
+                "content": CATEGORY_DETECTION_PROMPT.format(
+                    brand_name=brand_name,
+                    signals_summary=signals_text[:1000],
+                )
+            }]
+        )
+        category = response.content[0].text.strip().lower()
+        if category not in valid_categories:
+            category = detect_category_from_keywords(signals_text + " " + brand_name)
+    except Exception as e:
+        print(f"[detect_category] LLM failed: {e}, using keyword fallback")
+        category = detect_category_from_keywords(signals_text + " " + brand_name)
+
     benchmark = get_benchmark(category)
+    print(f"[detect_category] {brand_name} → {category}")
     return {"category": category, "benchmark": benchmark}
 
 
@@ -610,7 +670,15 @@ def draft_outreach(state: BrandScoutState) -> dict:
     # Parse founder name from raw search content using Claude — more reliable than regex
     raw = contact.get("raw_content", "")
     extracted = _extract_founder_name(raw, state["brand_name"], client) if raw else ""
-    founder_name = extracted or "Hi there"
+    cleaned = extracted.strip()
+    is_corporate = not cleaned or cleaned.lower() in ("hi there", "unknown", "none", "")
+    founder_name = cleaned if not is_corporate else ""
+    recipient_context = (
+        "This is a corporate brand — no individual founder identified. "
+        "Address the email generically (e.g. 'Hi,') and direct it to the brand team or category manager, not a named individual."
+        if is_corporate else
+        f"Address to {cleaned}, the founder. Use their first name."
+    )
     score = state["score"]
 
     score_detail = state.get("signals_found", {}).get("score_detail", {})
@@ -619,7 +687,8 @@ def draft_outreach(state: BrandScoutState) -> dict:
 
     prompt = DRAFT_PROMPT.format(
         brand_name=state["brand_name"],
-        founder_name=founder_name,
+        founder_name=founder_name if founder_name else "(corporate brand — no founder identified)",
+        recipient_context=recipient_context,
         verdict=verdict,
         outreach_angle=outreach_angle,
         total=score["total"],
@@ -637,8 +706,9 @@ def draft_outreach(state: BrandScoutState) -> dict:
         messages=[{"role": "user", "content": prompt}],
     )
 
+    display_name = founder_name or state["brand_name"] + " Team"
     return {
-        "founder_name": founder_name,
+        "founder_name": display_name,
         "founder_email": founder_email,
         "email_draft": message.content[0].text.strip(),
     }
