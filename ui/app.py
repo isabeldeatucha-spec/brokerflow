@@ -90,8 +90,8 @@ p, li { color: #4A4A4A !important; font-size: 14px !important; line-height: 1.6 
     text-align: center;
 }
 
+.badge-established { background: #FEF3C7; color: #92400E; padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; }
 .badge-ready    { background: #D1FAE5; color: #065F46; padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; }
-.badge-promising { background: #FEF3C7; color: #92400E; padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; }
 .badge-early    { background: #FEE2E2; color: #991B1B; padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; }
 
 .category-pill { background: #EBF5FB; color: #1B4F72; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
@@ -497,7 +497,7 @@ with st.sidebar:
                     use_container_width=True,
                 ):
                     detail = item.get("score_breakdown", {})
-                    st.session_state.phase          = "awaiting_approval" if score >= 70 else "promising"
+                    st.session_state.phase          = "awaiting_approval" if score >= 45 else "too_early"
                     st.session_state.final_state     = {
                         "brand_name":       name,
                         "score":            {"total": score, **{
@@ -781,8 +781,8 @@ def render_results(state: dict, show_outreach: bool = True):
         </div>
         """, unsafe_allow_html=True)
     with col3:
-        badge_class = "badge-ready" if total >= 70 else "badge-promising" if total >= 45 else "badge-early"
-        badge_label = "Broker Ready 🟢" if total >= 70 else "Promising 🟡" if total >= 45 else "Too Early 🔴"
+        badge_class = "badge-established" if total >= 70 else "badge-ready" if total >= 45 else "badge-early"
+        badge_label = "Established 🟡" if total >= 70 else "Broker Ready 🟢" if total >= 45 else "Too Early 🔴"
         st.markdown(
             f'<div style="padding-top:12px;"><span class="{badge_class}">{badge_label}</span></div>',
             unsafe_allow_html=True,
@@ -825,8 +825,8 @@ def render_results(state: dict, show_outreach: bool = True):
                 gets the same score. Total is out of 100.
             </p>
             <div style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
-                <span style="background:#D1FAE5; color:#065F46; padding:3px 10px; border-radius:99px; font-size:12px; font-weight:600;">🟢 Broker Ready = 70+</span>
-                <span style="background:#FEF3C7; color:#92400E; padding:3px 10px; border-radius:99px; font-size:12px; font-weight:600;">🟡 Promising = 45–69</span>
+                <span style="background:#FEF3C7; color:#92400E; padding:3px 10px; border-radius:99px; font-size:12px; font-weight:600;">🟡 Established = 70+</span>
+                <span style="background:#D1FAE5; color:#065F46; padding:3px 10px; border-radius:99px; font-size:12px; font-weight:600;">🟢 Broker Ready = 45–69</span>
                 <span style="background:#FEE2E2; color:#991B1B; padding:3px 10px; border-radius:99px; font-size:12px; font-weight:600;">🔴 Too Early = below 45</span>
             </div>
         </div>
@@ -953,10 +953,11 @@ def render_results(state: dict, show_outreach: bool = True):
                 st.markdown('<p style="color:#9CA3AF;">No reflection loops required.</p>', unsafe_allow_html=True)
 
     with right:
-        if show_outreach and total >= 70:
-            founder_name  = state.get("founder_name", "") or "Founder"
-            founder_email = state.get("founder_email", "")
-            email_draft   = state.get("email_draft", "")
+        if show_outreach and total >= 45:
+            founder_name    = state.get("founder_name", "") or "Founder"
+            founder_email   = state.get("founder_email", "")
+            email_draft     = state.get("email_draft", "")
+            outreach_angle  = state.get("signals_found", {}).get("score_detail", {}).get("outreach_angle", "")
 
             # Parse subject from draft (first "Subject: " line) or default
             email_subject = f"Partnership Opportunity — {display_name}"
@@ -967,9 +968,11 @@ def render_results(state: dict, show_outreach: bool = True):
                     email_body = email_draft[email_draft.index(line) + len(line):].lstrip("\n")
                     break
 
+            angle_html = f'<div style="font-size:12px; color:#6B7280; font-style:italic; margin-bottom:10px;">💡 {outreach_angle}</div>' if outreach_angle else ""
             st.markdown(f"""
             <div class="email-panel">
-                <div style="font-size:11px; font-weight:700; color:#9CA3AF; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:12px;">Outreach Draft</div>
+                <div style="font-size:11px; font-weight:700; color:#9CA3AF; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:8px;">Outreach Draft</div>
+                {angle_html}
                 <div class="email-to">
                     <span style="color:#9CA3AF; font-size:12px;">To</span>
                     <span style="margin-left:16px; font-weight:500;">{founder_name}</span>
@@ -1030,7 +1033,7 @@ def render_results(state: dict, show_outreach: bool = True):
             st.markdown(f"""
             <div class="watchlist-card">
                 <h3 style="color:#1B4F72;margin-top:0;">Added to Watch List</h3>
-                <p style="color:#4A6A7A;">This brand scored {total}/100 — below the 70-point broker-ready threshold.
+                <p style="color:#4A6A7A;">This brand scored {total}/100 — below the 45-point threshold.
                 Check back in 3–6 months as they build distribution and velocity.</p>
                 <hr style="border:none;border-top:1px solid #AED6F1;margin:14px 0;">
                 <p style="font-size:11px;color:#7FB3D3;margin:0;">Previously evaluated: {memory_previous} · Comparable brands: {comparable_brands}</p>
@@ -1055,15 +1058,110 @@ st.markdown("""
 
 # ── Phase: idle ───────────────────────────────────────────────────────────────
 if st.session_state.phase == "idle":
-    st.markdown("""
-    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:100px 40px; text-align:center;">
-        <div style="font-size:13px; font-weight:600; letter-spacing:0.1em; color:#9CA3AF; text-transform:uppercase; margin-bottom:12px;">BRAND SCOUT</div>
-        <h2 style="font-size:24px; font-weight:700; color:#111111; margin:0 0 12px 0;">Ready to evaluate brands</h2>
-        <p style="color:#9CA3AF; font-size:14px; max-width:320px; line-height:1.6; margin:0;">
-            Enter a brand name to research across 10+ sources and get a full broker-readiness scorecard in under 60 seconds.
+    st.html("""
+<div style="padding: 40px 60px;">
+
+    <div style="text-align:center; margin-bottom:48px;">
+        <p style="font-size:11px; font-weight:700; color:#9CA3AF; text-transform:uppercase; letter-spacing:0.12em; margin-bottom:12px;">Brand Scout by Sedge</p>
+        <h2 style="font-size:28px; font-weight:700; color:#111111; margin:0 0 12px 0; letter-spacing:-0.5px;">AI-powered brand evaluation for CPG brokers</h2>
+        <p style="font-size:15px; color:#6B6B6B; max-width:480px; margin:0 auto; line-height:1.6;">
+            Research any brand across 10+ sources in under 60 seconds.
+            Get a scored brief, know exactly where it fits, and send a personalized outreach — all in one workflow.
         </p>
     </div>
-    """, unsafe_allow_html=True)
+
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:48px;">
+
+        <div style="background:#ECFDF5; border-radius:12px; padding:20px; border:1px solid #6EE7B7;">
+            <div style="font-size:20px; margin-bottom:8px;">🟢</div>
+            <div style="font-size:14px; font-weight:700; color:#065F46; margin-bottom:4px;">Broker Ready · 45–69</div>
+            <div style="font-size:12px; color:#047857; font-weight:500; margin-bottom:8px;">Reach out now</div>
+            <p style="font-size:12px; color:#4A4A4A; margin:0; line-height:1.5;">
+                Emerging brand in the sweet spot — enough traction to be credible, not yet locked into national distribution.
+                Your window to open doors they don't have yet.
+            </p>
+        </div>
+
+        <div style="background:#FFFBEB; border-radius:12px; padding:20px; border:1px solid #FDE68A;">
+            <div style="font-size:20px; margin-bottom:8px;">🟡</div>
+            <div style="font-size:14px; font-weight:700; color:#92400E; margin-bottom:4px;">Established · 70+</div>
+            <div style="font-size:12px; color:#B45309; font-weight:500; margin-bottom:8px;">Verify broker need first</div>
+            <p style="font-size:12px; color:#4A4A4A; margin:0; line-height:1.5;">
+                Proven brand, likely already working with brokers.
+                Pitch angle: why you're better than their current broker — deeper relationships, more attentive service, better data.
+            </p>
+        </div>
+
+        <div style="background:#FEF2F2; border-radius:12px; padding:20px; border:1px solid #FECACA;">
+            <div style="font-size:20px; margin-bottom:8px;">🔴</div>
+            <div style="font-size:14px; font-weight:700; color:#991B1B; margin-bottom:4px;">Too Early · below 45</div>
+            <div style="font-size:12px; color:#B91C1C; font-weight:500; margin-bottom:8px;">Check back in 6 months</div>
+            <p style="font-size:12px; color:#4A4A4A; margin:0; line-height:1.5;">
+                Not enough traction yet. Missing velocity proof, distribution, or brand story clarity.
+                No outreach drafted — invest your time elsewhere.
+            </p>
+        </div>
+
+    </div>
+
+    <div style="background:#FFFFFF; border:1px solid #E5E5E5; border-radius:12px; padding:24px; margin-bottom:32px;">
+        <p style="font-size:11px; font-weight:700; color:#9CA3AF; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:16px;">How Scoring Works</p>
+        <p style="font-size:13px; color:#4A4A4A; margin-bottom:20px; line-height:1.6;">
+            Scores are <strong>deterministic</strong> — given the same data, the same brand always gets the same score.
+            Built from 150+ interviews with independent food brokers, CPG founders, distributors, and retail buyers.
+        </p>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+
+            <div style="padding:14px; background:#F9FAFB; border-radius:8px;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                    <span style="font-size:13px; font-weight:600; color:#111111;">Velocity Proof</span>
+                    <span style="font-size:12px; font-weight:600; color:#1B4F72; background:#EBF5FB; padding:2px 8px; border-radius:99px;">25 pts</span>
+                </div>
+                <p style="font-size:12px; color:#6B6B6B; margin:0; line-height:1.5;">Has this brand proven real consumers buy it repeatedly without heavy promos? Amazon reviews, Subscribe &amp; Save, Instacart presence, trade press sell-through.</p>
+            </div>
+
+            <div style="padding:14px; background:#F9FAFB; border-radius:8px;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                    <span style="font-size:13px; font-weight:600; color:#111111;">Distribution Density</span>
+                    <span style="font-size:12px; font-weight:600; color:#1B4F72; background:#EBF5FB; padding:2px 8px; border-radius:99px;">20 pts</span>
+                </div>
+                <p style="font-size:12px; color:#6B6B6B; margin:0; line-height:1.5;">Rewards proven retail footprint at any scale. More doors and national chain presence = higher score. Whole Foods, Target, Walmart, Sprouts, Costco, Faire.</p>
+            </div>
+
+            <div style="padding:14px; background:#F9FAFB; border-radius:8px;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                    <span style="font-size:13px; font-weight:600; color:#111111;">Margin Viability</span>
+                    <span style="font-size:12px; font-weight:600; color:#1B4F72; background:#EBF5FB; padding:2px 8px; border-radius:99px;">20 pts</span>
+                </div>
+                <p style="font-size:12px; color:#6B6B6B; margin:0; line-height:1.5;">Can this brand survive the retail cost stack — distributor markup (12–28%), broker commission (5%), free fill, slotting fees? Minimum 50% gross margin needed.</p>
+            </div>
+
+            <div style="padding:14px; background:#F9FAFB; border-radius:8px;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                    <span style="font-size:13px; font-weight:600; color:#111111;">Brand Story Clarity</span>
+                    <span style="font-size:12px; font-weight:600; color:#1B4F72; background:#EBF5FB; padding:2px 8px; border-radius:99px;">20 pts</span>
+                </div>
+                <p style="font-size:12px; color:#6B6B6B; margin:0; line-height:1.5;">Can a broker rep explain this brand to a buyer in 30 seconds? Clear hero product, specific consumer, defined differentiation. Instagram following, trade press, Expo West.</p>
+            </div>
+
+            <div style="padding:14px; background:#F9FAFB; border-radius:8px; grid-column:1/-1;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                    <span style="font-size:13px; font-weight:600; color:#111111;">Promotional Independence</span>
+                    <span style="font-size:12px; font-weight:600; color:#1B4F72; background:#EBF5FB; padding:2px 8px; border-radius:99px;">15 pts</span>
+                </div>
+                <p style="font-size:12px; color:#6B6B6B; margin:0; line-height:1.5;">Can this brand generate demand without the broker funding every promo? DTC channel, subscription model, organic social following, low TPR frequency, Subscribe &amp; Save.</p>
+            </div>
+
+        </div>
+
+        <p style="font-size:11px; color:#9CA3AF; margin-top:16px; font-style:italic;">
+            Missing data scores at 50% of max — absence of information is neutral, not negative. Only active negative signals reduce scores below the neutral floor.
+        </p>
+    </div>
+
+</div>
+    """)
 
 
 # ── Phase: running ────────────────────────────────────────────────────────────
@@ -1088,7 +1186,7 @@ elif st.session_state.phase == "running":
         st.session_state.phase = "awaiting_approval"
     else:
         verdict = (final or {}).get("verdict", "below_threshold")
-        st.session_state.phase = verdict if verdict in ("promising", "below_threshold") else "done"
+        st.session_state.phase = "too_early" if verdict == "below_threshold" else "done"
 
     st.rerun()
 
@@ -1107,8 +1205,8 @@ elif st.session_state.phase == "awaiting_approval":
         st.rerun()
 
 
-# ── Phase: promising / below_threshold ───────────────────────────────────────
-elif st.session_state.phase in ("promising", "below_threshold"):
+# ── Phase: too_early ─────────────────────────────────────────────────────────
+elif st.session_state.phase in ("too_early", "below_threshold"):
     final = st.session_state.final_state or {}
     render_results(final, show_outreach=False)
 

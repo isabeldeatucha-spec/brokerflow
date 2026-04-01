@@ -132,15 +132,21 @@ BRIEF_PROMPT = """
 Given these brand scores and research signals, write:
 1. A 3-4 sentence broker_brief a broker could read in 20 seconds
 2. A list of 2-3 key_gaps — specific things the broker needs to verify before signing
+3. An outreach_angle: one sentence describing the hook a broker should use when reaching out
+
+Verdict context:
+- established (70+): proven brand, likely already has broker relationships — angle on filling regional gaps or accounts they don't currently reach
+- broker_ready (45-69): strong trajectory, ready to scale — angle on accelerating growth into new retail doors
+- too_early (<45): not used here
 
 Brand: {brand_name}
 Category: {category}
+Verdict: {verdict}
 Scores: {scores}
 Total: {total}/100
 Key signals: {signals_summary}
-Beyond broker flag: {beyond_broker_flag}
 
-Return JSON: {{"broker_brief": "...", "key_gaps": ["...", "..."]}}
+Return JSON: {{"broker_brief": "...", "key_gaps": ["...", "..."], "outreach_angle": "..."}}
 """
 
 
@@ -471,16 +477,13 @@ def score_brand(state: BrandScoutState) -> dict:
 
     # ── Deterministic score ────────────────────────────────────────────────────
     result = calculate_score(state.get("extracted_fields") or {})
-    scores       = result["scores"]
-    total        = result["total"]
-    verdict_key  = result["verdict"]
-    beyond_broker = result["beyond_broker_flag"]
+    scores      = result["scores"]
+    total       = result["total"]
+    verdict_key = result["verdict"]
 
     # Map formula verdict → graph routing key
-    if verdict_key == "broker_ready":
+    if verdict_key in ("established", "broker_ready"):
         graph_verdict = "above_threshold"
-    elif verdict_key == "promising":
-        graph_verdict = "promising"
     else:
         graph_verdict = "below_threshold"
 
@@ -491,10 +494,10 @@ def score_brand(state: BrandScoutState) -> dict:
     prompt = BRIEF_PROMPT.format(
         brand_name=state["brand_name"],
         category=category,
+        verdict=verdict_key,
         scores=json.dumps(scores),
         total=total,
         signals_summary=signals_summary,
-        beyond_broker_flag=beyond_broker,
     )
 
     message = client.messages.create(
@@ -532,10 +535,10 @@ def score_brand(state: BrandScoutState) -> dict:
                 "brand_story_clarity":     {"score": scores["brand_story_clarity"]},
                 "promotional_independence": {"score": scores["promotional_independence"]},
                 "total":              total,
-                "verdict":            verdict_key,
-                "broker_brief":       brief_data.get("broker_brief", ""),
-                "key_gaps":           brief_data.get("key_gaps", []),
-                "beyond_broker_flag": beyond_broker,
+                "verdict":         verdict_key,
+                "broker_brief":    brief_data.get("broker_brief", ""),
+                "key_gaps":        brief_data.get("key_gaps", []),
+                "outreach_angle":  brief_data.get("outreach_angle", ""),
             },
         },
     }
@@ -610,9 +613,15 @@ def draft_outreach(state: BrandScoutState) -> dict:
     founder_name = extracted or "Hi there"
     score = state["score"]
 
+    score_detail = state.get("signals_found", {}).get("score_detail", {})
+    verdict      = score_detail.get("verdict", "broker_ready")
+    outreach_angle = score_detail.get("outreach_angle", "")
+
     prompt = DRAFT_PROMPT.format(
         brand_name=state["brand_name"],
         founder_name=founder_name,
+        verdict=verdict,
+        outreach_angle=outreach_angle,
         total=score["total"],
         velocity_proof=score["velocity_proof"],
         distribution_density=score["distribution_density"],
@@ -723,7 +732,7 @@ def build_graph():
     builder.add_conditional_edges(
         "score_brand",
         _route_after_score,
-        {"above_threshold": "draft_outreach", "promising": "store_memory", "below_threshold": "store_memory"},
+        {"above_threshold": "draft_outreach", "below_threshold": "store_memory"},
     )
 
     builder.add_edge("draft_outreach", "store_memory")
@@ -731,7 +740,7 @@ def build_graph():
     builder.add_conditional_edges(
         "store_memory",
         _route_after_score,
-        {"above_threshold": "human_approval", "promising": END, "below_threshold": END},
+        {"above_threshold": "human_approval", "below_threshold": END},
     )
 
     builder.add_conditional_edges(

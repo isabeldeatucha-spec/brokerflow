@@ -43,35 +43,33 @@ def calculate_score(fields: dict) -> dict:
 
     score["velocity_proof"] = min(vp, 25)
 
-    # DISTRIBUTION DENSITY (20pts)
+    # DISTRIBUTION DENSITY (20pts) — rewards proven retail footprint at any scale
     dd = 0
-    doors = fields.get("estimated_door_count")
-    if doors is None:            dd += 4
-    elif 50 <= doors <= 300:     dd += 8
-    elif 20 <= doors < 50:       dd += 5
-    elif 300 < doors <= 800:     dd += 6
-    elif doors > 800:            dd += 2
-    else:                        dd += 1
 
+    # Retailer presence (0-12pts) — more nationals = more proven
     retailer_pts = 0
     if fields.get("whole_foods_confirmed"):  retailer_pts += 3
     if fields.get("sprouts_confirmed"):      retailer_pts += 2
-    if fields.get("target_confirmed"):       retailer_pts += 2
+    if fields.get("target_confirmed"):       retailer_pts += 3
+    if fields.get("walmart_confirmed"):      retailer_pts += 2
     if fields.get("costco_confirmed"):       retailer_pts += 2
-    if fields.get("walmart_confirmed"):      retailer_pts += 1
-    retailer_pts = min(retailer_pts, 8)
-    nationals = sum([
-        bool(fields.get("whole_foods_confirmed")),
-        bool(fields.get("target_confirmed")),
-        bool(fields.get("walmart_confirmed")),
-        bool(fields.get("costco_confirmed"))
-    ])
-    if nationals >= 4:  retailer_pts = max(retailer_pts - 2, 3)
+    retailer_pts = min(retailer_pts, 12)
     dd += retailer_pts
 
-    if fields.get("faire_listed") is None:  dd += 2
-    elif fields.get("faire_listed"):        dd += 4
-    else:                                   dd += 0
+    # Door count (0-4pts) — more doors = more proven
+    doors = fields.get("estimated_door_count")
+    if doors is None:       dd += 2
+    elif doors >= 1000:     dd += 4
+    elif doors >= 300:      dd += 3
+    elif doors >= 50:       dd += 2
+    elif doors >= 20:       dd += 1
+    else:                   dd += 0
+
+    # Faire presence (0-4pts)
+    if fields.get("faire_listed") is None:   dd += 2
+    elif fields.get("faire_listed"):         dd += 4
+    else:                                    dd += 0
+
     score["distribution_density"] = min(dd, 20)
 
     # MARGIN VIABILITY (20pts)
@@ -178,22 +176,10 @@ def calculate_score(fields: dict) -> dict:
 
     # TOTAL + VERDICT
     total = sum(score.values())
-    nationals_count = sum([
-        bool(fields.get("whole_foods_confirmed")),
-        bool(fields.get("target_confirmed")),
-        bool(fields.get("walmart_confirmed")),
-        bool(fields.get("costco_confirmed"))
-    ])
-    beyond_broker = (
-        fields.get("publicly_traded") or
-        fields.get("inhouse_sales_team") or
-        (fields.get("estimated_door_count") or 0) > 5000 or
-        nationals_count >= 4
-    )
-    if total >= 70 and not beyond_broker:
-        verdict = "broker_ready"
+    if total >= 70:
+        verdict = "established"
     elif total >= 45:
-        verdict = "promising"
+        verdict = "broker_ready"
     else:
         verdict = "too_early"
 
@@ -201,6 +187,5 @@ def calculate_score(fields: dict) -> dict:
         "scores": score,
         "total": total,
         "verdict": verdict,
-        "beyond_broker_flag": bool(beyond_broker),
         "extracted_fields": fields,
     }

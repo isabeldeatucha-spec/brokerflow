@@ -293,6 +293,8 @@ DRAFT_PROMPT = """You are a senior food & beverage broker drafting a cold outrea
 
 Brand: {brand_name}
 Founder: {founder_name}
+Verdict: {verdict}
+Outreach angle: {outreach_angle}
 Score: {total}/100
 
 Score breakdown:
@@ -305,7 +307,11 @@ Score breakdown:
 Research signals:
 {signals_json}
 
-Write a short, warm, non-salesy cold email from a broker's perspective. The broker is interested in representing the brand in new retail accounts. Rules:
+Tailor the email based on the verdict:
+- established: acknowledge their existing success and scale; position the broker as someone who can open specific regional doors or fill account gaps they don't currently have covered — not as someone trying to "help them grow from zero"
+- broker_ready: position the broker as excited to help them scale from their current strong foundation into new retail doors
+
+Write a short, warm, non-salesy cold email from a broker's perspective. Rules:
 - Subject line on first line, prefixed with "Subject: "
 - 3-4 short paragraphs max
 - Reference specific signals you found (reviews, retailer presence, etc.)
