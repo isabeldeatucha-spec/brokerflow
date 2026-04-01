@@ -493,7 +493,7 @@ with st.sidebar:
             for item in recent[:5]:
                 score = item.get("score", 0)
                 name  = item.get("brand_name", "Unknown")
-                dot   = "🟢" if score >= 70 else "🟡" if score >= 45 else "🔴"
+                dot   = "🟡" if score >= 70 else "🟢" if score >= 45 else "🔴"
                 if st.button(
                     f"{dot} {name}   {score}/100",
                     key=f"recent_{name}",
