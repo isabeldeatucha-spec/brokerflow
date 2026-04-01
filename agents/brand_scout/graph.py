@@ -81,10 +81,12 @@ IMPORTANT EXTRACTION RULES:
   Only return a number if it explicitly refers to individual store or location count.
 - For faire_listed: set true if the brand appears on faire.com or is described as listed/available on Faire wholesale platform
 - For whole_foods_confirmed, target_confirmed, walmart_confirmed, sprouts_confirmed, costco_confirmed:
-  Check ALL signal sections including RETAIL PARTNERS. For large corporate brands, these confirmations
-  often appear in press articles, Wikipedia, or product pages rather than a where-to-buy page.
-  If signals say "available at major grocery retailers nationwide" or list major chains anywhere, set the appropriate flags to true.
-  For well-known national brands (Oikos, Chobani, Dannon, etc.), if you see any grocery retail presence, assume major chain distribution.
+  Check ALL signal sections including RETAIL PARTNERS. Set to true if ANY of the following appear:
+  * The retailer name appears in a page URL or page title (e.g. "OIKOS products at Target" → target_confirmed=true)
+  * The retailer name appears as a place where the brand is sold in any signal text
+  * Search results show the brand's product page on that retailer's website
+  * Press articles mention the brand being sold at that retailer
+  For large corporate brands (Oikos, Chobani, Dannon, Danone brands), if you see any grocery retail presence at all, set walmart_confirmed=true and target_confirmed=true as these brands have universal major chain distribution.
 
 Fields to extract:
 {{
@@ -474,7 +476,25 @@ def _build_signals_string(state: BrandScoutState) -> str:
 
     # Retail partners (dedicated Firecrawl scrape — most reliable)
     retail = signals.get("retail_partners", {})
-    parts.append(f"RETAIL PARTNERS (dedicated scrape): {json.dumps(retail.get('data', retail.get('retailer_search', '')))}")
+    if retail.get("data"):
+        retail_text = json.dumps(retail["data"])
+    else:
+        raw_retail = " | ".join(filter(None, [
+            retail.get("retailer_search", ""),
+            retail.get("product_search", ""),
+        ]))
+        # Pre-detect retailer presence and inject explicit flags so Haiku doesn't have to infer
+        raw_lower = raw_retail.lower()
+        detected = []
+        if "target" in raw_lower:        detected.append("target=true")
+        if "walmart" in raw_lower:       detected.append("walmart=true")
+        if "whole foods" in raw_lower:   detected.append("whole_foods=true")
+        if "sprouts" in raw_lower:       detected.append("sprouts=true")
+        if "costco" in raw_lower:        detected.append("costco=true")
+        if "kroger" in raw_lower:        detected.append("kroger=true")
+        flags_line = ("DETECTED RETAILERS: " + ", ".join(detected)) if detected else ""
+        retail_text = (flags_line + "\n" + raw_retail).strip()
+    parts.append(f"RETAIL PARTNERS (dedicated scrape): {retail_text}")
 
     # Certifications + SRP (dedicated Firecrawl scrape)
     certs = signals.get("certifications_scrape", {})
@@ -521,6 +541,26 @@ def extract_fields(state: BrandScoutState) -> dict:
     # Override extracted category with the deterministic detect_category result
     if state.get("category"):
         fields["category"] = state["category"]
+
+    # Hard-override retailer flags from pre-detected signals — Haiku is unreliable on boolean inference
+    # The RETAIL PARTNERS section has "DETECTED RETAILERS: target=true, walmart=true, ..." injected by
+    # _build_signals_string. Parse those directly rather than hoping Haiku picks them up.
+    retail = state.get("signals_found", {}).get("retail_partners", {})
+    raw_retail = " ".join(filter(None, [
+        json.dumps(retail.get("data", {})),
+        retail.get("retailer_search", ""),
+        retail.get("product_search", ""),
+    ])).lower()
+    if "target" in raw_retail and fields.get("target_confirmed") is None:
+        fields["target_confirmed"] = True
+    if "walmart" in raw_retail and fields.get("walmart_confirmed") is None:
+        fields["walmart_confirmed"] = True
+    if "whole foods" in raw_retail and fields.get("whole_foods_confirmed") is None:
+        fields["whole_foods_confirmed"] = True
+    if "sprouts" in raw_retail and fields.get("sprouts_confirmed") is None:
+        fields["sprouts_confirmed"] = True
+    if "costco" in raw_retail and fields.get("costco_confirmed") is None:
+        fields["costco_confirmed"] = True
 
     print(f"[extract_fields] Extracted: {json.dumps(fields, indent=2)}")
 
