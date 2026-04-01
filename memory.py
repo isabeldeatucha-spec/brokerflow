@@ -48,6 +48,13 @@ def store_brand_evaluation(
     founder_email: str = "",
 ) -> None:
     brand_name = brand_name.strip().title()
+    # Extract subject line from email draft if present
+    email_subject = ""
+    if email_draft:
+        for line in email_draft.split("\n"):
+            if line.lower().startswith("subject:"):
+                email_subject = line.split(":", 1)[-1].strip()
+                break
     try:
         client = _get_client()
         client.table("brand_evaluations").upsert({
@@ -61,6 +68,7 @@ def store_brand_evaluation(
             "score_breakdown":  score_breakdown,
             "reflection_notes": reflection_notes,
             "email_draft":      email_draft,
+            "email_subject":    email_subject,
             "founder_name":     founder_name,
             "founder_email":    founder_email,
             "evaluated_at":     datetime.now().isoformat(),

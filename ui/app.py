@@ -358,6 +358,8 @@ if "selected_criterion" not in st.session_state:
     st.session_state.selected_criterion = None
 if "extracted_fields" not in st.session_state:
     st.session_state.extracted_fields = {}
+if "incomplete_record" not in st.session_state:
+    st.session_state.incomplete_record = False
 
 
 def reset():
@@ -367,6 +369,7 @@ def reset():
     st.session_state.final_state = None
     st.session_state.selected_criterion = None
     st.session_state.extracted_fields = {}
+    st.session_state.incomplete_record = False
 
 
 def run_graph_to_completion(brand_name: str, website_url: str):
@@ -501,6 +504,7 @@ with st.sidebar:
                 ):
                     detail = item.get("score_breakdown", {})
                     st.session_state.phase          = "awaiting_approval" if score >= 45 else "too_early"
+                    st.session_state.incomplete_record = not bool(item.get("broker_brief"))
                     st.session_state.final_state     = {
                         "brand_name":       name,
                         "score":            {"total": score, **{
@@ -517,13 +521,15 @@ with st.sidebar:
                         "signals_found":    {
                             "score_detail": {
                                 **detail,
-                                "broker_brief": item.get("broker_brief", ""),
-                                "key_gaps":     item.get("key_gaps") or [],
+                                "broker_brief":   item.get("broker_brief", ""),
+                                "key_gaps":       item.get("key_gaps") or [],
+                                "email_subject":  item.get("email_subject", ""),
+                                "outreach_angle": item.get("outreach_angle", ""),
                             }
                         },
                     }
                     st.session_state.interrupt_data  = st.session_state.final_state
-                    st.session_state.extracted_fields = {}
+                    st.session_state.extracted_fields = item.get("extracted_fields") or {}
                     st.rerun()
         else:
             st.markdown("<p style='font-size:13px; color:#9CA3AF;'>No evaluations yet.</p>", unsafe_allow_html=True)
@@ -763,6 +769,17 @@ def render_results(state: dict, show_outreach: bool = True):
     margin       = pts("margin_viability")
     story        = pts("brand_story_clarity")
     promo        = pts("promotional_independence")
+
+    # ── Incomplete record banner ──────────────────────────────────────────────
+    if st.session_state.get("incomplete_record"):
+        st.markdown("""
+<div style="background:#FEF3C7; border-radius:8px; padding:12px 16px; margin-bottom:16px; border:1px solid #FDE68A;">
+<p style="font-size:13px; color:#92400E; margin:0;">
+⚠️ This evaluation was run before the latest scoring update.
+<strong>Re-run this brand</strong> to get the full scorecard and outreach draft.
+</p>
+</div>
+""", unsafe_allow_html=True)
 
     # ── Brand header ──────────────────────────────────────────────────────────
     col1, col2, col3 = st.columns([3, 1, 1])
