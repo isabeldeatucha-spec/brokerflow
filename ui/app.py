@@ -825,8 +825,7 @@ def render_results(state: dict, show_outreach: bool = True):
             <p style="font-size:13px; color:#4A4A4A; margin-bottom:16px; line-height:1.6;">
                 Brand Scout scores brands on five criteria drawn from 150+ interviews with independent
                 food brokers, CPG founders, distributors, and retail buyers.
-                Scores are <strong>deterministic</strong> — given the same data, the same brand always
-                gets the same score. Total is out of 100.
+                Total is out of 100.
             </p>
             <div style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
                 <span style="background:#FEF3C7; color:#92400E; padding:3px 10px; border-radius:99px; font-size:12px; font-weight:600;">🟡 Established = 70+</span>
@@ -1106,7 +1105,6 @@ if st.session_state.phase == "idle":
     <div style="background:#FFFFFF; border:1px solid #E5E5E5; border-radius:12px; padding:24px; margin-bottom:32px;">
         <p style="font-size:11px; font-weight:700; color:#9CA3AF; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:16px;">How Scoring Works</p>
         <p style="font-size:13px; color:#4A4A4A; margin-bottom:20px; line-height:1.6;">
-            Scores are <strong>deterministic</strong> — given the same data, the same brand always gets the same score.
             Built from 150+ interviews with independent food brokers, CPG founders, distributors, and retail buyers.
         </p>
 
