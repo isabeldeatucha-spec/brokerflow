@@ -47,6 +47,7 @@ def store_brand_evaluation(
     founder_name: str = "",
     founder_email: str = "",
 ) -> None:
+    brand_name = brand_name.strip().title()
     try:
         client = _get_client()
         client.table("brand_evaluations").upsert({

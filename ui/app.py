@@ -356,6 +356,8 @@ if "final_state" not in st.session_state:
     st.session_state.final_state = None
 if "selected_criterion" not in st.session_state:
     st.session_state.selected_criterion = None
+if "extracted_fields" not in st.session_state:
+    st.session_state.extracted_fields = {}
 
 
 def reset():
@@ -364,6 +366,7 @@ def reset():
     st.session_state.interrupt_data = None
     st.session_state.final_state = None
     st.session_state.selected_criterion = None
+    st.session_state.extracted_fields = {}
 
 
 def run_graph_to_completion(brand_name: str, website_url: str):
@@ -520,6 +523,7 @@ with st.sidebar:
                         },
                     }
                     st.session_state.interrupt_data  = st.session_state.final_state
+                    st.session_state.extracted_fields = {}
                     st.rerun()
         else:
             st.markdown("<p style='font-size:13px; color:#9CA3AF;'>No evaluations yet.</p>", unsafe_allow_html=True)
@@ -890,7 +894,7 @@ def render_results(state: dict, show_outreach: bool = True):
             "brand_story_clarity":      "Brand Story Clarity",
             "promotional_independence": "Promotional Independence",
         }
-        extracted = state.get("extracted_fields") or {}
+        extracted = state.get("extracted_fields") or st.session_state.get("extracted_fields") or {}
         rows = _criterion_breakdown_rows(selected, extracted) if extracted else []
 
         if rows:
@@ -969,21 +973,21 @@ def render_results(state: dict, show_outreach: bool = True):
                     break
 
             angle_html = f'<div style="font-size:12px; color:#6B7280; font-style:italic; margin-bottom:10px;">💡 {outreach_angle}</div>' if outreach_angle else ""
-            st.markdown(f"""
-            <div class="email-panel">
-                <div style="font-size:11px; font-weight:700; color:#9CA3AF; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:8px;">Outreach Draft</div>
-                {angle_html}
-                <div class="email-to">
-                    <span style="color:#9CA3AF; font-size:12px;">To</span>
-                    <span style="margin-left:16px; font-weight:500;">{founder_name}</span>
-                    <span style="color:#9CA3AF; font-size:12px; margin-left:8px;">— verify email before sending</span>
-                </div>
-                <div class="email-subject">
-                    <span style="color:#9CA3AF; font-size:12px;">Subject</span>
-                    <span style="margin-left:16px;">{email_subject}</span>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+            st.html(f"""
+<div style="background:#FFFFFF; border:1px solid #E5E5E5; border-radius:12px; padding:16px 20px; margin-bottom:8px;">
+<div style="font-size:11px; font-weight:700; color:#9CA3AF; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:8px;">Outreach Draft</div>
+{angle_html}
+<div style="padding:8px 0; border-bottom:1px solid #F3F4F6;">
+<span style="font-size:12px; color:#9CA3AF;">To</span>
+<span style="font-size:13px; font-weight:500; color:#111111; margin-left:16px;">{founder_name}</span>
+<span style="font-size:12px; color:#9CA3AF; margin-left:8px;">— verify email before sending</span>
+</div>
+<div style="padding:8px 0;">
+<span style="font-size:12px; color:#9CA3AF;">Subject</span>
+<span style="font-size:13px; color:#111111; margin-left:16px;">{email_subject}</span>
+</div>
+</div>
+""")
 
             edited_body = st.text_area(
                 "",
@@ -994,28 +998,23 @@ def render_results(state: dict, show_outreach: bool = True):
             )
 
             copy_js = edited_body.replace("`", "\\`").replace("\n", "\\n")
-            st.markdown(f"""
-            <script>
-            function copyDraft() {{
-                navigator.clipboard.writeText(`{copy_js}`).then(function() {{
-                    document.getElementById('copy-btn').innerText = '✓ Copied to clipboard';
-                    document.getElementById('copy-btn').style.background = '#1B7A4A';
-                    setTimeout(() => {{
-                        document.getElementById('copy-btn').innerText = '📋 Copy to clipboard';
-                        document.getElementById('copy-btn').style.background = '#1B4F72';
-                    }}, 2500);
-                }});
-            }}
-            </script>
-            <div style="margin-top:8px;">
-                <button id="copy-btn" onclick="copyDraft()" style="
-                    width:100%; background:#1B4F72; color:#FFFFFF; border:none;
-                    border-radius:8px; padding:11px 16px; font-size:14px;
-                    font-weight:600; cursor:pointer; font-family:Inter,sans-serif;
-                    margin-bottom:8px;
-                ">📋 Copy to clipboard</button>
-            </div>
-            """, unsafe_allow_html=True)
+            st.html(f"""
+<script>
+function copyDraft() {{
+navigator.clipboard.writeText(`{copy_js}`).then(function() {{
+document.getElementById('copy-btn').innerText = '✓ Copied to clipboard';
+document.getElementById('copy-btn').style.background = '#1B7A4A';
+setTimeout(() => {{
+document.getElementById('copy-btn').innerText = '📋 Copy to clipboard';
+document.getElementById('copy-btn').style.background = '#1B4F72';
+}}, 2500);
+}});
+}}
+</script>
+<div style="margin-top:8px;">
+<button id="copy-btn" onclick="copyDraft()" style="width:100%; background:#1B4F72; color:#FFFFFF; border:none; border-radius:8px; padding:11px 16px; font-size:14px; font-weight:600; cursor:pointer; font-family:Inter,sans-serif; margin-bottom:8px;">📋 Copy to clipboard</button>
+</div>
+""")
 
             reject = st.button("✗ Discard", key="reject_btn", use_container_width=True)
             return {"approve": False, "reject": reject, "edited_draft": edited_body}
@@ -1180,6 +1179,7 @@ elif st.session_state.phase == "running":
 
     interrupt_data, final = run_graph_to_completion(b_name, b_url)
     st.session_state.final_state = final
+    st.session_state.extracted_fields = (final or {}).get("extracted_fields", {})
 
     if interrupt_data:
         st.session_state.interrupt_data = interrupt_data
