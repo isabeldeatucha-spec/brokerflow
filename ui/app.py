@@ -360,6 +360,8 @@ if "extracted_fields" not in st.session_state:
     st.session_state.extracted_fields = {}
 if "incomplete_record" not in st.session_state:
     st.session_state.incomplete_record = False
+if "loaded_from_cache" not in st.session_state:
+    st.session_state.loaded_from_cache = False
 
 
 def reset():
@@ -370,6 +372,7 @@ def reset():
     st.session_state.selected_criterion = None
     st.session_state.extracted_fields = {}
     st.session_state.incomplete_record = False
+    st.session_state.loaded_from_cache = False
 
 
 def run_graph_to_completion(brand_name: str, website_url: str):
@@ -504,6 +507,7 @@ with st.sidebar:
                 ):
                     detail = item.get("score_breakdown", {})
                     st.session_state.phase          = "awaiting_approval" if score >= 45 else "too_early"
+                    st.session_state.loaded_from_cache = True
                     st.session_state.incomplete_record = not bool(item.get("broker_brief"))
                     st.session_state.final_state     = {
                         "brand_name":       name,
@@ -771,7 +775,7 @@ def render_results(state: dict, show_outreach: bool = True):
     promo        = pts("promotional_independence")
 
     # ── Incomplete record banner ──────────────────────────────────────────────
-    if st.session_state.get("incomplete_record"):
+    if st.session_state.get("incomplete_record") and st.session_state.get("loaded_from_cache"):
         st.markdown("""
 <div style="background:#FEF3C7; border-radius:8px; padding:12px 16px; margin-bottom:16px; border:1px solid #FDE68A;">
 <p style="font-size:13px; color:#92400E; margin:0;">
@@ -1195,6 +1199,9 @@ elif st.session_state.phase == "running":
     interrupt_data, final = run_graph_to_completion(b_name, b_url)
     st.session_state.final_state = final
     st.session_state.extracted_fields = (final or {}).get("extracted_fields", {})
+
+    st.session_state.incomplete_record = False
+    st.session_state.loaded_from_cache = False
 
     if interrupt_data:
         st.session_state.interrupt_data = interrupt_data
