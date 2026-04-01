@@ -74,19 +74,21 @@ IMPORTANT EXTRACTION RULES:
 - For instagram_followers: look for any number followed by "followers" near "instagram" or "IG"
 - For funding_amount_usd: look for "$XM raised", "raised $X million", "funding round". Convert to integer (e.g. "$2.37M" = 2370000). Do NOT use valuation as funding.
 - For press_trade_mentions: count mentions of NOSH, FoodNavigator, GroceryDive, New Hope Network
-- For estimated_door_count: this means TOTAL NUMBER OF INDIVIDUAL STORE LOCATIONS, not the number of retail chains or retailers.
-  Examples of correct extraction: "available in 500 stores" → 500, "51,000+ locations" → 51000, "distributed in 300 doors" → 300.
-  Examples of WRONG extraction: "sold at 6 retailers" → DO NOT use 6, this is chain count not door count.
-  If you only see a number of retail chains/banners (like "available at Whole Foods, Target, Sprouts") with no store count, return null.
-  Only return a number if it explicitly refers to individual store or location count.
-- For faire_listed: set true if the brand appears on faire.com or is described as listed/available on Faire wholesale platform
 - For whole_foods_confirmed, target_confirmed, walmart_confirmed, sprouts_confirmed, costco_confirmed:
-  Check ALL signal sections including RETAIL PARTNERS. Set to true if ANY of the following appear:
-  * The retailer name appears in a page URL or page title (e.g. "OIKOS products at Target" → target_confirmed=true)
-  * The retailer name appears as a place where the brand is sold in any signal text
-  * Search results show the brand's product page on that retailer's website
-  * Press articles mention the brand being sold at that retailer
-  For large corporate brands (Oikos, Chobani, Dannon, Danone brands), if you see any grocery retail presence at all, set walmart_confirmed=true and target_confirmed=true as these brands have universal major chain distribution.
+  Set true if ANY of these appear in the signals:
+  (a) The retailer name is explicitly listed as a place to buy
+  (b) Press or Wikipedia describes the brand as having "national distribution", "available nationwide",
+      "in major grocery chains", or lists the retailer as a partner
+  (c) The brand is described as owned by a major CPG conglomerate (Danone, General Mills, Unilever,
+      Nestle, Kraft Heinz, PepsiCo, Coca-Cola) — these brands have national distribution by default
+  (d) The brand has 10,000+ Amazon reviews — this level of velocity implies national retail presence
+- For estimated_door_count: this means TOTAL NUMBER OF INDIVIDUAL STORE LOCATIONS, not the number of retail chains.
+  Examples of correct extraction: "available in 500 stores" → 500, "51,000+ locations" → 51000, "distributed in 300 doors" → 300.
+  If signals indicate national distribution or conglomerate ownership, set to 50000.
+  Examples of WRONG extraction: "sold at 6 retailers" → DO NOT use 6, this is chain count not door count.
+  Only return a number if it explicitly refers to individual store/location count OR signals indicate national scale.
+- For inhouse_sales_team: set true if signals mention the brand is owned by a conglomerate or has a dedicated sales organization.
+- For faire_listed: set true if the brand appears on faire.com or is described as listed/available on Faire wholesale platform
 
 Fields to extract:
 {{

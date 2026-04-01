@@ -271,7 +271,7 @@ def scrape_amazon_listing(brand_name: str) -> dict[str, Any]:
             raise ValueError("No Firecrawl API key")
 
         app = V1FirecrawlApp(api_key=api_key)
-        amazon_url = f"https://www.amazon.com/s?k={brand_name.replace(' ', '+')}&i=grocery"
+        amazon_url = f"https://www.amazon.com/s?k={brand_name.replace(' ', '+')}+brand&i=grocery&s=review-rank"
 
         result = app.scrape_url(
             url=amazon_url,
