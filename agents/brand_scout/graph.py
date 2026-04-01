@@ -33,6 +33,7 @@ from langgraph.types import interrupt, Command
 from state import BrandScoutState, ScoreBreakdown
 from memory import memory, get_config, store_brand_evaluation, retrieve_similar_brands, retrieve_brand_history
 from agents.brand_scout.prompts import SCORE_THRESHOLDS, SCORING_PROMPT, DRAFT_PROMPT, REFLECTION_PROMPT
+from agents.brand_scout.skills.scoring_formula import calculate_score
 from agents.brand_scout.tools import (
     scrape_whole_foods_new_arrivals,
     scrape_target_new_arrivals,
@@ -40,6 +41,8 @@ from agents.brand_scout.tools import (
     scrape_sprouts_new_arrivals,
     scrape_brand_website,
     scrape_amazon_listing,
+    scrape_retail_partners,
+    scrape_brand_certifications,
     scrape_faire_listing,
     search,
     search_velocity_signals,
@@ -49,6 +52,96 @@ from agents.brand_scout.tools import (
     send_email,
 )
 from agents.brand_scout.skills.category_benchmarks import detect_category, get_benchmark
+
+
+# ── Extraction + brief prompts ────────────────────────────────────────────────
+
+EXTRACTION_PROMPT = """
+You are a data extraction assistant. Extract structured fields from the research signals below.
+Return ONLY valid JSON. Use null for fields not found.
+Do NOT guess — only extract what is explicitly stated.
+
+IMPORTANT EXTRACTION RULES:
+- For whole_foods_confirmed: check RETAIL PARTNERS section first — if whole_foods=true there, set true. Also set true if "Whole Foods" appears anywhere in signals as a place the brand is sold.
+- For target_confirmed: check RETAIL PARTNERS section first — if target=true there, set true. Also check all other signal text.
+- For walmart_confirmed: check RETAIL PARTNERS section first — if walmart=true there, set true. Also check all other signal text.
+- For sprouts_confirmed: check RETAIL PARTNERS section first — if sprouts=true there, set true.
+- For costco_confirmed: check RETAIL PARTNERS section first — if costco=true there, set true.
+- For certifications: check CERTIFICATIONS section first — use the list provided there. Supplement with any certs found elsewhere.
+- For srp_hero: check CERTIFICATIONS section first for srp value. Then check website/amazon signals. "$18" = 18.0
+- For amazon_review_count: look for any number followed by "reviews", "ratings", "global ratings", "customer reviews"
+- For amazon_rating: look for any number like "4.7 out of 5" or "4.7 stars"
+- For instagram_followers: look for any number followed by "followers" near "instagram" or "IG"
+- For funding_amount_usd: look for "$XM raised", "raised $X million", "funding round". Convert to integer (e.g. "$2.37M" = 2370000). Do NOT use valuation as funding.
+- For press_trade_mentions: count mentions of NOSH, FoodNavigator, GroceryDive, New Hope Network
+- For estimated_door_count: this means TOTAL NUMBER OF INDIVIDUAL STORE LOCATIONS, not the number of retail chains or retailers.
+  Examples of correct extraction: "available in 500 stores" → 500, "51,000+ locations" → 51000, "distributed in 300 doors" → 300.
+  Examples of WRONG extraction: "sold at 6 retailers" → DO NOT use 6, this is chain count not door count.
+  If you only see a number of retail chains/banners (like "available at Whole Foods, Target, Sprouts") with no store count, return null.
+  Only return a number if it explicitly refers to individual store or location count.
+- For faire_listed: set true if the brand appears on faire.com or is described as listed/available on Faire wholesale platform
+
+Fields to extract:
+{{
+  "amazon_review_count": integer or null,
+  "amazon_rating": float or null,
+  "amazon_subscribe_save": boolean or null,
+  "amazon_bsr_rank": integer or null,
+  "amazon_sku_count": integer or null,
+  "instacart_banner_count": integer or null,
+  "instacart_banners": list of strings or null,
+  "whole_foods_confirmed": boolean or null,
+  "target_confirmed": boolean or null,
+  "walmart_confirmed": boolean or null,
+  "sprouts_confirmed": boolean or null,
+  "costco_confirmed": boolean or null,
+  "faire_present": boolean or null,
+  "faire_listed": boolean or null,
+  "faire_door_count": integer or null,
+  "estimated_door_count": integer or null,
+  "srp_min": float or null,
+  "srp_max": float or null,
+  "srp_hero": float or null,
+  "category": string or null,
+  "funding_amount_usd": integer or null,
+  "funding_stage": string or null,
+  "instagram_followers": integer or null,
+  "tiktok_followers": integer or null,
+  "press_trade_mentions": integer or null,
+  "press_consumer_mentions": integer or null,
+  "expo_west_confirmed": boolean or null,
+  "dtc_channel": boolean or null,
+  "subscription_available": boolean or null,
+  "promo_frequency_tpr_per_year": integer or null,
+  "bogo_detected": boolean or null,
+  "founder_story_clear": boolean or null,
+  "certifications": list of strings or null,
+  "hero_product_clear": boolean or null,
+  "national_chain_count": integer or null,
+  "publicly_traded": boolean or null,
+  "inhouse_sales_team": boolean or null,
+  "spins_mentioned": boolean or null,
+  "sell_through_press": boolean or null
+}}
+
+Research signals:
+{signals}
+"""
+
+BRIEF_PROMPT = """
+Given these brand scores and research signals, write:
+1. A 3-4 sentence broker_brief a broker could read in 20 seconds
+2. A list of 2-3 key_gaps — specific things the broker needs to verify before signing
+
+Brand: {brand_name}
+Category: {category}
+Scores: {scores}
+Total: {total}/100
+Key signals: {signals_summary}
+Beyond broker flag: {beyond_broker_flag}
+
+Return JSON: {{"broker_brief": "...", "key_gaps": ["...", "..."]}}
+"""
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -93,6 +186,7 @@ def discover_brands(state: BrandScoutState) -> dict:
             "reflection_notes": [],
             "category": "",
             "benchmark": {},
+            "extracted_fields": {},
         }
 
     # No brand name — discover from retailer new-arrivals
@@ -124,6 +218,7 @@ def discover_brands(state: BrandScoutState) -> dict:
             "reflection_notes": [],
             "category": "",
             "benchmark": {},
+            "extracted_fields": {},
         }
 
     brand = valid[0]
@@ -137,6 +232,7 @@ def discover_brands(state: BrandScoutState) -> dict:
         "reflection_notes": [],
         "category": "",
         "benchmark": {},
+        "extracted_fields": {},
     }
 
 
@@ -147,12 +243,14 @@ def research_brand(state: BrandScoutState) -> dict:
     existing_signals = state.get("signals_found", {})
 
     tasks = {
-        "website":  lambda: scrape_brand_website(website_url),
-        "amazon":   lambda: scrape_amazon_listing(brand_name),
-        "faire":    lambda: scrape_faire_listing(brand_name),
-        "velocity": lambda: search_velocity_signals(brand_name),
-        "press":    lambda: search_press_and_story(brand_name),
-        "funding":  lambda: search_funding_and_team(brand_name),
+        "website":          lambda: scrape_brand_website(website_url),
+        "amazon":           lambda: scrape_amazon_listing(brand_name),
+        "retail_partners":  lambda: scrape_retail_partners(website_url),
+        "certifications_scrape": lambda: scrape_brand_certifications(website_url),
+        "faire":            lambda: scrape_faire_listing(brand_name),
+        "velocity":         lambda: search_velocity_signals(brand_name),
+        "press":            lambda: search_press_and_story(brand_name),
+        "funding":          lambda: search_funding_and_team(brand_name),
     }
     # Add brand history check on first pass
     if state.get("reflection_count", 0) == 0:
@@ -174,7 +272,8 @@ def research_brand(state: BrandScoutState) -> dict:
                 results[key] = {"error": str(e)}
 
     new_signals = {**existing_signals}
-    for key in ("website", "amazon", "faire", "velocity", "press", "funding"):
+    for key in ("website", "amazon", "retail_partners", "certifications_scrape",
+                "faire", "velocity", "press", "funding"):
         if key in results:
             new_signals[key] = results[key]
 
@@ -265,64 +364,81 @@ def detect_category_node(state: BrandScoutState) -> dict:
     return {"category": category, "benchmark": benchmark}
 
 
-def score_brand(state: BrandScoutState) -> dict:
-    """Score broker-readiness using Claude with category context and memory comparables."""
+def _build_signals_string(state: BrandScoutState) -> str:
+    """Flatten all signal dicts into a single rich string for the extraction prompt."""
+    signals = state.get("signals_found", {})
+    parts = []
+
+    website = signals.get("website", {})
+    parts.append(f"WEBSITE: {website.get('homepage', '')} {website.get('retail_page', '')}")
+
+    amazon = signals.get("amazon", {})
+    # Firecrawl keys (structured) + Parallel fallback keys (text)
+    fc_parts = []
+    if amazon.get("review_count") is not None:
+        fc_parts.append(f"{amazon['review_count']} customer reviews")
+    if amazon.get("rating") is not None:
+        fc_parts.append(f"{amazon['rating']} out of 5 stars")
+    if amazon.get("price_min") is not None:
+        fc_parts.append(f"price from ${amazon['price_min']}")
+    if amazon.get("price_max") is not None:
+        fc_parts.append(f"to ${amazon['price_max']}")
+    if amazon.get("sku_count") is not None:
+        fc_parts.append(f"{amazon['sku_count']} distinct SKUs")
+    if amazon.get("subscribe_save") is not None:
+        fc_parts.append(f"Subscribe & Save: {amazon['subscribe_save']}")
+    if amazon.get("bsr_rank") is not None:
+        fc_parts.append(f"Best Seller Rank: #{amazon['bsr_rank']}")
+    amazon_text = " | ".join(fc_parts) + " " + " ".join(str(v) for v in [
+        amazon.get("review_data", ""),
+        amazon.get("product_data", ""),
+        amazon.get("presence_data", ""),
+        amazon.get("fallback_search", ""),
+    ] if v not in ("", None))
+    parts.append(f"AMAZON: {amazon_text}")
+
+    velocity = signals.get("velocity", {})
+    parts.append(f"INSTACART/VELOCITY: {velocity.get('instacart', '')} {velocity.get('instacart_search', '')} {velocity.get('spins_search', '')} {velocity.get('faire_search', '')}")
+
+    press = signals.get("press", {})
+    parts.append(f"PRESS/SOCIAL: {press.get('trade_press', '')} {press.get('consumer_press', '')} {press.get('social_signals', '')} {press.get('expo', '')}")
+
+    funding = signals.get("funding", {})
+    parts.append(f"FUNDING/TEAM: {funding.get('funding', '')} {funding.get('founder', '')}")
+
+    # Retail partners (dedicated Firecrawl scrape — most reliable)
+    retail = signals.get("retail_partners", {})
+    parts.append(f"RETAIL PARTNERS (dedicated scrape): {json.dumps(retail.get('data', retail.get('retailer_search', '')))}")
+
+    # Certifications + SRP (dedicated Firecrawl scrape)
+    certs = signals.get("certifications_scrape", {})
+    parts.append(f"CERTIFICATIONS (dedicated scrape): {json.dumps(certs.get('data', ''))}")
+
+    follow_up = signals.get("follow_up_research", {})
+    if follow_up:
+        follow_text = " ".join(
+            f"{q}: " + " ".join(r.get("snippet", "") for r in results)
+            for q, results in follow_up.items()
+        )
+        parts.append(f"FOLLOW-UP RESEARCH: {follow_text}")
+
+    return "\n\n".join(p for p in parts if p.strip())
+
+
+def extract_fields(state: BrandScoutState) -> dict:
+    """
+    Stage 1 of deterministic scoring: use Claude Haiku to extract structured fields
+    from raw research signals. Runs after detect_category_node so the detected
+    category can be injected into the fields before scoring.
+    """
     client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 
-    category = state.get("category", "unknown")
-    benchmark = state.get("benchmark", {})
-
-    # Pull comparable brands from Mem0 for context
-    score_estimate = 50  # rough midpoint before we know the real score
-    comparable_brands = retrieve_similar_brands(category, (score_estimate - 15, score_estimate + 15))
-
-    signals = state["signals_found"]
-    signals_context = f"""
-WEBSITE DATA:
-{signals.get('website', {}).get('homepage', 'Not available')[:1500]}
-
-RETAIL PAGE:
-{signals.get('website', {}).get('retail_page', 'Not available')[:500]}
-
-AMAZON DATA:
-Reviews/ratings: {signals.get('amazon', {}).get('review_data', 'Not available')[:600]}
-Product/pricing: {signals.get('amazon', {}).get('product_data', 'Not available')[:600]}
-Presence: {signals.get('amazon', {}).get('presence_data', 'Not available')[:400]}
-
-INSTACART & VELOCITY:
-{signals.get('velocity', {}).get('instacart', 'Not available')[:600]}
-SPINS/NIQ: {signals.get('velocity', {}).get('spins_search', 'Not available')[:300]}
-Faire: {signals.get('velocity', {}).get('faire_search', 'Not available')[:300]}
-
-PRESS & SOCIAL:
-Trade: {signals.get('press', {}).get('trade_press', 'Not available')[:500]}
-Consumer: {signals.get('press', {}).get('consumer_press', 'Not available')[:500]}
-Social: {signals.get('press', {}).get('social_signals', 'Not available')[:300]}
-
-FUNDING & TEAM:
-{signals.get('funding', {}).get('funding', 'Not available')[:400]}
-{signals.get('funding', {}).get('founder', 'Not available')[:400]}
-
-CATEGORY BENCHMARKS:
-{json.dumps(benchmark, indent=2)[:800]}
-
-COMPARABLE BRANDS FROM MEMORY:
-{comparable_brands or 'No comparable brands evaluated yet.'}
-"""
-
-    prompt = SCORING_PROMPT.format(
-        brand_name=state["brand_name"],
-        website_url=state["website_url"],
-        category=category,
-        category_benchmark_json=json.dumps(benchmark, indent=2),
-        comparable_brands=comparable_brands or "No comparable brands evaluated yet.",
-        signals_json=signals_context,
-    )
+    signals_str = _build_signals_string(state)
+    prompt = EXTRACTION_PROMPT.format(signals=signals_str[:10000])
 
     message = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-haiku-4-5-20251001",
         max_tokens=2048,
-        temperature=0,
         messages=[{"role": "user", "content": prompt}],
     )
 
@@ -331,35 +447,96 @@ COMPARABLE BRANDS FROM MEMORY:
         raw = raw.split("```")[1]
         if raw.startswith("json"):
             raw = raw[4:]
-    data = json.loads(raw)
+    try:
+        fields = json.loads(raw)
+    except json.JSONDecodeError:
+        fields = {}
 
-    def _extract_score(key: str) -> int:
-        val = data[key]
-        return val["score"] if isinstance(val, dict) else int(val)
+    # Override extracted category with the deterministic detect_category result
+    if state.get("category"):
+        fields["category"] = state["category"]
 
-    score: ScoreBreakdown = {
-        "velocity_proof": _extract_score("velocity_proof"),
-        "distribution_density": _extract_score("distribution_density"),
-        "margin_viability": _extract_score("margin_viability"),
-        "brand_story_clarity": _extract_score("brand_story_clarity"),
-        "promotional_independence": _extract_score("promotional_independence"),
-        "total": data["total"],
-    }
+    print(f"[extract_fields] Extracted: {json.dumps(fields, indent=2)}")
 
-    total = score["total"]
-    if total >= SCORE_THRESHOLDS["broker_ready"]:
+    return {"extracted_fields": fields}
+
+
+def score_brand(state: BrandScoutState) -> dict:
+    """
+    Stage 2 of deterministic scoring:
+      1. Run the rule-based calculate_score formula on extracted_fields.
+      2. Make a single Claude Sonnet call to generate broker_brief + key_gaps.
+    """
+    client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+
+    # ── Deterministic score ────────────────────────────────────────────────────
+    result = calculate_score(state.get("extracted_fields") or {})
+    scores       = result["scores"]
+    total        = result["total"]
+    verdict_key  = result["verdict"]
+    beyond_broker = result["beyond_broker_flag"]
+
+    # Map formula verdict → graph routing key
+    if verdict_key == "broker_ready":
         graph_verdict = "above_threshold"
-    elif total >= SCORE_THRESHOLDS["promising"]:
+    elif verdict_key == "promising":
         graph_verdict = "promising"
     else:
         graph_verdict = "below_threshold"
 
+    # ── Single Sonnet call for broker brief + key gaps ─────────────────────────
+    category = state.get("category", "unknown")
+    signals_summary = json.dumps(_compact_signals(state["signals_found"]), indent=2)[:2000]
+
+    prompt = BRIEF_PROMPT.format(
+        brand_name=state["brand_name"],
+        category=category,
+        scores=json.dumps(scores),
+        total=total,
+        signals_summary=signals_summary,
+        beyond_broker_flag=beyond_broker,
+    )
+
+    message = client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=1024,
+        messages=[{"role": "user", "content": prompt}],
+    )
+
+    raw = message.content[0].text.strip()
+    if raw.startswith("```"):
+        raw = raw.split("```")[1]
+        if raw.startswith("json"):
+            raw = raw[4:]
+    brief_data = json.loads(raw)
+
+    score: ScoreBreakdown = {
+        "velocity_proof":          scores["velocity_proof"],
+        "distribution_density":    scores["distribution_density"],
+        "margin_viability":        scores["margin_viability"],
+        "brand_story_clarity":     scores["brand_story_clarity"],
+        "promotional_independence": scores["promotional_independence"],
+        "total": total,
+    }
+
     return {
         "score": score,
         "verdict": graph_verdict,
+        "extracted_fields": state.get("extracted_fields") or {},
         "signals_found": {
             **state.get("signals_found", {}),
-            "score_detail": data,
+            "score_detail": {
+                "velocity_proof":          {"score": scores["velocity_proof"]},
+                "distribution_density":    {"score": scores["distribution_density"]},
+                "margin_viability":        {"score": scores["margin_viability"]},
+                "brand_story_clarity":     {"score": scores["brand_story_clarity"]},
+                "promotional_independence": {"score": scores["promotional_independence"]},
+                "total":              total,
+                "verdict":            verdict_key,
+                "broker_brief":       brief_data.get("broker_brief", ""),
+                "key_gaps":           brief_data.get("key_gaps", []),
+                "beyond_broker_flag": beyond_broker,
+            },
         },
     }
 
@@ -523,6 +700,7 @@ def build_graph():
     builder.add_node("research_brand", research_brand)
     builder.add_node("reflect_and_decide", reflect_and_decide)
     builder.add_node("detect_category_node", detect_category_node)
+    builder.add_node("extract_fields", extract_fields)
     builder.add_node("score_brand", score_brand)
     builder.add_node("store_memory", store_memory_node)
     builder.add_node("draft_outreach", draft_outreach)
@@ -539,7 +717,8 @@ def build_graph():
         {"research_brand": "research_brand", "detect_category_node": "detect_category_node"},
     )
 
-    builder.add_edge("detect_category_node", "score_brand")
+    builder.add_edge("detect_category_node", "extract_fields")
+    builder.add_edge("extract_fields", "score_brand")
 
     builder.add_conditional_edges(
         "score_brand",

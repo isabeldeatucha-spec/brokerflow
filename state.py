@@ -49,6 +49,9 @@ class BrandScoutState(TypedDict):
     founder_email: str
     email_draft: str
 
+    # Extracted fields (structured data pulled from raw signals by Haiku)
+    extracted_fields: dict
+
     # Human gate
     approved: Optional[bool]
     rejection_reason: Optional[str]

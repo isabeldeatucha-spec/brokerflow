@@ -30,6 +30,7 @@ def run(brand_name: str = "", website_url: str = ""):
         "reflection_notes": [],
         "category": "",
         "benchmark": {},
+        "extracted_fields": {},
         "score": {},
         "verdict": "",
         "founder_name": "",

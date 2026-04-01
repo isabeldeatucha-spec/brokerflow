@@ -9,7 +9,7 @@ Real implementations:
   scrape_sprouts_new_arrivals      — Parallel Extract + Search fallback
   scrape_walmart_new_arrivals      — Parallel Search
   scrape_brand_website             — Parallel Extract
-  scrape_amazon_listing            — Parallel Extract
+  scrape_amazon_listing            — Firecrawl Extract (Parallel search fallback)
   scrape_faire_listing             — Parallel Extract + Search fallback
   search / search_velocity_signals
   search_press_and_story
@@ -263,25 +263,178 @@ def scrape_brand_website(url: str) -> dict[str, Any]:
 
 
 def scrape_amazon_listing(brand_name: str) -> dict[str, Any]:
-    """Get Amazon signals via targeted search queries — Amazon blocks direct extraction."""
-    queries = {
-        "reviews":   f"{brand_name} amazon.com reviews rating stars \"global ratings\"",
-        "product":   f"{brand_name} amazon.com price subscribe save best seller rank",
-        "presence":  f"site:amazon.com {brand_name} grocery snack",
-    }
-    results: dict[str, str] = {}
-    with ThreadPoolExecutor(max_workers=3) as pool:
-        futures = {pool.submit(parallel_search_text, q, 4): k for k, q in queries.items()}
-        for f in as_completed(futures):
-            results[futures[f]] = f.result()
+    """Get Amazon signals via Firecrawl V1 extract, with Parallel search fallback."""
+    try:
+        from firecrawl import V1FirecrawlApp, V1JsonConfig
+        api_key = os.getenv("FIRECRAWL_API_KEY")
+        if not api_key:
+            raise ValueError("No Firecrawl API key")
 
-    return {
-        "review_data":   results.get("reviews", "")[:600],
-        "product_data":  results.get("product", "")[:600],
-        "presence_data": results.get("presence", "")[:400],
-        "source":        "parallel_search_amazon",
-        "brand":         brand_name,
-    }
+        app = V1FirecrawlApp(api_key=api_key)
+        amazon_url = f"https://www.amazon.com/s?k={brand_name.replace(' ', '+')}&i=grocery"
+
+        result = app.scrape_url(
+            url=amazon_url,
+            formats=["extract"],
+            extract=V1JsonConfig(
+                prompt=f"""For the brand {brand_name}, extract these exact values:
+                - Total number of customer reviews (integer)
+                - Average star rating (float out of 5)
+                - Price range: lowest and highest price shown
+                - Number of distinct SKUs or products listed
+                - Whether Subscribe & Save is available (true/false)
+                - Amazon Best Seller Rank number if shown
+                - Whether Amazon Choice badge is present (true/false)
+                - Number of units bought in past month if shown
+                Return only these values, nothing else.""",
+                schema={
+                    "type": "object",
+                    "properties": {
+                        "review_count":         {"type": "number"},
+                        "rating":               {"type": "number"},
+                        "price_min":            {"type": "number"},
+                        "price_max":            {"type": "number"},
+                        "sku_count":            {"type": "number"},
+                        "subscribe_save":       {"type": "boolean"},
+                        "bsr_rank":             {"type": "number"},
+                        "amazon_choice":        {"type": "boolean"},
+                        "units_bought_monthly": {"type": "number"},
+                    }
+                }
+            ),
+            proxy="stealth",
+        )
+
+        extracted = result.extract or {}
+        return {
+            "review_count":   extracted.get("review_count"),
+            "rating":         extracted.get("rating"),
+            "price_min":      extracted.get("price_min"),
+            "price_max":      extracted.get("price_max"),
+            "sku_count":      extracted.get("sku_count"),
+            "subscribe_save": extracted.get("subscribe_save"),
+            "bsr_rank":       extracted.get("bsr_rank"),
+            "source":         "firecrawl_amazon",
+            "brand":          brand_name,
+        }
+    except Exception as e:
+        print(f"[Firecrawl] Amazon scrape failed: {e}, using fallback")
+        fallback = parallel_search_text(
+            f"{brand_name} amazon reviews rating price subscribe save", 3
+        )
+        return {
+            "fallback_search": fallback[:800],
+            "error":  str(e),
+            "source": "parallel_fallback",
+            "brand":  brand_name,
+        }
+
+
+def scrape_retail_partners(brand_url: str) -> dict[str, Any]:
+    """Dedicated scrape for retailer confirmations — most reliable signal source."""
+    if not brand_url:
+        return {"error": "no_url"}
+
+    from firecrawl import V1FirecrawlApp, V1JsonConfig
+    api_key = os.getenv("FIRECRAWL_API_KEY")
+    if not api_key:
+        return {"error": "no_firecrawl_key"}
+
+    base_url = brand_url.rstrip("/")
+    app = V1FirecrawlApp(api_key=api_key)
+
+    retail_pages = [
+        f"{base_url}/pages/where-to-buy",
+        f"{base_url}/where-to-buy",
+        f"{base_url}/stockists",
+        f"{base_url}/find-us",
+        f"{base_url}/pages/find-us",
+        f"{base_url}/store-locator",
+    ]
+
+    for page_url in retail_pages:
+        try:
+            result = app.scrape_url(
+                url=page_url,
+                formats=["extract"],
+                extract=V1JsonConfig(
+                    prompt="""Extract all retailer names where this brand is sold.
+                    Return a JSON object with:
+                    - retailers: list of retailer names mentioned
+                    - whole_foods: true/false
+                    - target: true/false
+                    - walmart: true/false
+                    - sprouts: true/false
+                    - costco: true/false
+                    - kroger: true/false
+                    - total_store_count: integer if mentioned, null otherwise""",
+                    schema={
+                        "type": "object",
+                        "properties": {
+                            "retailers":         {"type": "array", "items": {"type": "string"}},
+                            "whole_foods":       {"type": "boolean"},
+                            "target":            {"type": "boolean"},
+                            "walmart":           {"type": "boolean"},
+                            "sprouts":           {"type": "boolean"},
+                            "costco":            {"type": "boolean"},
+                            "kroger":            {"type": "boolean"},
+                            "total_store_count": {"type": "number"},
+                        }
+                    }
+                ),
+            )
+            extracted = result.extract or {}
+            if extracted and any(extracted.get(k) for k in ["whole_foods", "target", "walmart", "sprouts", "costco"]):
+                return {"source": "firecrawl_retail_page", "data": extracted, "url": page_url}
+        except Exception:
+            continue
+
+    # Fallback — search for retailer presence
+    brand_slug = base_url.replace("https://", "").replace("http://", "").replace("www.", "").split(".")[0]
+    retailer_search = parallel_search_text(
+        f"{brand_slug} sold at retailers whole foods target walmart sprouts", 5
+    )
+    return {"source": "parallel_fallback", "retailer_search": retailer_search[:800]}
+
+
+def scrape_brand_certifications(brand_url: str) -> dict[str, Any]:
+    """Dedicated scrape for certifications and SRP — stable signal from brand website."""
+    if not brand_url:
+        return {"error": "no_url"}
+
+    from firecrawl import V1FirecrawlApp, V1JsonConfig
+    api_key = os.getenv("FIRECRAWL_API_KEY")
+    if not api_key:
+        return {"error": "no_firecrawl_key"}
+
+    base_url = brand_url.rstrip("/")
+    app = V1FirecrawlApp(api_key=api_key)
+
+    try:
+        result = app.scrape_url(
+            url=base_url,
+            formats=["extract"],
+            extract=V1JsonConfig(
+                prompt="""Extract all certifications and claims this brand has.
+                Look for: USDA Organic, Non-GMO Project, Keto Certified, Paleo Certified,
+                Gluten Free, B Corp, Kosher, Halal, Whole30, NSF, grass-fed, pasture-raised.
+                Also extract the main product price (SRP) if shown.
+                Return JSON with:
+                - certifications: list of certification names found
+                - srp: main product price as a number (e.g. 18.0), null if not found""",
+                schema={
+                    "type": "object",
+                    "properties": {
+                        "certifications": {"type": "array", "items": {"type": "string"}},
+                        "srp":            {"type": "number"},
+                    }
+                }
+            ),
+        )
+        extracted = result.extract or {}
+        return {"source": "firecrawl_certifications", "data": extracted}
+    except Exception as e:
+        return {"error": str(e), "source": "firecrawl_failed"}
 
 
 def scrape_faire_listing(brand_name: str) -> dict[str, Any]:
@@ -325,13 +478,16 @@ def search(query: str, max_results: int = 5) -> list[dict[str, Any]]:
 
 
 def search_velocity_signals(brand_name: str) -> dict[str, Any]:
-    """Check Instacart via Extract, SPINS and Faire via search — in parallel."""
+    """Check Instacart via brand-specific search, SPINS and Faire via search — in parallel."""
     def _instacart():
-        return parallel_extract(
+        extracted = parallel_extract(
             f"https://www.instacart.com/store/s?k={brand_name.replace(' ', '+')}",
-            f"For {brand_name}: which store banners carry this product, "
-            "how many stores, is it available for delivery",
+            f"Which store banners carry {brand_name}? List the retailer names.",
         )
+        search_backup = parallel_search_text(
+            f"{brand_name} instacart available stores banners", 3
+        )
+        return extracted, search_backup
 
     def _spins():
         return parallel_search_text(
@@ -340,22 +496,23 @@ def search_velocity_signals(brand_name: str) -> dict[str, Any]:
 
     def _faire():
         return parallel_search_text(
-            f"{brand_name} faire.com wholesale reorder rate retailers", 3
+            f"{brand_name} faire.com wholesale", 3
         )
 
     with ThreadPoolExecutor(max_workers=3) as pool:
         fi = pool.submit(_instacart)
         fs = pool.submit(_spins)
         ff = pool.submit(_faire)
-        instacart_raw = fi.result()
-        spins_raw     = fs.result()
-        faire_raw     = ff.result()
+        instacart_extracted, instacart_search = fi.result()
+        spins_raw  = fs.result()
+        faire_raw  = ff.result()
 
     return {
-        "instacart":    instacart_raw[:1000],
-        "spins_search": spins_raw[:500],
-        "faire_search": faire_raw[:500],
-        "source":       "mixed_extract_search",
+        "instacart":        instacart_extracted[:800],
+        "instacart_search": instacart_search[:500],
+        "spins_search":     spins_raw[:500],
+        "faire_search":     faire_raw[:500],
+        "source":           "mixed_extract_search",
     }
 
 

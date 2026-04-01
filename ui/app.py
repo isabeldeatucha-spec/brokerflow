@@ -384,6 +384,7 @@ def run_graph_to_completion(brand_name: str, website_url: str):
         "reflection_notes": [],
         "category": "",
         "benchmark": {},
+        "extracted_fields": {},
         "score": {},
         "verdict": "",
         "founder_name": "",
@@ -398,6 +399,7 @@ def run_graph_to_completion(brand_name: str, website_url: str):
         "research_brand":       "📊 Researching signals…",
         "reflect_and_decide":   "🤔 Checking for gaps…",
         "detect_category_node": "🏷️ Detecting category…",
+        "extract_fields":       "🔬 Extracting structured fields…",
         "score_brand":          "🎯 Scoring brand…",
         "store_memory":         "💾 Saving to memory…",
         "draft_outreach":       "✍️ Drafting email…",
@@ -535,6 +537,201 @@ with st.sidebar:
 
 # ── Shared result renderer (defined before phase chain) ───────────────────────
 
+def _criterion_breakdown_rows(criterion: str, fields: dict) -> list:
+    """
+    Returns list of (label, value_display, points_awarded) for each sub-factor
+    of the given criterion, mirroring the calculate_score formula exactly.
+    """
+    rows = []
+
+    if criterion == "velocity_proof":
+        reviews = fields.get("amazon_review_count")
+        if reviews is None: pts = 5
+        elif reviews >= 1000: pts = 10
+        elif reviews >= 500: pts = 8
+        elif reviews >= 200: pts = 6
+        elif reviews >= 50: pts = 3
+        else: pts = 1
+        val = f"{reviews:,}" if reviews is not None else "not found"
+        rows.append(("Amazon reviews", val, pts))
+
+        rating = fields.get("amazon_rating")
+        if rating is None: pts = 2
+        elif rating >= 4.5: pts = 5
+        elif rating >= 4.2: pts = 4
+        elif rating >= 4.0: pts = 3
+        elif rating >= 3.5: pts = 1
+        else: pts = 0
+        rows.append(("Amazon rating", str(rating) if rating is not None else "not found", pts))
+
+        ss = fields.get("amazon_subscribe_save")
+        if ss is None: pts = 2
+        elif ss: pts = 4
+        else: pts = 0
+        rows.append(("Subscribe & Save", "Yes" if ss else ("No" if ss is not None else "not found"), pts))
+
+        banners = fields.get("instacart_banner_count")
+        if banners is None: pts = 1
+        elif banners >= 3: pts = 3
+        elif banners >= 1: pts = 2
+        else: pts = 0
+        rows.append(("Instacart banners", str(banners) if banners is not None else "not found", pts))
+
+        spins = fields.get("spins_mentioned")
+        sell = fields.get("sell_through_press")
+        if spins: pts = 3
+        elif sell: pts = 2
+        else: pts = 1
+        press_val = "SPINS mentioned" if spins else ("Sell-through press" if sell else "None found")
+        rows.append(("SPINS / press", press_val, pts))
+
+    elif criterion == "distribution_density":
+        doors = fields.get("estimated_door_count")
+        if doors is None: pts = 4
+        elif 50 <= doors <= 300: pts = 8
+        elif 20 <= doors < 50: pts = 5
+        elif 300 < doors <= 800: pts = 6
+        elif doors > 800: pts = 2
+        else: pts = 1
+        rows.append(("Est. door count", f"{doors:,}" if doors is not None else "not found", pts))
+
+        retailer_pts = 0
+        retailer_parts = []
+        if fields.get("whole_foods_confirmed"): retailer_pts += 3; retailer_parts.append("Whole Foods")
+        if fields.get("sprouts_confirmed"): retailer_pts += 2; retailer_parts.append("Sprouts")
+        if fields.get("target_confirmed"): retailer_pts += 2; retailer_parts.append("Target")
+        if fields.get("costco_confirmed"): retailer_pts += 2; retailer_parts.append("Costco")
+        if fields.get("walmart_confirmed"): retailer_pts += 1; retailer_parts.append("Walmart")
+        retailer_pts = min(retailer_pts, 8)
+        nationals = sum(bool(fields.get(k)) for k in ["whole_foods_confirmed", "target_confirmed", "walmart_confirmed", "costco_confirmed"])
+        if nationals >= 4: retailer_pts = max(retailer_pts - 4, 2)
+        rows.append(("Retail chains", ", ".join(retailer_parts) if retailer_parts else "None confirmed", retailer_pts))
+
+        faire_listed = fields.get("faire_listed")
+        if faire_listed is None: pts = 2
+        elif faire_listed: pts = 4
+        else: pts = 0
+        rows.append(("Faire listed", "Yes" if faire_listed else ("No" if faire_listed is not None else "not found"), pts))
+
+    elif criterion == "margin_viability":
+        srp = fields.get("srp_hero") or fields.get("srp_min")
+        category = fields.get("category", "unknown")
+        _benchmarks = {
+            "beverage_rtd": (3.50, 6.00), "snack_bar": (2.50, 5.00),
+            "condiment_sauce": (7.00, 16.00), "frozen_food": (6.00, 14.00),
+            "supplement_functional": (20.00, 65.00), "olive_oil_cooking_oil": (12.00, 35.00),
+            "dairy_alternative": (5.00, 12.00), "meat_snack_protein": (2.00, 5.00),
+            "unknown": (6.00, 20.00),
+        }
+        low, _ = _benchmarks.get(category, (6.00, 20.00))
+        if srp is None: pts = 5
+        elif srp >= low * 1.2: pts = 10
+        elif srp >= low: pts = 7
+        elif srp >= low * 0.8: pts = 4
+        else: pts = 1
+        rows.append(("SRP", f"${srp:.2f}" if srp is not None else "not found", pts))
+
+        funding = fields.get("funding_amount_usd")
+        if funding is None: pts = 3
+        elif funding >= 5_000_000: pts = 6
+        elif funding >= 1_000_000: pts = 4
+        elif funding > 0: pts = 2
+        else: pts = 1
+        rows.append(("Funding raised", f"${funding:,}" if funding is not None else "not found", pts))
+
+        faire_listed = fields.get("faire_listed")
+        if faire_listed is None: pts = 2
+        elif faire_listed: pts = 3
+        else: pts = 1
+        rows.append(("Faire listed", "Yes" if faire_listed else ("No" if faire_listed is not None else "not found"), pts))
+
+    elif criterion == "brand_story_clarity":
+        hero = fields.get("hero_product_clear")
+        if hero is None: pts = 2
+        elif hero: pts = 4
+        else: pts = 0
+        rows.append(("Hero product clear", "Yes" if hero else ("No" if hero is not None else "not found"), pts))
+
+        founder = fields.get("founder_story_clear")
+        if founder is None: pts = 1
+        elif founder: pts = 3
+        else: pts = 0
+        rows.append(("Founder story clear", "Yes" if founder else ("No" if founder is not None else "not found"), pts))
+
+        ig = fields.get("instagram_followers") or 0
+        tt = fields.get("tiktok_followers") or 0
+        social_max = max(ig, tt)
+        if fields.get("instagram_followers") is None and fields.get("tiktok_followers") is None: pts = 2
+        elif social_max >= 100_000: pts = 5
+        elif social_max >= 50_000: pts = 4
+        elif social_max >= 10_000: pts = 3
+        elif social_max >= 1_000: pts = 2
+        else: pts = 1
+        rows.append(("Social following", f"{social_max:,}" if social_max > 0 else "not found", pts))
+
+        trade = fields.get("press_trade_mentions") or 0
+        if fields.get("press_trade_mentions") is None: pts = 2
+        elif trade >= 3: pts = 4
+        elif trade >= 1: pts = 3
+        else: pts = 1
+        rows.append(("Trade press mentions", str(trade) if fields.get("press_trade_mentions") is not None else "not found", pts))
+
+        certs = fields.get("certifications") or []
+        if fields.get("certifications") is None: pts = 1
+        elif len(certs) >= 2: pts = 2
+        elif len(certs) >= 1: pts = 1
+        else: pts = 0
+        cert_val = ", ".join(certs) if certs else ("None found" if fields.get("certifications") is not None else "not found")
+        rows.append(("Certifications", cert_val, pts))
+
+        expo = fields.get("expo_west_confirmed")
+        if expo is None: pts = 1
+        elif expo: pts = 2
+        else: pts = 0
+        rows.append(("ExpoWest", "Confirmed" if expo else ("No" if expo is not None else "not found"), pts))
+
+    elif criterion == "promotional_independence":
+        ig = fields.get("instagram_followers") or 0
+        tt = fields.get("tiktok_followers") or 0
+        social_max = max(ig, tt)
+
+        dtc = fields.get("dtc_channel")
+        sub = fields.get("subscription_available")
+        if dtc is None: pts = 2
+        elif dtc:
+            pts = 4 if sub else 3
+        else: pts = 0
+        dtc_val = ("Yes + subscription" if (dtc and sub) else "Yes" if dtc else ("No" if dtc is not None else "not found"))
+        rows.append(("DTC channel", dtc_val, pts))
+
+        if fields.get("instagram_followers") is None and fields.get("tiktok_followers") is None: pts = 2
+        elif social_max >= 100_000: pts = 4
+        elif social_max >= 50_000: pts = 3
+        elif social_max >= 10_000: pts = 2
+        elif social_max >= 1_000: pts = 1
+        else: pts = 0
+        rows.append(("Social following", f"{social_max:,}" if social_max > 0 else "not found", pts))
+
+        tprs = fields.get("promo_frequency_tpr_per_year")
+        bogo = fields.get("bogo_detected", False)
+        if tprs is None: pts = 2
+        elif tprs <= 2: pts = 4
+        elif tprs <= 4: pts = 3
+        elif tprs <= 6: pts = 1
+        else: pts = 0
+        if bogo: pts = max(pts - 2, 0)
+        tpr_val = (f"{tprs}/yr" if tprs is not None else "not found") + (" (BOGO detected −2pts)" if bogo else "")
+        rows.append(("TPR frequency", tpr_val, pts))
+
+        ss = fields.get("amazon_subscribe_save")
+        if ss is None: pts = 1
+        elif ss: pts = 3
+        else: pts = 0
+        rows.append(("Subscribe & Save", "Yes" if ss else ("No" if ss is not None else "not found"), pts))
+
+    return rows
+
+
 def render_results(state: dict, show_outreach: bool = True):
     """Render the full scorecard UI for a completed evaluation."""
     brand_name   = state.get("brand_name", "Unknown")
@@ -617,10 +814,75 @@ def render_results(state: dict, show_outreach: bool = True):
             </div>
             """, unsafe_allow_html=True)
 
+    # ── How scoring works expander ────────────────────────────────────────────
+    with st.expander("ℹ️ How scoring works"):
+        st.markdown("""
+        <div style="padding:8px 0;">
+            <p style="font-size:13px; color:#4A4A4A; margin-bottom:16px; line-height:1.6;">
+                Brand Scout scores brands on five criteria drawn from 150+ interviews with independent
+                food brokers, CPG founders, distributors, and retail buyers.
+                Scores are <strong>deterministic</strong> — given the same data, the same brand always
+                gets the same score. Total is out of 100.
+            </p>
+            <div style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
+                <span style="background:#D1FAE5; color:#065F46; padding:3px 10px; border-radius:99px; font-size:12px; font-weight:600;">🟢 Broker Ready = 70+</span>
+                <span style="background:#FEF3C7; color:#92400E; padding:3px 10px; border-radius:99px; font-size:12px; font-weight:600;">🟡 Promising = 45–69</span>
+                <span style="background:#FEE2E2; color:#991B1B; padding:3px 10px; border-radius:99px; font-size:12px; font-weight:600;">🔴 Too Early = below 45</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        rubric = [
+            (
+                "Velocity Proof", 25,
+                "The most important signal. Has this brand proven that real consumers buy it repeatedly without heavy promotional support? Brokers need evidence that product moves off shelf on its own.",
+                "Amazon reviews & rating, Subscribe & Save, Instacart banner presence, SPINS/NIQ mentions, trade press sell-through data"
+            ),
+            (
+                "Distribution Density", 20,
+                "Is the brand in the right number of doors — enough to prove viability, not so many that a broker adds no value? Sweet spot is 20–300 doors with regional traction, not yet in all major nationals.",
+                "Brand website store locator, Whole Foods / Target / Walmart / Sprouts / Costco listings, Faire door count, Instacart banners"
+            ),
+            (
+                "Margin Viability", 20,
+                "Can this brand survive the full retail cost stack: distributor markup (12–28%), broker commission (5%), free fill, and slotting fees? Brands need minimum 50% gross margin to survive.",
+                "SRP vs category benchmarks, Faire wholesale pricing, funding signals (can they absorb slotting costs?)"
+            ),
+            (
+                "Brand Story Clarity", 20,
+                "Can a broker rep explain this brand to a retail buyer in 30 seconds? Clear hero product, specific consumer, defined differentiation vs. incumbents — packaging that sells itself.",
+                "Brand website, Instagram & TikTok following, trade press (NOSH, FoodNavigator), Expo West presence, certifications"
+            ),
+            (
+                "Promotional Independence", 15,
+                "Can this brand generate consumer demand without relying entirely on the broker to fund promos? Brands that only sell on promotion are a liability. Healthy brands survive on regular pricing.",
+                "DTC channel & subscription model, organic social following, TPR frequency, Amazon Subscribe & Save, promotional history"
+            ),
+        ]
+
+        for name, pts_val, description, sources in rubric:
+            st.markdown(f"""
+            <div style="padding:12px 0; border-bottom:1px solid #F3F4F6;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <span style="font-size:13px; font-weight:600; color:#111111;">{name}</span>
+                    <span style="font-size:12px; font-weight:600; color:#1B4F72; background:#EBF5FB; padding:2px 10px; border-radius:99px;">{pts_val} pts</span>
+                </div>
+                <p style="font-size:12px; color:#4A4A4A; margin:0 0 4px 0; line-height:1.5;">{description}</p>
+                <p style="font-size:11px; color:#9CA3AF; margin:0;">Sources: {sources}</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <p style="font-size:11px; color:#9CA3AF; margin-top:12px; font-style:italic; line-height:1.5;">
+            Missing data scores at 50% of max — absence of information is treated as neutral, not negative.
+            Only active negative signals (confirmed over-distribution, below-viable pricing, promotional dependency)
+            reduce scores below the neutral floor.
+        </p>
+        """, unsafe_allow_html=True)
+
     # Detail panel — renders below the row when a card is selected
     selected = st.session_state.get("selected_criterion")
     if selected:
-        crit_detail = detail.get(selected, {})
         name_map = {
             "velocity_proof":           "Velocity Proof",
             "distribution_density":     "Distribution Density",
@@ -628,25 +890,35 @@ def render_results(state: dict, show_outreach: bool = True):
             "brand_story_clarity":      "Brand Story Clarity",
             "promotional_independence": "Promotional Independence",
         }
-        reasoning = crit_detail.get("reasoning", "No detail available.") if isinstance(crit_detail, dict) else "No detail available."
-        signals   = crit_detail.get("signals_used", []) if isinstance(crit_detail, dict) else []
-        sentences = [s.strip() for s in reasoning.replace(". ", ".|").split("|") if s.strip() and len(s.strip()) > 10]
-        bullets_html = "".join(
-            f'<p style="font-size:13px; color:#4A4A4A; margin:4px 0; padding-left:12px; border-left:2px solid #E5E5E5;">• {s}</p>'
-            for s in sentences[:4]
-        )
-        sources_html = (
-            f'<p style="font-size:11px; color:#9CA3AF; margin-top:10px;">Sources: {" · ".join([s.replace("_", " ") for s in signals[:5]])}</p>'
-            if signals else ""
-        )
+        extracted = state.get("extracted_fields") or {}
+        rows = _criterion_breakdown_rows(selected, extracted) if extracted else []
+
+        if rows:
+            rows_html = "".join(
+                f'<div style="display:flex; justify-content:space-between; align-items:center; '
+                f'padding:8px 0; border-bottom:1px solid #F3F4F6;">'
+                f'<span style="font-size:13px; color:#4A4A4A;">{label}</span>'
+                f'<span style="font-size:13px; color:#6B6B6B; flex:1; text-align:center; padding:0 12px;">{val}</span>'
+                f'<span style="font-size:13px; font-weight:600; color:#1B4F72; min-width:48px; text-align:right;">{pts} pts</span>'
+                f'</div>'
+                for label, val, pts in rows
+            )
+        else:
+            crit_detail = detail.get(selected, {})
+            reasoning = crit_detail.get("reasoning", "No detail available.") if isinstance(crit_detail, dict) else "No detail available."
+            sentences = [s.strip() for s in reasoning.replace(". ", ".|").split("|") if s.strip() and len(s.strip()) > 10]
+            rows_html = "".join(
+                f'<p style="font-size:13px; color:#4A4A4A; margin:4px 0; padding-left:12px; border-left:2px solid #E5E5E5;">• {s}</p>'
+                for s in sentences[:4]
+            )
+
         st.markdown(f"""
         <div style="background:#FFFFFF; border:1px solid #E5E5E5; border-radius:12px; padding:20px; margin:8px 0 16px 0; box-shadow:0 2px 8px rgba(0,0,0,0.06);">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                 <p style="font-weight:600; font-size:14px; color:#111111; margin:0;">{name_map.get(selected, selected)}</p>
                 <p style="font-size:12px; color:#9CA3AF; margin:0;">Click card again to close</p>
             </div>
-            {bullets_html}
-            {sources_html}
+            {rows_html}
         </div>
         """, unsafe_allow_html=True)
 

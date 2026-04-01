@@ -138,12 +138,15 @@ def detect_category(brand_name: str, signals: dict) -> str:
         return "condiment_sauce"
     if any(w in text for w in ["supplement", "vitamin", "adaptogen", "mushroom powder", "nootropic"]):
         return "supplement_functional"
-    # probiotic check before dairy_alternative to catch "probiotic beverage"
+    # beverage check before dairy to prevent "coconut water" matching dairy
+    if any(w in text for w in ["coconut water", "vita coco", "energy drink", "beverage", "drink", "rtd", "juice", "coffee", "tea", "soda", "sparkling", "kombucha", "kefir water"]):
+        return "beverage_rtd"
+    # dairy check after beverage
     if any(w in text for w in ["milk", "dairy", "yogurt", "kefir", "oat milk", "almond milk", "sourmilk", "fermented milk"]):
         return "dairy_alternative"
     if any(w in text for w in ["bar", "granola bar", "protein bar", "snack bar", "energy bar", "cereal bar"]):
         return "snack_bar"
-    if any(w in text for w in ["beverage", "drink", "rtd", "juice", "water", "coffee", "tea", "soda", "sparkling", "kombucha", "kefir water"]):
+    if any(w in text for w in ["water", "coconut"]):
         return "beverage_rtd"
     if any(w in text for w in ["frozen", "freeze-dried", "ice cream", "popsicle", "frozen meal"]):
         return "frozen_food"
