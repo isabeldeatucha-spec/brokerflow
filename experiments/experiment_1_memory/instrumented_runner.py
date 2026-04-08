@@ -44,6 +44,7 @@ def _reflect_and_decide_instrumented(
     memory_strategy,
     client: anthropic.Anthropic,
     metrics: dict,
+    reflection_prompt_template: str = None,
 ) -> dict:
     """
     Drop-in replacement for graph.reflect_and_decide that:
@@ -78,7 +79,8 @@ def _reflect_and_decide_instrumented(
     metrics["compression_calls"]      += 1 if compress_metrics["compression_tokens_in"] > 0 else 0
 
     # ── Step 2: build reflection prompt with (possibly compressed) signals ───
-    prompt = REFLECTION_PROMPT.format(
+    template = reflection_prompt_template if reflection_prompt_template else REFLECTION_PROMPT
+    prompt = template.format(
         brand_name=state["brand_name"],
         website_url=state["website_url"],
         reflection_count=reflection_count + 1,
@@ -134,10 +136,18 @@ def _reflect_and_decide_instrumented(
 
 # ── Full pipeline runner ──────────────────────────────────────────────────────
 
-def run_pipeline(brand: dict, memory_strategy, agent_id: str) -> dict:
+def run_pipeline(
+    brand: dict,
+    memory_strategy,
+    agent_id: str,
+    reflection_prompt_template: str = None,
+) -> dict:
     """
     Run the complete Brand Scout evaluation pipeline for one brand using
     the given memory strategy. Returns a metrics dict with all measurements.
+
+    Optional reflection_prompt_template overrides the default REFLECTION_PROMPT.
+    Use this for Experiment 4 (prompt variant testing).
 
     Parameters
     ----------
@@ -221,7 +231,8 @@ def run_pipeline(brand: dict, memory_strategy, agent_id: str) -> dict:
         # ── Step 2: Reflect loop (max 2 rounds) ───────────────────────────────
         while True:
             reflect_result = _reflect_and_decide_instrumented(
-                state, memory_strategy, client, metrics
+                state, memory_strategy, client, metrics,
+                reflection_prompt_template=reflection_prompt_template,
             )
             state.update(reflect_result)
             metrics["reflection_rounds"] = state["reflection_count"]
