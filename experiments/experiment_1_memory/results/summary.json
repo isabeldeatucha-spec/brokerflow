@@ -1,0 +1,180 @@
+{
+  "experiment": "experiment_1_memory",
+  "hypothesis": "Summarized memory (Group B) will be faster and cheaper but may lose precision.",
+  "run_timestamp": "20260408T161125Z",
+  "total_wall_time_ms": 11115.7,
+  "agents": [
+    {
+      "agent_id": "A1",
+      "strategy": "full_history",
+      "brand_name": "Chomps",
+      "reflect_input_tokens": 0,
+      "reflect_output_tokens": 0,
+      "reflect_calls": 0,
+      "reflect_latency_ms": 0,
+      "compression_tokens_in": 0,
+      "compression_tokens_out": 0,
+      "compression_calls": 0,
+      "compression_latency_ms": 0,
+      "total_reflect_tokens": 0,
+      "total_extra_tokens": 0,
+      "total_latency_ms": 9746.5,
+      "reflection_rounds": 0,
+      "verdict": null,
+      "score": null,
+      "score_breakdown": {},
+      "broker_brief": "",
+      "key_gaps": [],
+      "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.'}, 'request_id': 'req_011CZrbbNh83LsTuKyD4w1Vb'}"
+    },
+    {
+      "agent_id": "B2",
+      "strategy": "summarized",
+      "brand_name": "Fishwife",
+      "reflect_input_tokens": 0,
+      "reflect_output_tokens": 0,
+      "reflect_calls": 0,
+      "reflect_latency_ms": 0,
+      "compression_tokens_in": 0,
+      "compression_tokens_out": 0,
+      "compression_calls": 0,
+      "compression_latency_ms": 0,
+      "total_reflect_tokens": 0,
+      "total_extra_tokens": 0,
+      "total_latency_ms": 9770.0,
+      "reflection_rounds": 0,
+      "verdict": null,
+      "score": null,
+      "score_breakdown": {},
+      "broker_brief": "",
+      "key_gaps": [],
+      "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.'}, 'request_id': 'req_011CZrbbNyygNUP8PPChMjBr'}"
+    },
+    {
+      "agent_id": "A2",
+      "strategy": "full_history",
+      "brand_name": "Fishwife",
+      "reflect_input_tokens": 0,
+      "reflect_output_tokens": 0,
+      "reflect_calls": 0,
+      "reflect_latency_ms": 0,
+      "compression_tokens_in": 0,
+      "compression_tokens_out": 0,
+      "compression_calls": 0,
+      "compression_latency_ms": 0,
+      "total_reflect_tokens": 0,
+      "total_extra_tokens": 0,
+      "total_latency_ms": 9954.7,
+      "reflection_rounds": 0,
+      "verdict": null,
+      "score": null,
+      "score_breakdown": {},
+      "broker_brief": "",
+      "key_gaps": [],
+      "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.'}, 'request_id': 'req_011CZrbbPzWKNMHAFQaRkdBq'}"
+    },
+    {
+      "agent_id": "B1",
+      "strategy": "summarized",
+      "brand_name": "Chomps",
+      "reflect_input_tokens": 0,
+      "reflect_output_tokens": 0,
+      "reflect_calls": 0,
+      "reflect_latency_ms": 0,
+      "compression_tokens_in": 0,
+      "compression_tokens_out": 0,
+      "compression_calls": 0,
+      "compression_latency_ms": 0,
+      "total_reflect_tokens": 0,
+      "total_extra_tokens": 0,
+      "total_latency_ms": 10559.1,
+      "reflection_rounds": 0,
+      "verdict": null,
+      "score": null,
+      "score_breakdown": {},
+      "broker_brief": "",
+      "key_gaps": [],
+      "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.'}, 'request_id': 'req_011CZrbbSb2NcN7587Y6FBHa'}"
+    }
+  ],
+  "analysis": {
+    "by_group": {
+      "full_history": {
+        "agent_count": 2,
+        "avg_reflect_tokens": 0,
+        "avg_compression_tokens": 0,
+        "avg_reflect_latency_ms": 0,
+        "avg_total_latency_ms": 9851,
+        "avg_reflection_rounds": 0.0,
+        "verdicts": [
+          null,
+          null
+        ],
+        "scores": [
+          null,
+          null
+        ],
+        "avg_score": 0.0,
+        "errors": [
+          "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.'}, 'request_id': 'req_011CZrbbNh83LsTuKyD4w1Vb'}",
+          "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.'}, 'request_id': 'req_011CZrbbPzWKNMHAFQaRkdBq'}"
+        ]
+      },
+      "summarized": {
+        "agent_count": 2,
+        "avg_reflect_tokens": 0,
+        "avg_compression_tokens": 0,
+        "avg_reflect_latency_ms": 0,
+        "avg_total_latency_ms": 10165,
+        "avg_reflection_rounds": 0.0,
+        "verdicts": [
+          null,
+          null
+        ],
+        "scores": [
+          null,
+          null
+        ],
+        "avg_score": 0.0,
+        "errors": [
+          "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.'}, 'request_id': 'req_011CZrbbNyygNUP8PPChMjBr'}",
+          "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.'}, 'request_id': 'req_011CZrbbSb2NcN7587Y6FBHa'}"
+        ]
+      }
+    },
+    "brand_comparisons": [
+      {
+        "brand": "Chomps",
+        "expected_verdict": "established",
+        "verdict_A": null,
+        "verdict_B": null,
+        "verdicts_agree": true,
+        "score_A": null,
+        "score_B": null,
+        "score_delta": 0,
+        "reflect_tokens_A": 0,
+        "reflect_tokens_B": 0,
+        "token_savings_B": 0,
+        "latency_ms_A": 9746.5,
+        "latency_ms_B": 10559.1,
+        "latency_savings_ms_B": -812.6000000000004
+      },
+      {
+        "brand": "Fishwife",
+        "expected_verdict": "broker_ready",
+        "verdict_A": null,
+        "verdict_B": null,
+        "verdicts_agree": true,
+        "score_A": null,
+        "score_B": null,
+        "score_delta": 0,
+        "reflect_tokens_A": 0,
+        "reflect_tokens_B": 0,
+        "token_savings_B": 0,
+        "latency_ms_A": 9954.7,
+        "latency_ms_B": 9770.0,
+        "latency_savings_ms_B": 184.70000000000073
+      }
+    ]
+  }
+}
