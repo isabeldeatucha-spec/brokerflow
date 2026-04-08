@@ -1,0 +1,792 @@
+{
+  "experiment": "experiment_2_consistency",
+  "hypothesis": "Score variance < 5 pts per brand across identical agents.",
+  "run_timestamp": "20260408T213022Z",
+  "total_wall_time_ms": 229673.3,
+  "raw_results": [
+    {
+      "agent_id": "C3:Chomps",
+      "strategy": "full_history",
+      "brand_name": "Chomps",
+      "reflect_input_tokens": 1624,
+      "reflect_output_tokens": 560,
+      "reflect_calls": 2,
+      "reflect_latency_ms": 15704.9,
+      "compression_tokens_in": 0,
+      "compression_tokens_out": 0,
+      "compression_calls": 0,
+      "compression_latency_ms": 0,
+      "total_reflect_tokens": 2184,
+      "total_extra_tokens": 0,
+      "total_latency_ms": 45830.6,
+      "reflection_rounds": 2,
+      "verdict": "too_early",
+      "score": 40,
+      "score_breakdown": {
+        "velocity_proof": 11,
+        "distribution_density": 4,
+        "margin_viability": 10,
+        "brand_story_clarity": 8,
+        "promotional_independence": 7
+      },
+      "broker_brief": "Chomps is a meat snack brand that scored 40/100 - below our broker-ready threshold. The brand shows critical gaps in velocity proof (11/20) and distribution density (4/20), indicating limited retail traction and sparse market presence. While they have decent brand story clarity (8/20), their margin viability is concerning at only 10/20. Technical issues prevented gathering key data on retail partners, Amazon performance, and velocity metrics, making this a high-risk opportunity requiring significant groundwork.",
+      "key_gaps": [
+        "Verify current retail distribution footprint - no data available on existing partners like Whole Foods, Target, or other key accounts",
+        "Confirm product pricing, MSRP, and actual retail margins - low margin viability score suggests potential profitability issues",
+        "Validate brand momentum through Amazon rankings, velocity data, or recent sales performance metrics"
+      ],
+      "error": null
+    },
+    {
+      "agent_id": "C3:Fishwife",
+      "strategy": "full_history",
+      "brand_name": "Fishwife",
+      "reflect_input_tokens": 1646,
+      "reflect_output_tokens": 565,
+      "reflect_calls": 2,
+      "reflect_latency_ms": 15375.900000000001,
+      "compression_tokens_in": 0,
+      "compression_tokens_out": 0,
+      "compression_calls": 0,
+      "compression_latency_ms": 0,
+      "total_reflect_tokens": 2211,
+      "total_extra_tokens": 0,
+      "total_latency_ms": 43359.8,
+      "reflection_rounds": 2,
+      "verdict": "broker_ready",
+      "score": 48,
+      "score_breakdown": {
+        "velocity_proof": 11,
+        "distribution_density": 12,
+        "margin_viability": 11,
+        "brand_story_clarity": 7,
+        "promotional_independence": 7
+      },
+      "broker_brief": "Fishwife is a broker_ready tinned fish brand in the growing meat/protein snack category with a total score of 48/100. While the brand shows moderate performance across velocity proof (11), distribution density (12), and margin viability (11), there are significant data gaps that prevented full assessment of their retail presence and sales momentum. The brand appears positioned for scaling but needs verification of current retail partnerships and actual sales velocity before broker engagement.",
+      "key_gaps": [
+        "Verify current retail distribution partners and door count - no reliable data found on existing relationships with Whole Foods, Target, or other major retailers",
+        "Confirm actual sales velocity and reorder rates through Instacart data or retailer feedback to validate the low velocity proof score of 11/100"
+      ],
+      "error": null
+    },
+    {
+      "agent_id": "C3:Olipop",
+      "strategy": "full_history",
+      "brand_name": "Olipop",
+      "reflect_input_tokens": 1644,
+      "reflect_output_tokens": 534,
+      "reflect_calls": 2,
+      "reflect_latency_ms": 15724.6,
+      "compression_tokens_in": 0,
+      "compression_tokens_out": 0,
+      "compression_calls": 0,
+      "compression_latency_ms": 0,
+      "total_reflect_tokens": 2178,
+      "total_extra_tokens": 0,
+      "total_latency_ms": 45121.5,
+      "reflection_rounds": 2,
+      "verdict": "broker_ready",
+      "score": 49,
+      "score_breakdown": {
+        "velocity_proof": 11,
+        "distribution_density": 10,
+        "margin_viability": 10,
+        "brand_story_clarity": 11,
+        "promotional_independence": 7
+      },
+      "broker_brief": "Olipop is a functional prebiotic soda brand in the RTD beverage space with strong fundamentals - excellent margin viability and distribution density scores suggest solid retail economics. However, velocity proof is limited and promotional independence needs work, indicating they may still be relying heavily on discounting to move product. The brand appears ready to scale but needs strategic guidance on sustainable growth tactics.",
+      "key_gaps": [
+        "Verify current retail velocity data and turn rates at existing accounts - low velocity score suggests potential performance issues",
+        "Confirm promotional strategy and ability to maintain margins without constant discounting (promotional independence scored only 7/21)",
+        "Validate actual retail footprint and which major chains they're currently in vs. want to be in"
+      ],
+      "error": null
+    },
+    {
+      "agent_id": "C3:Magic Spoon",
+      "strategy": "full_history",
+      "brand_name": "Magic Spoon",
+      "reflect_input_tokens": 1626,
+      "reflect_output_tokens": 525,
+      "reflect_calls": 2,
+      "reflect_latency_ms": 14441.8,
+      "compression_tokens_in": 0,
+      "compression_tokens_out": 0,
+      "compression_calls": 0,
+      "compression_latency_ms": 0,
+      "total_reflect_tokens": 2151,
+      "total_extra_tokens": 0,
+      "total_latency_ms": 43283.9,
+      "reflection_rounds": 2,
+      "verdict": "too_early",
+      "score": 41,
+      "score_breakdown": {
+        "velocity_proof": 11,
+        "distribution_density": 4,
+        "margin_viability": 10,
+        "brand_story_clarity": 9,
+        "promotional_independence": 7
+      },
+      "broker_brief": "Magic Spoon scores 41/100 with a 'too_early' verdict for broker partnership in the snack bar category. The brand shows promising story clarity (9/10) and some promotional independence (7/10), but critical gaps in velocity proof (11/100) and distribution density (4/100) indicate limited market traction. Margin viability is concerning at 10/100, suggesting potential pricing or cost structure challenges. Technical extraction errors prevented full competitive analysis, but available data suggests this brand needs more foundational growth before broker scaling.",
+      "key_gaps": [
+        "Verify actual retail presence and current distribution footprint - extraction errors obscured current store count and partner relationships",
+        "Confirm pricing strategy and unit economics - low margin viability score needs validation against category benchmarks",
+        "Validate velocity metrics through direct retail data - unable to confirm sales performance through standard channels"
+      ],
+      "error": null
+    },
+    {
+      "agent_id": "C3:Graza",
+      "strategy": "full_history",
+      "brand_name": "Graza",
+      "reflect_input_tokens": 1614,
+      "reflect_output_tokens": 524,
+      "reflect_calls": 2,
+      "reflect_latency_ms": 15216.4,
+      "compression_tokens_in": 0,
+      "compression_tokens_out": 0,
+      "compression_calls": 0,
+      "compression_latency_ms": 0,
+      "total_reflect_tokens": 2138,
+      "total_extra_tokens": 0,
+      "total_latency_ms": 43284.3,
+      "reflection_rounds": 2,
+      "verdict": "too_early",
+      "score": 41,
+      "score_breakdown": {
+        "velocity_proof": 11,
+        "distribution_density": 4,
+        "margin_viability": 10,
+        "brand_story_clarity": 9,
+        "promotional_independence": 7
+      },
+      "broker_brief": "Graza is an olive oil/cooking oil brand that scores 41/100, placing it in the too_early category for broker partnerships. While the brand shows some clarity in storytelling (9/10) and moderate promotional independence (7/10), it struggles significantly with velocity proof (11/100) and distribution density (4/100). Critical data gaps exist across all research channels due to technical extraction issues, making it impossible to verify current retail presence, sales momentum, or market positioning.",
+      "key_gaps": [
+        "Verify actual retail distribution and current store count - no reliable data on existing partnerships or shelf presence",
+        "Confirm sales velocity and market traction through direct brand contact - all velocity signals failed to extract",
+        "Validate margin structure and minimum order requirements - current margin viability scored only 10/100"
+      ],
+      "error": null
+    },
+    {
+      "agent_id": "C2:Chomps",
+      "strategy": "full_history",
+      "brand_name": "Chomps",
+      "reflect_input_tokens": 1620,
+      "reflect_output_tokens": 641,
+      "reflect_calls": 2,
+      "reflect_latency_ms": 17568.300000000003,
+      "compression_tokens_in": 0,
+      "compression_tokens_out": 0,
+      "compression_calls": 0,
+      "compression_latency_ms": 0,
+      "total_reflect_tokens": 2261,
+      "total_extra_tokens": 0,
+      "total_latency_ms": 46431.1,
+      "reflection_rounds": 2,
+      "verdict": "too_early",
+      "score": 41,
+      "score_breakdown": {
+        "velocity_proof": 11,
+        "distribution_density": 4,
+        "margin_viability": 10,
+        "brand_story_clarity": 9,
+        "promotional_independence": 7
+      },
+      "broker_brief": "Chomps is a meat snack brand with clear positioning but significant data gaps that prevent proper evaluation. Technical errors blocked access to critical information including Amazon performance, retail distribution, velocity data, and press coverage. While the brand appears to have strong storytelling potential based on its website presence, the lack of verifiable sales momentum and distribution density raises red flags about current market readiness.",
+      "key_gaps": [
+        "Verify actual retail distribution footprint - need confirmed presence in major chains like Walmart, Target, or Whole Foods",
+        "Obtain real sales velocity data from SPINS, IRI, or retailer portals to assess market traction",
+        "Confirm Amazon performance metrics including BSR rankings, review counts, and sales estimates"
+      ],
+      "error": null
+    },
+    {
+      "agent_id": "C2:Fishwife",
+      "strategy": "full_history",
+      "brand_name": "Fishwife",
+      "reflect_input_tokens": 1642,
+      "reflect_output_tokens": 582,
+      "reflect_calls": 2,
+      "reflect_latency_ms": 15550.6,
+      "compression_tokens_in": 0,
+      "compression_tokens_out": 0,
+      "compression_calls": 0,
+      "compression_latency_ms": 0,
+      "total_reflect_tokens": 2224,
+      "total_extra_tokens": 0,
+      "total_latency_ms": 43216.8,
+      "reflection_rounds": 2,
+      "verdict": "too_early",
+      "score": 40,
+      "score_breakdown": {
+        "velocity_proof": 11,
+        "distribution_density": 4,
+        "margin_viability": 10,
+        "brand_story_clarity": 8,
+        "promotional_independence": 7
+      },
+      "broker_brief": "Fishwife is a condiment/sauce brand that appears to be in very early stages with limited market presence. The brand scored 40/100 overall, with particularly low velocity proof (11/100) and distribution density (4/100), indicating minimal retail traction. Technical issues prevented gathering key data on Amazon presence, retail partners, and sales velocity, but the available signals suggest this brand needs significant development before broker representation would be viable.",
+      "key_gaps": [
+        "Verify actual product category - research indicates tinned fish/seafood rather than condiment/sauce as categorized",
+        "Confirm current retail distribution and sales velocity data from brand directly",
+        "Assess minimum viable order quantities and promotional support capabilities"
+      ],
+      "error": null
+    },
+    {
+      "agent_id": "C2:Olipop",
+      "strategy": "full_history",
+      "brand_name": "Olipop",
+      "reflect_input_tokens": 1641,
+      "reflect_output_tokens": 582,
+      "reflect_calls": 2,
+      "reflect_latency_ms": 15182.5,
+      "compression_tokens_in": 0,
+      "compression_tokens_out": 0,
+      "compression_calls": 0,
+      "compression_latency_ms": 0,
+      "total_reflect_tokens": 2223,
+      "total_extra_tokens": 0,
+      "total_latency_ms": 42744.6,
+      "reflection_rounds": 2,
+      "verdict": "too_early",
+      "score": 41,
+      "score_breakdown": {
+        "velocity_proof": 11,
+        "distribution_density": 4,
+        "margin_viability": 10,
+        "brand_story_clarity": 9,
+        "promotional_independence": 7
+      },
+      "broker_brief": "Olipop is a functional beverage brand in the RTD category that scored 41/100, falling into the too_early verdict category. While the brand shows strong story clarity (9/10), it's held back by extremely low velocity proof (11/100) and distribution density (4/100). The research signals had significant extraction errors, making it difficult to assess current retail presence, funding status, or market traction.",
+      "key_gaps": [
+        "Verify current retail distribution footprint - research shows virtually no density data",
+        "Confirm velocity metrics and sales performance in existing doors",
+        "Validate margin structure and promotional requirements for retail partners"
+      ],
+      "error": null
+    },
+    {
+      "agent_id": "C2:Magic Spoon",
+      "strategy": "full_history",
+      "brand_name": "Magic Spoon",
+      "reflect_input_tokens": 1632,
+      "reflect_output_tokens": 597,
+      "reflect_calls": 2,
+      "reflect_latency_ms": 16529.699999999997,
+      "compression_tokens_in": 0,
+      "compression_tokens_out": 0,
+      "compression_calls": 0,
+      "compression_latency_ms": 0,
+      "total_reflect_tokens": 2229,
+      "total_extra_tokens": 0,
+      "total_latency_ms": 45915.8,
+      "reflection_rounds": 2,
+      "verdict": "too_early",
+      "score": 41,
+      "score_breakdown": {
+        "velocity_proof": 11,
+        "distribution_density": 4,
+        "margin_viability": 10,
+        "brand_story_clarity": 9,
+        "promotional_independence": 7
+      },
+      "broker_brief": "Magic Spoon in snack_bar scores 41/100 with a too_early verdict, indicating significant challenges for immediate broker representation. The brand shows some promise with decent brand story clarity (9/10) and promotional independence (7/10), but struggles with critical velocity proof (11/100) and distribution density (4/100). Data extraction issues prevented comprehensive analysis of retail presence, Amazon performance, and velocity metrics. This brand needs more proof of market traction before being broker-ready.",
+      "key_gaps": [
+        "Verify actual retail presence and current distribution footprint - data extraction failed for key retail partners",
+        "Confirm Amazon sales velocity and bestseller rankings in relevant categories",
+        "Validate true product margins and pricing strategy across different retail channels"
+      ],
+      "error": null
+    },
+    {
+      "agent_id": "C2:Graza",
+      "strategy": "full_history",
+      "brand_name": "Graza",
+      "reflect_input_tokens": 1614,
+      "reflect_output_tokens": 485,
+      "reflect_calls": 2,
+      "reflect_latency_ms": 14272.8,
+      "compression_tokens_in": 0,
+      "compression_tokens_out": 0,
+      "compression_calls": 0,
+      "compression_latency_ms": 0,
+      "total_reflect_tokens": 2099,
+      "total_extra_tokens": 0,
+      "total_latency_ms": 44292.6,
+      "reflection_rounds": 2,
+      "verdict": "too_early",
+      "score": 40,
+      "score_breakdown": {
+        "velocity_proof": 11,
+        "distribution_density": 4,
+        "margin_viability": 10,
+        "brand_story_clarity": 8,
+        "promotional_independence": 7
+      },
+      "broker_brief": "Graza operates in the competitive olive oil/cooking oil category but currently shows limited market traction with a total score of 40/100. The brand faces significant challenges across all key metrics, particularly in velocity proof (11/20) and distribution density (4/20), indicating minimal retail presence and sales momentum. Technical issues prevented comprehensive data collection on their retail partnerships, Amazon presence, and velocity metrics, making it difficult to assess their true market position.",
+      "key_gaps": [
+        "Verify actual retail distribution footprint and current door count - data extraction failed to capture existing partnerships",
+        "Confirm pricing strategy and margin structure to assess true viability for broker economics",
+        "Validate brand funding status and financial runway to ensure stability for potential partnership"
+      ],
+      "error": null
+    },
+    {
+      "agent_id": "C1:Chomps",
+      "strategy": "full_history",
+      "brand_name": "Chomps",
+      "reflect_input_tokens": 1617,
+      "reflect_output_tokens": 582,
+      "reflect_calls": 2,
+      "reflect_latency_ms": 16841.7,
+      "compression_tokens_in": 0,
+      "compression_tokens_out": 0,
+      "compression_calls": 0,
+      "compression_latency_ms": 0,
+      "total_reflect_tokens": 2199,
+      "total_extra_tokens": 0,
+      "total_latency_ms": 45138.8,
+      "reflection_rounds": 2,
+      "verdict": "broker_ready",
+      "score": 51,
+      "score_breakdown": {
+        "velocity_proof": 11,
+        "distribution_density": 12,
+        "margin_viability": 10,
+        "brand_story_clarity": 11,
+        "promotional_independence": 7
+      },
+      "broker_brief": "Chomps is a meat snack brand scoring 51/100 - solidly broker-ready with strong fundamentals across velocity proof, distribution density, and brand story clarity. The brand shows consistent performance in core metrics but has moderate promotional independence (7/10), suggesting some reliance on discounting. With balanced scores across key areas, Chomps appears positioned for scaling into new retail doors through broker partnerships.",
+      "key_gaps": [
+        "Verify current retail distribution footprint - which major chains they're already in vs. white space opportunities",
+        "Confirm promotional strategy and margin requirements - the moderate promotional independence score needs clarification on discount expectations"
+      ],
+      "error": null
+    },
+    {
+      "agent_id": "C1:Fishwife",
+      "strategy": "full_history",
+      "brand_name": "Fishwife",
+      "reflect_input_tokens": 1644,
+      "reflect_output_tokens": 587,
+      "reflect_calls": 2,
+      "reflect_latency_ms": 17078.9,
+      "compression_tokens_in": 0,
+      "compression_tokens_out": 0,
+      "compression_calls": 0,
+      "compression_latency_ms": 0,
+      "total_reflect_tokens": 2231,
+      "total_extra_tokens": 0,
+      "total_latency_ms": 45274.8,
+      "reflection_rounds": 2,
+      "verdict": "too_early",
+      "score": 40,
+      "score_breakdown": {
+        "velocity_proof": 11,
+        "distribution_density": 4,
+        "margin_viability": 10,
+        "brand_story_clarity": 8,
+        "promotional_independence": 7
+      },
+      "broker_brief": "Fishwife is a tinned fish/canned seafood brand in the condiment/sauce category that scored 40/100 - below our broker-ready threshold. The brand shows significant gaps across all key metrics with velocity proof at only 11/100 and distribution density at 4/100. Technical issues prevented gathering critical data on retail partnerships, Amazon presence, and sales velocity, making it impossible to assess current market traction. This brand needs more foundational growth before broker engagement would be viable.",
+      "key_gaps": [
+        "Verify current retail distribution footprint and which major chains (if any) currently carry the brand",
+        "Confirm actual sales velocity and repeat purchase data through available retail partners",
+        "Assess wholesale pricing structure and margin viability for retailer partners"
+      ],
+      "error": null
+    },
+    {
+      "agent_id": "C1:Olipop",
+      "strategy": "full_history",
+      "brand_name": "Olipop",
+      "reflect_input_tokens": 1640,
+      "reflect_output_tokens": 567,
+      "reflect_calls": 2,
+      "reflect_latency_ms": 15476.8,
+      "compression_tokens_in": 0,
+      "compression_tokens_out": 0,
+      "compression_calls": 0,
+      "compression_latency_ms": 0,
+      "total_reflect_tokens": 2207,
+      "total_extra_tokens": 0,
+      "total_latency_ms": 44152.5,
+      "reflection_rounds": 2,
+      "verdict": "too_early",
+      "score": 43,
+      "score_breakdown": {
+        "velocity_proof": 11,
+        "distribution_density": 4,
+        "margin_viability": 10,
+        "brand_story_clarity": 11,
+        "promotional_independence": 7
+      },
+      "broker_brief": "Olipop appears to be a functional beverage brand in the RTD category, but critical data extraction failed across all key metrics due to technical issues. Without visibility into their current distribution, velocity proof, or retail partnerships, this brand cannot be properly evaluated for broker readiness. The low scores (43/100 total) suggest either very early stage operations or significant data gaps that need manual verification.",
+      "key_gaps": [
+        "Verify actual retail presence and current distribution footprint - no partner data was successfully extracted",
+        "Confirm sales velocity and pricing strategy through direct retailer contacts or manual research",
+        "Validate brand positioning and margin structure since all automated signals failed to capture"
+      ],
+      "error": null
+    },
+    {
+      "agent_id": "C1:Magic Spoon",
+      "strategy": "full_history",
+      "brand_name": "Magic Spoon",
+      "reflect_input_tokens": 1636,
+      "reflect_output_tokens": 605,
+      "reflect_calls": 2,
+      "reflect_latency_ms": 17334.1,
+      "compression_tokens_in": 0,
+      "compression_tokens_out": 0,
+      "compression_calls": 0,
+      "compression_latency_ms": 0,
+      "total_reflect_tokens": 2241,
+      "total_extra_tokens": 0,
+      "total_latency_ms": 45075.5,
+      "reflection_rounds": 2,
+      "verdict": "too_early",
+      "score": 41,
+      "score_breakdown": {
+        "velocity_proof": 11,
+        "distribution_density": 4,
+        "margin_viability": 10,
+        "brand_story_clarity": 9,
+        "promotional_independence": 7
+      },
+      "broker_brief": "Magic Spoon shows early promise with a clear brand story (9/10) but falls short on critical retail readiness metrics. With velocity proof at only 11/100 and minimal distribution density (4/100), they lack the market traction needed for immediate broker partnership. The brand appears to be in early scaling phase, requiring more foundational growth before premium broker representation makes sense.",
+      "key_gaps": [
+        "Verify actual retail velocity and sales data - current performance metrics are insufficient to demonstrate market demand",
+        "Confirm distribution footprint and existing retail partnerships - extremely limited presence suggests need for direct sales focus first"
+      ],
+      "error": null
+    },
+    {
+      "agent_id": "C1:Graza",
+      "strategy": "full_history",
+      "brand_name": "Graza",
+      "reflect_input_tokens": 1617,
+      "reflect_output_tokens": 484,
+      "reflect_calls": 2,
+      "reflect_latency_ms": 16179.6,
+      "compression_tokens_in": 0,
+      "compression_tokens_out": 0,
+      "compression_calls": 0,
+      "compression_latency_ms": 0,
+      "total_reflect_tokens": 2101,
+      "total_extra_tokens": 0,
+      "total_latency_ms": 49364.9,
+      "reflection_rounds": 2,
+      "verdict": "broker_ready",
+      "score": 49,
+      "score_breakdown": {
+        "velocity_proof": 11,
+        "distribution_density": 10,
+        "margin_viability": 10,
+        "brand_story_clarity": 11,
+        "promotional_independence": 7
+      },
+      "broker_brief": "Graza is a broker-ready olive oil brand with strong fundamentals - solid velocity proof, dense distribution, and healthy margins that indicate real retail traction. The brand shows clear positioning in the competitive cooking oil space with good promotional independence, suggesting they can drive their own demand. While still building momentum with a 49/100 score, they're positioned to scale rapidly with the right broker partnership. Technical data extraction issues limit visibility into specific retail partners and velocity metrics, requiring verification.",
+      "key_gaps": [
+        "Verify current retail distribution footprint and key accounts (Whole Foods, Target, specialty) to identify white space opportunities",
+        "Confirm actual sales velocity and ranking data on Amazon and in-store to validate scaling potential",
+        "Assess promotional calendar and trade spend requirements to ensure margin sustainability during growth phase"
+      ],
+      "error": null
+    }
+  ],
+  "brand_stats": {
+    "Chomps": {
+      "scores": [
+        40,
+        41,
+        51
+      ],
+      "score_mean": 44,
+      "score_std": 6.08,
+      "score_range": 11,
+      "verdicts": [
+        "too_early",
+        "too_early",
+        "broker_ready"
+      ],
+      "verdict_agreement": false,
+      "criterion_variance": {
+        "velocity_proof": {
+          "values": [
+            11,
+            11,
+            11
+          ],
+          "range": 0
+        },
+        "distribution_density": {
+          "values": [
+            4,
+            4,
+            12
+          ],
+          "range": 8
+        },
+        "margin_viability": {
+          "values": [
+            10,
+            10,
+            10
+          ],
+          "range": 0
+        },
+        "brand_story_clarity": {
+          "values": [
+            8,
+            9,
+            11
+          ],
+          "range": 3
+        },
+        "promotional_independence": {
+          "values": [
+            7,
+            7,
+            7
+          ],
+          "range": 0
+        }
+      }
+    },
+    "Fishwife": {
+      "scores": [
+        48,
+        40,
+        40
+      ],
+      "score_mean": 42.7,
+      "score_std": 4.62,
+      "score_range": 8,
+      "verdicts": [
+        "broker_ready",
+        "too_early",
+        "too_early"
+      ],
+      "verdict_agreement": false,
+      "criterion_variance": {
+        "velocity_proof": {
+          "values": [
+            11,
+            11,
+            11
+          ],
+          "range": 0
+        },
+        "distribution_density": {
+          "values": [
+            12,
+            4,
+            4
+          ],
+          "range": 8
+        },
+        "margin_viability": {
+          "values": [
+            11,
+            10,
+            10
+          ],
+          "range": 1
+        },
+        "brand_story_clarity": {
+          "values": [
+            7,
+            8,
+            8
+          ],
+          "range": 1
+        },
+        "promotional_independence": {
+          "values": [
+            7,
+            7,
+            7
+          ],
+          "range": 0
+        }
+      }
+    },
+    "Olipop": {
+      "scores": [
+        49,
+        41,
+        43
+      ],
+      "score_mean": 44.3,
+      "score_std": 4.16,
+      "score_range": 8,
+      "verdicts": [
+        "broker_ready",
+        "too_early",
+        "too_early"
+      ],
+      "verdict_agreement": false,
+      "criterion_variance": {
+        "velocity_proof": {
+          "values": [
+            11,
+            11,
+            11
+          ],
+          "range": 0
+        },
+        "distribution_density": {
+          "values": [
+            10,
+            4,
+            4
+          ],
+          "range": 6
+        },
+        "margin_viability": {
+          "values": [
+            10,
+            10,
+            10
+          ],
+          "range": 0
+        },
+        "brand_story_clarity": {
+          "values": [
+            11,
+            9,
+            11
+          ],
+          "range": 2
+        },
+        "promotional_independence": {
+          "values": [
+            7,
+            7,
+            7
+          ],
+          "range": 0
+        }
+      }
+    },
+    "Magic Spoon": {
+      "scores": [
+        41,
+        41,
+        41
+      ],
+      "score_mean": 41,
+      "score_std": 0.0,
+      "score_range": 0,
+      "verdicts": [
+        "too_early",
+        "too_early",
+        "too_early"
+      ],
+      "verdict_agreement": true,
+      "criterion_variance": {
+        "velocity_proof": {
+          "values": [
+            11,
+            11,
+            11
+          ],
+          "range": 0
+        },
+        "distribution_density": {
+          "values": [
+            4,
+            4,
+            4
+          ],
+          "range": 0
+        },
+        "margin_viability": {
+          "values": [
+            10,
+            10,
+            10
+          ],
+          "range": 0
+        },
+        "brand_story_clarity": {
+          "values": [
+            9,
+            9,
+            9
+          ],
+          "range": 0
+        },
+        "promotional_independence": {
+          "values": [
+            7,
+            7,
+            7
+          ],
+          "range": 0
+        }
+      }
+    },
+    "Graza": {
+      "scores": [
+        41,
+        40,
+        49
+      ],
+      "score_mean": 43.3,
+      "score_std": 4.93,
+      "score_range": 9,
+      "verdicts": [
+        "too_early",
+        "too_early",
+        "broker_ready"
+      ],
+      "verdict_agreement": false,
+      "criterion_variance": {
+        "velocity_proof": {
+          "values": [
+            11,
+            11,
+            11
+          ],
+          "range": 0
+        },
+        "distribution_density": {
+          "values": [
+            4,
+            4,
+            10
+          ],
+          "range": 6
+        },
+        "margin_viability": {
+          "values": [
+            10,
+            10,
+            10
+          ],
+          "range": 0
+        },
+        "brand_story_clarity": {
+          "values": [
+            9,
+            8,
+            11
+          ],
+          "range": 3
+        },
+        "promotional_independence": {
+          "values": [
+            7,
+            7,
+            7
+          ],
+          "range": 0
+        }
+      }
+    }
+  }
+}

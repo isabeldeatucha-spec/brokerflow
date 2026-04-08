@@ -1,0 +1,176 @@
+{
+  "experiment": "experiment_3_url",
+  "hypothesis": "No-URL agents score 5\u201315 pts lower; may need more reflection rounds.",
+  "run_timestamp": "20260408T213120Z",
+  "total_wall_time_ms": 44622.3,
+  "raw_results": [
+    {
+      "agent_id": "N1",
+      "strategy": "full_history",
+      "brand_name": "Chomps",
+      "reflect_input_tokens": 1526,
+      "reflect_output_tokens": 538,
+      "reflect_calls": 2,
+      "reflect_latency_ms": 15143.8,
+      "compression_tokens_in": 0,
+      "compression_tokens_out": 0,
+      "compression_calls": 0,
+      "compression_latency_ms": 0,
+      "total_reflect_tokens": 2064,
+      "total_extra_tokens": 0,
+      "total_latency_ms": 30272.9,
+      "reflection_rounds": 2,
+      "verdict": "too_early",
+      "score": 40,
+      "score_breakdown": {
+        "velocity_proof": 11,
+        "distribution_density": 4,
+        "margin_viability": 10,
+        "brand_story_clarity": 8,
+        "promotional_independence": 7
+      },
+      "broker_brief": "Chomps is a meat snack/protein brand that scores 40/100 overall, falling into the 'too early' category for broker partnership. The brand shows some foundation with decent brand story clarity (8/10) but critically lacks velocity proof (11/100) and distribution density (4/100). Technical issues prevented gathering key data on their retail presence, Amazon performance, and velocity metrics, making it difficult to assess their current market traction.",
+      "key_gaps": [
+        "Verify actual retail distribution footprint and current door count across major chains",
+        "Confirm sales velocity data and year-over-year growth trends to assess market demand",
+        "Validate margin structure and promotional requirements to ensure profitability for retail partners"
+      ],
+      "error": null,
+      "used_url": false
+    },
+    {
+      "agent_id": "N2",
+      "strategy": "full_history",
+      "brand_name": "Fishwife",
+      "reflect_input_tokens": 1542,
+      "reflect_output_tokens": 537,
+      "reflect_calls": 2,
+      "reflect_latency_ms": 15242.7,
+      "compression_tokens_in": 0,
+      "compression_tokens_out": 0,
+      "compression_calls": 0,
+      "compression_latency_ms": 0,
+      "total_reflect_tokens": 2079,
+      "total_extra_tokens": 0,
+      "total_latency_ms": 31863.1,
+      "reflection_rounds": 2,
+      "verdict": "broker_ready",
+      "score": 48,
+      "score_breakdown": {
+        "velocity_proof": 11,
+        "distribution_density": 10,
+        "margin_viability": 10,
+        "brand_story_clarity": 10,
+        "promotional_independence": 7
+      },
+      "broker_brief": "Fishwife is a condiment/sauce brand showing broker-ready fundamentals with strong margin viability and clear brand positioning. The brand demonstrates solid promotional independence, suggesting they can support retail partnerships without heavy trade spend requirements. However, critical velocity and distribution data is missing due to research extraction errors, making it impossible to verify current retail traction. This could be a promising scaling opportunity if the missing performance metrics check out.",
+      "key_gaps": [
+        "Verify current retail velocity and sales performance - no Instacart, SPINS, or other velocity data was captured",
+        "Confirm existing distribution footprint and retail partnerships - unable to extract current store presence",
+        "Validate actual product category - listed as condiment/sauce but signals suggest tinned fish/seafood brand"
+      ],
+      "error": null,
+      "used_url": false
+    },
+    {
+      "agent_id": "U1",
+      "strategy": "full_history",
+      "brand_name": "Chomps",
+      "reflect_input_tokens": 1619,
+      "reflect_output_tokens": 574,
+      "reflect_calls": 2,
+      "reflect_latency_ms": 15708.0,
+      "compression_tokens_in": 0,
+      "compression_tokens_out": 0,
+      "compression_calls": 0,
+      "compression_latency_ms": 0,
+      "total_reflect_tokens": 2193,
+      "total_extra_tokens": 0,
+      "total_latency_ms": 43437.2,
+      "reflection_rounds": 2,
+      "verdict": "broker_ready",
+      "score": 51,
+      "score_breakdown": {
+        "velocity_proof": 11,
+        "distribution_density": 12,
+        "margin_viability": 11,
+        "brand_story_clarity": 10,
+        "promotional_independence": 7
+      },
+      "broker_brief": "Chomps is a meat snack/protein brand scoring 51/100 - solidly broker-ready with strong fundamentals across velocity proof, distribution density, and margin viability. The brand shows consistent performance indicators suggesting readiness to scale into new retail doors. However, promotional independence scored lower at 7/10, indicating some reliance on discounting that brokers should factor into margin negotiations.",
+      "key_gaps": [
+        "Verify current retail distribution footprint - no clear data on existing partners like Whole Foods/Target to avoid channel conflicts",
+        "Confirm actual sales velocity and Amazon performance metrics - connection errors prevented validation of momentum claims",
+        "Validate wholesale pricing and margin structure given lower promotional independence score"
+      ],
+      "error": null,
+      "used_url": true
+    },
+    {
+      "agent_id": "U2",
+      "strategy": "full_history",
+      "brand_name": "Fishwife",
+      "reflect_input_tokens": 1648,
+      "reflect_output_tokens": 573,
+      "reflect_calls": 2,
+      "reflect_latency_ms": 16370.5,
+      "compression_tokens_in": 0,
+      "compression_tokens_out": 0,
+      "compression_calls": 0,
+      "compression_latency_ms": 0,
+      "total_reflect_tokens": 2221,
+      "total_extra_tokens": 0,
+      "total_latency_ms": 44124.2,
+      "reflection_rounds": 2,
+      "verdict": "broker_ready",
+      "score": 47,
+      "score_breakdown": {
+        "velocity_proof": 11,
+        "distribution_density": 10,
+        "margin_viability": 10,
+        "brand_story_clarity": 9,
+        "promotional_independence": 7
+      },
+      "broker_brief": "Fishwife is a broker-ready condiment/sauce brand with a score of 47/100, showing strong fundamentals in distribution density and margin viability (both 10/10). The brand demonstrates solid brand story clarity but needs acceleration in velocity proof and promotional independence. With proper broker support, Fishwife appears positioned to scale into new retail doors and expand their current distribution footprint.",
+      "key_gaps": [
+        "Verify current retail distribution footprint and which major chains they're already in vs. white space opportunities",
+        "Confirm actual velocity data and sell-through rates at existing accounts to validate scalability potential",
+        "Assess promotional support capabilities and marketing budget available for new door activations"
+      ],
+      "error": null,
+      "used_url": true
+    }
+  ],
+  "comparisons": [
+    {
+      "brand": "Chomps",
+      "score_with_url": 51,
+      "score_no_url": 40,
+      "score_delta": 11,
+      "verdict_with_url": "broker_ready",
+      "verdict_no_url": "too_early",
+      "verdicts_agree": false,
+      "reflect_rounds_with_url": 2,
+      "reflect_rounds_no_url": 2,
+      "tokens_with_url": 2193,
+      "tokens_no_url": 2064,
+      "latency_with_url": 43437.2,
+      "latency_no_url": 30272.9
+    },
+    {
+      "brand": "Fishwife",
+      "score_with_url": 47,
+      "score_no_url": 48,
+      "score_delta": -1,
+      "verdict_with_url": "broker_ready",
+      "verdict_no_url": "broker_ready",
+      "verdicts_agree": true,
+      "reflect_rounds_with_url": 2,
+      "reflect_rounds_no_url": 2,
+      "tokens_with_url": 2221,
+      "tokens_no_url": 2079,
+      "latency_with_url": 44124.2,
+      "latency_no_url": 31863.1
+    }
+  ]
+}
