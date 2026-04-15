@@ -1,0 +1,33 @@
+{
+  "total_runs": 153,
+  "success": 99,
+  "failure": 54,
+  "success_rate": 0.647,
+  "p50_latency_s": 83.32,
+  "p95_latency_s": 139.57,
+  "max_latency_s": 174.47,
+  "failure_modes": {
+    "JSONDecodeError": 26,
+    "BadRequestError": 15,
+    "ServerError": 5,
+    "ClientError": 8
+  },
+  "regions": {
+    "unknown": 26,
+    "us-east-1": 26,
+    "eastus": 23,
+    "eastus2": 2,
+    "westus": 1,
+    "westus3": 2,
+    "uksouth": 3,
+    "us-west-2": 3,
+    "us-central1": 2,
+    "australia-southeast1": 2,
+    "us-east-2": 4,
+    "asia-southeast1": 1,
+    "me-west1": 1,
+    "southeastasia": 1,
+    "eu-west-1": 1,
+    "italynorth": 1
+  }
+}
