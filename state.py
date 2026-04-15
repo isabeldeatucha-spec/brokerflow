@@ -5,7 +5,8 @@ Each agent defines its own TypedDict that extends or mirrors these base shapes.
 Adding a new agent? Drop its state class here so the UI and memory layer can
 reference it without importing from a specific agent package.
 """
-from typing import Any, Optional
+import operator
+from typing import Annotated, Any, Optional
 from typing_extensions import TypedDict
 
 
@@ -57,7 +58,34 @@ class BrandScoutState(TypedDict):
     rejection_reason: Optional[str]
 
 
+# ── Retailer Pitcher ─────────────────────────────────────────────────────────
+
+class RetailerPitcherState(TypedDict):
+    # Input / handoff
+    brand_name: str
+    buyer_key: str           # "whole_foods" | "sprouts" | "erewhon"
+    scout_context: dict      # snapshot loaded from shared memory (Brand Scout eval)
+
+    # Status of the handoff itself — distinct from artifact-generation status
+    handoff_status: str      # "ok" | "miss" | "stale"
+    handoff_error: Optional[str]
+
+    # Generated artifacts
+    email_subject: str
+    email_body: str
+    sell_sheet_html: str
+    artifact_status: str     # "ok" | "partial" | "failed"
+    # Parallel email/sell-sheet nodes both append errors and add tokens.
+    # Annotated reducers let LangGraph merge concurrent updates safely.
+    artifact_errors: Annotated[list[str], operator.add]
+    input_tokens: Annotated[int, operator.add]
+    output_tokens: Annotated[int, operator.add]
+
+    # Human gate
+    approved: Optional[bool]
+    rejection_reason: Optional[str]
+
+
 # ── Future agents — add state classes here as they're built ──────────────────
-# class RetailerPitcherState(TypedDict): ...
 # class AdminOpsState(TypedDict): ...
 # class PortfolioManagerState(TypedDict): ...

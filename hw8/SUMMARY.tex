@@ -1,0 +1,86 @@
+\documentclass[9pt]{extarticle}
+
+\usepackage[margin=0.5in]{geometry}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{titlesec}
+\usepackage{parskip}
+
+\hypersetup{colorlinks=true, urlcolor=teal}
+
+\titleformat{\section}{\bfseries\normalsize}{}{0pt}{}
+\titlespacing*{\section}{0pt}{4pt}{1pt}
+
+\setlist[itemize]{leftmargin=*, topsep=1pt, itemsep=0pt, parsep=0pt}
+\setlist[enumerate]{leftmargin=*, topsep=1pt, itemsep=0pt, parsep=0pt}
+
+\setlength{\parskip}{2pt}
+\linespread{0.95}
+\pagenumbering{gobble}
+
+\begin{document}
+
+\begin{center}
+{\Large\bfseries HW8 — Sedge: Scaled Multi-Agent Experiments}\\[2pt]
+{\small Isabel de Atucha \, $\cdot$ \, Yi Liu \, $\cdot$ \, Sasha Towe \quad|\quad
+Repo: \href{https://github.com/isabeldeatucha-spec/sedge}{github.com/isabeldeatucha-spec/sedge} \quad|\quad
+Demo: \href{https://sedge-production.up.railway.app}{sedge-production.up.railway.app} \quad|\quad
+Video: \href{https://youtu.be/nzvLyrNXYX4}{youtu.be/nzvLyrNXYX4}}
+\end{center}
+
+\section*{What changed since HW7}
+HW7 ran \textbf{Brand Scout on a laptop}: 3 agents $\times$ 5 brands = 15 serial runs, single LLM (Claude Sonnet), single region. HW8 deploys the same graph to \textbf{30--60 parallel Modal containers across 16 cloud regions}, adds the \textbf{full Retailer Pitcher agent} (LangGraph: email + HTML sell sheet, 3 buyer personas), expands the test set 5 $\rightarrow$ \textbf{50 brands}, and migrates Brand Scout to a \textbf{cross-provider stack} (Claude shim $\rightarrow$ Gemini Flash) after our personal Anthropic account was blocked at the provisioning layer mid-experiment.
+
+\section*{Scaled setup}
+\begin{itemize}
+  \item \textbf{Compute}: Modal serverless, \texttt{max\_containers=60}, observed 16 distinct cloud regions (us-east-1/2, us-west-2/3, eastus, eastus2, westus3, uksouth, italynorth, eu-west-1, me-west1, asia-southeast1, southeastasia, australia-southeast1, us-central1).
+  \item \textbf{Agents}: Brand Scout (existing) + Retailer Pitcher (new --- \texttt{agents/retailer\_pitcher/}). Coordination via Supabase shared memory only --- no shared process between Scout and Pitcher containers.
+  \item \textbf{Workload}: 50 CPG brands. \textbf{E1} Throughput (50 $\times$ 1). \textbf{E2} Consistency (10 $\times$ 3). \textbf{E3} Cost (per-run tokens). \textbf{E4} Two-agent handoff (30 brands $\times$ Scout-container $\to$ Pitcher-container).
+  \item \textbf{Telemetry per run}: latency, status, error type, region, container id, score breakdown, input/output tokens.
+\end{itemize}
+
+\section*{Results / failures / bottlenecks}
+
+\begin{center}
+\small
+\begin{tabular}{lll}
+\toprule
+\textbf{Metric} & \textbf{HW7} & \textbf{HW8} \\
+\midrule
+Concurrent agents          & 1            & \textbf{30--60} \\
+Distinct cloud regions     & 1            & \textbf{16} \\
+Total runs logged          & 15           & \textbf{153} \\
+Overall success rate       & 100\% (n=15) & \textbf{64.7\%} (99/153, includes debugging) \\
+p50 / p95 / max latency    & ---          & \textbf{83 / 140 / 175 s} (p95 = 1.7$\times$ p50) \\
+E4 Scout$\to$Pitcher (after fix) & n/a   & \textbf{30/30} memory + \textbf{30/30} artifact in 25 s \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Failure taxonomy} (n=54):
+\texttt{JSONDecodeError} 26 (Gemini wrapped JSON in single-line \texttt{```json...```} fences --- Claude-tuned parser broke),
+\texttt{BadRequestError} 15 (Anthropic billing rejected purchased credit),
+\texttt{ServerError 503} 5 (Gemini overloaded under concurrency),
+\texttt{ClientError 429} 8 (Gemini free-tier 20/day ceiling).
+
+\textbf{Four scale-only bugs} that did \emph{not} surface in HW7:
+\begin{enumerate}
+  \item \textbf{Provider provisioning opacity} --- Claude \$15 purchased credit unusable through API; reproduced with \texttt{curl}. Triggered cross-provider migration mid-experiment.
+  \item \textbf{Hidden free-tier per-day ceiling} --- Gemini Flash limits free tier to \textbf{20 requests/day}, not the ``1500/day'' we believed. Hit on the second batch. Fixed by upgrading to pay-as-you-go ($\sim$\$1 total).
+  \item \textbf{LLM contract drift} --- Gemini's default \emph{thinking mode} consumes output tokens before emitting visible text $\to$ 35-token ``emails''. Disabled with \texttt{thinking\_config=0}. Different markdown-fence conventions per provider also broke our JSON parser.
+  \item \textbf{Parallel LangGraph node race} --- Pitcher's \texttt{draft\_email} and \texttt{draft\_sell\_sheet} both wrote \texttt{input\_tokens}. LangGraph raised \texttt{InvalidUpdateError: Can receive only one value per step} on \emph{all 26} pitches in the first E4 run. Fixed with \texttt{Annotated[int, operator.add]} reducers in the state class --- the exact multi-agent coordination bug HW5 warned about, observable only once both agents ran in separate containers.
+\end{enumerate}
+
+Two more scale-pressure observations: (a) E2 success rate dropped to 77\% (vs E1's 90\%) because repeating the same brand from different Modal egress regions surfaces different Firecrawl snapshots; (b) p95 latency stretches to 1.7$\times$ p50 once we cross 30 concurrent agents --- the system degrades gracefully, but the long tail is real.
+
+\section*{What we added or improved}
+\begin{itemize}
+  \item \textbf{\texttt{agents/retailer\_pitcher/}} --- first-class LangGraph agent (sibling to Brand Scout): \texttt{load\_scout\_context $\to$ select\_buyer $\to$ (draft\_email $\parallel$ draft\_sell\_sheet) $\to$ store\_artifacts $\to$ human\_approval}. Three buyer personas (Whole Foods, Sprouts, Erewhon). Closes the HW6 deliverable our team had deferred.
+  \item \textbf{\texttt{agents/llm\_shim.py}} --- Anthropic-compatible shim that monkey-patches \texttt{anthropic.Anthropic} to route Brand Scout's 6 LLM call sites to Gemini, with code-fence stripping, exponential-backoff retry on 503/429, thinking-mode suppression, and JSON mime-type switching. Zero changes needed in Brand Scout's 872-line graph.
+  \item \textbf{State reducer fix} in \texttt{state.py} --- \texttt{Annotated} reducers on \texttt{input\_tokens}, \texttt{output\_tokens}, \texttt{artifact\_errors} for parallel-write safety.
+  \item \textbf{\texttt{hw8/}} harness --- \texttt{modal\_runner.py}, \texttt{modal\_handoff.py}, \texttt{modal\_pitch\_only.py} (lets us iterate on Pitcher without re-running Scout --- saved $\sim$10 min and $\sim$\$0.50 every retry), \texttt{analyze.py} (one command, four figures + JSON summary), \texttt{brands.csv} (50-brand benchmark, reusable for Demo Day).
+\end{itemize}
+
+\end{document}

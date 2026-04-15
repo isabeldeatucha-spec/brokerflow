@@ -10,6 +10,10 @@ import argparse
 import sys
 import uuid
 
+# Install the Gemini shim before brand_scout imports `anthropic`.
+# Controlled by SEDGE_LLM_PROVIDER (default: gemini). See agents/llm_shim.py.
+import agents.llm_shim  # noqa: F401
+
 from langgraph.types import Command
 
 from agents.brand_scout.graph import graph
