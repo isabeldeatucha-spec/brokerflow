@@ -34,8 +34,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from typing import Any
 
-from google import genai
-from google.genai import types as genai_types
+import anthropic
 from langgraph.graph import StateGraph, END
 from langgraph.types import interrupt
 
@@ -61,7 +60,7 @@ from agents.retailer_pitcher.skills.sell_sheet_template import (
 logger = logging.getLogger(__name__)
 
 HANDOFF_FRESHNESS_SECONDS = 24 * 60 * 60   # beyond this, Scout data is "stale"
-MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+MODEL = "claude-haiku-4-5-20251001"
 
 
 # ── Nodes ────────────────────────────────────────────────────────────────────
@@ -122,54 +121,18 @@ def select_buyer(state: RetailerPitcherState) -> dict:
     return {"buyer_key": buyer_key}
 
 
-def _strip_fences(text: str) -> str:
-    """Gemini 2.5 Flash often wraps JSON / prose in ```json ... ``` or ``` ... ```."""
-    if not text:
-        return text
-    t = text.strip()
-    if t.startswith("```"):
-        t = t[3:]
-        if t[:4].lower() == "json":
-            t = t[4:]
-        t = t.lstrip()
-    if t.rstrip().endswith("```"):
-        t = t.rstrip()[:-3]
-    return t.strip()
-
-
-def _gemini_call(system: str, user: str) -> tuple[str, int, int]:
-    """Single-shot Gemini Flash call. Returns (text, input_tokens, output_tokens).
-
-    Cross-provider by design (Scout on Claude, Pitcher on Gemini). Handles
-    Gemini 2.5 Flash quirks: disables thinking (which eats output tokens),
-    enables JSON mime type when prompt asks for JSON, strips markdown fences.
-    """
-    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
-
-    config_kwargs: dict[str, Any] = {
-        "system_instruction": system,
-        "max_output_tokens": 2048,
-    }
-    # Gemini 2.5 Flash "thinking" defaults to on and can consume most of
-    # max_output_tokens before emitting visible text. Turn it off.
-    try:
-        config_kwargs["thinking_config"] = genai_types.ThinkingConfig(
-            thinking_budget=0
-        )
-    except Exception:
-        pass
-    if "JSON" in system or "json" in system.lower():
-        config_kwargs["response_mime_type"] = "application/json"
-
-    resp = client.models.generate_content(
+def _claude_call(system: str, user: str) -> tuple[str, int, int]:
+    """Single-shot Claude Haiku call. Returns (text, input_tokens, output_tokens)."""
+    client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+    resp = client.messages.create(
         model=MODEL,
-        contents=user,
-        config=genai_types.GenerateContentConfig(**config_kwargs),
+        max_tokens=2048,
+        system=system,
+        messages=[{"role": "user", "content": user}],
     )
-    text = _strip_fences(resp.text or "")
-    usage = getattr(resp, "usage_metadata", None)
-    tin = getattr(usage, "prompt_token_count", 0) or 0
-    tout = getattr(usage, "candidates_token_count", 0) or 0
+    text = resp.content[0].text if resp.content else ""
+    tin = resp.usage.input_tokens
+    tout = resp.usage.output_tokens
     return text, tin, tout
 
 
@@ -194,7 +157,7 @@ def draft_email(state: RetailerPitcherState) -> dict:
     )
 
     try:
-        text, tin, tout = _gemini_call(EMAIL_SYSTEM, user)
+        text, tin, tout = _claude_call(EMAIL_SYSTEM, user)
     except Exception as exc:  # noqa: BLE001
         # Reducers on artifact_errors / *_tokens: return deltas only.
         return {
@@ -246,7 +209,7 @@ def draft_sell_sheet(state: RetailerPitcherState) -> dict:
     )
 
     try:
-        text, tin, tout = _gemini_call(SELL_SHEET_SYSTEM, user)
+        text, tin, tout = _claude_call(SELL_SHEET_SYSTEM, user)
         payload = _extract_json(text)
     except Exception as exc:  # noqa: BLE001
         return {
