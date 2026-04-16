@@ -59,7 +59,7 @@ from agents.retailer_pitcher.skills.sell_sheet_template import (
 
 logger = logging.getLogger(__name__)
 
-HANDOFF_FRESHNESS_SECONDS = 24 * 60 * 60   # beyond this, Scout data is "stale"
+HANDOFF_FRESHNESS_SECONDS = 30 * 24 * 60 * 60   # 30 days
 MODEL = "claude-haiku-4-5-20251001"
 
 
