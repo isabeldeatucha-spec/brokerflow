@@ -140,7 +140,16 @@ def run_with_buyer(brand_name: str, buyer_key: str) -> dict:
 
 
 with st.spinner(f"Drafting pitch for {pick['brand_name']} → {persona['retailer']}..."):
-    _ = run_with_buyer(pick["brand_name"], buyer_key)
+    final = run_with_buyer(pick["brand_name"], buyer_key)
+
+handoff_status = final.get("handoff_status", "")
+artifact_errors = final.get("artifact_errors", [])
+if handoff_status != "ok":
+    st.error(f"Handoff failed: {handoff_status} — {final.get('handoff_error', 'unknown error')}")
+    st.stop()
+if artifact_errors:
+    st.error(f"Pitch generation errors: {artifact_errors}")
+    st.stop()
 
 client = _get_client()
 res = (
@@ -152,7 +161,7 @@ res = (
     .execute()
 )
 if not res.data:
-    st.error("Couldn't draft the pitch. Try again in a moment.")
+    st.error(f"Pitch ran (status: {final.get('artifact_status')}) but nothing saved to Supabase.")
     st.stop()
 row = res.data[0]
 
