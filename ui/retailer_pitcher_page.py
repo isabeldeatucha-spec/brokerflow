@@ -107,15 +107,16 @@ def render_retailer_pitcher_page() -> None:
                 del st.session_state["handoff_brand"]
                 st.rerun()
 
-    # ── Sidebar ───────────────────────────────────────────────────────────────
+    # ── Controls ──────────────────────────────────────────────────────────────
 
-    with st.sidebar:
+    buyer_labels = {k: v["retailer"] for k, v in BUYER_PERSONAS.items()}
+
+    _rp_brand_col, _rp_buyer_col = st.columns([1, 1])
+    with _rp_brand_col:
         st.markdown(
-            '<p style="font-size:11px; font-weight:700; color:#9CA3AF; text-transform:uppercase; '
-            'letter-spacing:0.1em; margin-bottom:16px;">Retailer Pitcher</p>',
+            '<p style="font-size:12px;font-weight:700;color:#4A4A4A;margin-bottom:4px;">1 · Pick a brand</p>',
             unsafe_allow_html=True,
         )
-        st.subheader("1 · Pick a brand")
         pick = st.selectbox(
             "From your Brand Scout book",
             options=brands,
@@ -126,9 +127,11 @@ def render_retailer_pitcher_page() -> None:
         )
         st.caption(f"Category: {pick.get('category', '—')}  ·  Verdict: {pick.get('verdict', '—')}")
 
-        st.divider()
-        st.subheader("2 · Pick a buyer")
-        buyer_labels = {k: v["retailer"] for k, v in BUYER_PERSONAS.items()}
+    with _rp_buyer_col:
+        st.markdown(
+            '<p style="font-size:12px;font-weight:700;color:#4A4A4A;margin-bottom:4px;">2 · Pick a buyer</p>',
+            unsafe_allow_html=True,
+        )
         buyer_key = st.radio(
             "Who are we pitching?",
             options=list(buyer_labels.keys()),
@@ -136,17 +139,17 @@ def render_retailer_pitcher_page() -> None:
             label_visibility="collapsed",
             key="rp_buyer_key",
         )
-        persona = BUYER_PERSONAS[buyer_key]
-        st.caption(f"**{persona['buyer_title']}** · tone: {persona['tone']}")
 
-        st.divider()
-        go = st.button("Draft pitch", type="primary", use_container_width=True, key="rp_go")
+    persona = BUYER_PERSONAS[buyer_key]
+    st.caption(f"**{persona['buyer_title']}** · tone: {persona['tone']}")
+    go = st.button("Draft pitch", type="primary", use_container_width=True, key="rp_go")
+    st.markdown("<hr style='border:none;border-top:1px solid #EBEBEB;margin:12px 0 20px;'>", unsafe_allow_html=True)
 
     # ── Main ──────────────────────────────────────────────────────────────────
 
     if not go:
         st.info(
-            "Pick a brand and a buyer on the left, then click **Draft pitch**. "
+            "Pick a brand and a buyer above, then click **Draft pitch**. "
             "You'll get a ready-to-send email and a printable 1-page sell sheet."
         )
         return

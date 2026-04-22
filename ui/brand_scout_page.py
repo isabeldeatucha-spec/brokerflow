@@ -331,6 +331,8 @@ def run_graph_to_completion(brand_name: str, website_url: str):
     initial_state = {
         "brand_name": brand_name,
         "website_url": website_url,
+        "cache_hit": False,
+        "force_refresh": st.session_state.get("force_refresh", False),
         "sources_checked": [],
         "signals_found": {},
         "follow_up_queries": [],
@@ -349,6 +351,7 @@ def run_graph_to_completion(brand_name: str, website_url: str):
     }
 
     _NODE_LABELS = {
+        "check_cache":          "⚡ Checking memory…",
         "discover_brands":      "🔍 Discovering brands…",
         "research_brand":       "📊 Researching signals…",
         "reflect_and_decide":   "🤔 Checking for gaps…",
@@ -891,64 +894,84 @@ def render_brand_scout_page() -> None:
             unsafe_allow_html=True,
         )
 
-    # Sidebar
-    with st.sidebar:
-        st.markdown('<p style="font-size:11px; font-weight:700; color:#9CA3AF; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:16px;">Brand Scout</p>', unsafe_allow_html=True)
+    # ── Input form + Recent evaluations ──────────────────────────────────────────
+    _fcol, _rcol = st.columns([3, 2])
 
+    with _fcol:
         mode = st.radio(
             "Mode",
             ["🔍  Research a brand", "🌐  Discover new brands"],
             key="mode_radio",
+            horizontal=True,
             label_visibility="collapsed",
         )
-
         if mode == "🔍  Research a brand":
-            # Pre-fill from handoff or dashboard query (only if not already set by user)
             _hb = st.session_state.get("handoff_brand") or st.session_state.get("_brand_name", "")
             if _hb and "brand_input" not in st.session_state:
                 st.session_state["brand_input"] = _hb
-            brand_name_input = st.text_input("Brand name", placeholder="Brand name", key="brand_input")
-            brand_url_input = st.text_input("Website URL", placeholder="Website URL — speeds up research", key="url_input")
+            brand_name_input = st.text_input(
+                "Brand name",
+                placeholder="Brand name (e.g. Chomps, Fishwife, Graza)",
+                key="brand_input",
+                label_visibility="collapsed",
+            )
+            brand_url_input = st.text_input(
+                "Website URL",
+                placeholder="Website URL — speeds up research (optional)",
+                key="url_input",
+                label_visibility="collapsed",
+            )
         else:
             brand_name_input = ""
             brand_url_input = ""
-            st.markdown("""
-<div style="background:#EBF5FB; border-radius:8px; padding:12px; font-size:13px; color:#1B4F72; line-height:1.5;">
-    Scans Whole Foods, Sprouts, Target and Walmart for brands just hitting shelves.
-    Evaluates the top picks and surfaces the ones worth your time.
-</div>
-""", unsafe_allow_html=True)
-
-        if st.button("▶ Run", key="run_btn", use_container_width=True):
+            st.markdown(
+                '<div style="background:#EBF5FB;border-radius:8px;padding:10px 12px;'
+                'font-size:13px;color:#1B4F72;line-height:1.5;margin-bottom:8px;">'
+                'Scans Whole Foods, Sprouts, Target and Walmart for brands just hitting shelves.</div>',
+                unsafe_allow_html=True,
+            )
+        _btn_c, _new_c = st.columns([4, 1])
+        with _btn_c:
+            _run_clicked = st.button("▶  Run", key="run_btn", use_container_width=True)
+        with _new_c:
+            _new_search = st.button(
+                "↺", key="new_search_btn", use_container_width=True,
+                disabled=(st.session_state.phase == "idle"),
+            )
+        if _run_clicked:
             if mode == "🔍  Research a brand" and not brand_name_input.strip():
                 st.warning("Enter a brand name first.")
             else:
                 st.session_state["_brand_name"] = brand_name_input.strip()
                 st.session_state["_website_url"] = brand_url_input.strip()
+                st.session_state["force_refresh"] = False
                 st.session_state.phase = "running"
                 st.rerun()
+        if _new_search:
+            reset()
+            st.rerun()
 
-        st.markdown("<hr style='border:none;border-top:1px solid #EBEBEB;margin:20px 0'>", unsafe_allow_html=True)
-        st.markdown("<p style='font-size:11px; font-weight:700; color:#9CA3AF; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:8px;'>Recent Evaluations</p>", unsafe_allow_html=True)
-
+    with _rcol:
+        st.markdown(
+            '<p style="font-size:11px;font-weight:700;color:#9CA3AF;text-transform:uppercase;'
+            'letter-spacing:0.1em;margin:0 0 8px;">Recent Evaluations</p>',
+            unsafe_allow_html=True,
+        )
         try:
             recent = retrieve_all_evaluations()
             if recent:
-                for item in recent[:5]:
+                for item in recent[:6]:
                     score = item.get("score", 0)
                     name  = item.get("brand_name", "Unknown")
                     dot   = "🟡" if score >= 70 else "🟢" if score >= 45 else "🔴"
-                    if st.button(
-                        f"{dot} {name}   {score}/100",
-                        key=f"recent_{name}",
-                        use_container_width=True,
-                    ):
+                    if st.button(f"{dot} {name}   {score}/100", key=f"recent_{name}", use_container_width=True):
                         detail = item.get("score_breakdown", {})
-                        st.session_state.phase          = "awaiting_approval" if score >= 45 else "too_early"
+                        st.session_state.phase = "awaiting_approval" if score >= 45 else "too_early"
                         st.session_state.loaded_from_cache = True
                         st.session_state.incomplete_record = False
-                        st.session_state.final_state     = {
+                        st.session_state.final_state = {
                             "brand_name":       name,
+                            "cache_hit":        False,
                             "score":            {"total": score, **{
                                 k: (detail.get(k, {}).get("score", 0) if isinstance(detail.get(k), dict) else 0)
                                 for k in ("velocity_proof", "distribution_density", "margin_viability",
@@ -960,31 +983,23 @@ def render_brand_scout_page() -> None:
                             "email_draft":      item.get("email_draft", ""),
                             "founder_name":     item.get("founder_name", ""),
                             "founder_email":    item.get("founder_email", ""),
-                            "signals_found":    {
-                                "score_detail": {
-                                    **detail,
-                                    "broker_brief":   item.get("broker_brief", ""),
-                                    "key_gaps":       item.get("key_gaps") or [],
-                                    "email_subject":  item.get("email_subject", ""),
-                                    "outreach_angle": item.get("outreach_angle", ""),
-                                }
-                            },
+                            "signals_found":    {"score_detail": {
+                                **detail,
+                                "broker_brief":   item.get("broker_brief", ""),
+                                "key_gaps":       item.get("key_gaps") or [],
+                                "email_subject":  item.get("email_subject", ""),
+                                "outreach_angle": item.get("outreach_angle", ""),
+                            }},
                         }
-                        st.session_state.interrupt_data  = st.session_state.final_state
+                        st.session_state.interrupt_data   = st.session_state.final_state
                         st.session_state.extracted_fields = item.get("extracted_fields") or {}
                         st.rerun()
             else:
-                st.markdown("<p style='font-size:13px; color:#9CA3AF;'>No evaluations yet.</p>", unsafe_allow_html=True)
+                st.markdown("<p style='font-size:13px;color:#9CA3AF;'>No evaluations yet.</p>", unsafe_allow_html=True)
         except Exception as _e:
-            st.markdown(f"<p style='font-size:11px; color:#EF4444;'>Error: {_e}</p>", unsafe_allow_html=True)
+            st.markdown(f"<p style='font-size:11px;color:#EF4444;'>Error: {_e}</p>", unsafe_allow_html=True)
 
-        st.markdown("<hr style='border:none;border-top:1px solid #EBEBEB;margin:20px 0'>", unsafe_allow_html=True)
-        if st.session_state.phase != "idle":
-            st.markdown('<div style="margin-top:8px; padding-bottom:40px;">', unsafe_allow_html=True)
-            if st.button("↺ New Search", key="new_search_btn"):
-                reset()
-                st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("<hr style='border:none;border-top:1px solid #EBEBEB;margin:16px 0 8px;'>", unsafe_allow_html=True)
 
     # Header
     st.markdown("""
@@ -1088,6 +1103,21 @@ def render_brand_scout_page() -> None:
         data  = st.session_state.interrupt_data or {}
         final = st.session_state.final_state or {}
         merged = {**final, **data}
+
+        if merged.get("cache_hit"):
+            _cb_col, _rf_col = st.columns([5, 1])
+            with _cb_col:
+                st.markdown(
+                    '<div style="background:#F0FDF4;border:1px solid #A7F3D0;border-radius:8px;'
+                    'padding:8px 14px;margin-bottom:12px;font-size:12px;color:#065F46;">'
+                    '♻ Loaded from memory — research on file (< 7 days old)</div>',
+                    unsafe_allow_html=True,
+                )
+            with _rf_col:
+                if st.button("🔄 Re-run", key="force_refresh_btn", use_container_width=True):
+                    st.session_state["force_refresh"] = True
+                    st.session_state.phase = "running"
+                    st.rerun()
 
         actions = render_results(merged, show_outreach=True)
 

@@ -650,41 +650,36 @@ def render_admin_ops_page() -> None:
     # ── Handoff from Brand Scout / Retailer Pitcher ───────────────────────────
     _handoff_brand = st.session_state.get("handoff_brand")
 
-    # ── Sidebar ───────────────────────────────────────────────────────────────
-    with st.sidebar:
+    # ── Controls ─────────────────────────────────────────────────────────────
+    brands: list[dict] = []
+    try:
+        brands = retrieve_all_evaluations() or []
+    except Exception as exc:
         st.markdown(
-            '<p style="font-size:11px;font-weight:700;color:#9CA3AF;text-transform:uppercase;'
-            'letter-spacing:0.1em;margin-bottom:16px;">Admin & Ops</p>',
+            f'<p style="font-size:11px;color:#EF4444;">Could not load brands: {exc}</p>',
             unsafe_allow_html=True,
         )
 
-        # Brand picker
+    def _brand_label(b: dict) -> str:
+        score = b.get("score", 0) or 0
+        dot = _verdict_dot(score)
+        return f"{b.get('brand_name','?')} · {score}/100 · {_verdict_label(score)}"
+
+    _ao_handoff_idx = 0
+    if _handoff_brand and brands:
+        for _i, _b in enumerate(brands):
+            if _b.get("brand_name", "").lower() == _handoff_brand.lower():
+                _ao_handoff_idx = _i
+                break
+
+    _ao_brand_col, _ao_retailer_col = st.columns([1, 1])
+
+    with _ao_brand_col:
         st.markdown(
-            '<p style="font-size:12px;font-weight:600;color:#4A4A4A;margin-bottom:4px;">1 · Pick a brand</p>',
+            '<p style="font-size:12px;font-weight:700;color:#4A4A4A;margin-bottom:4px;">1 · Pick a brand</p>',
             unsafe_allow_html=True,
         )
-        brands: list[dict] = []
-        try:
-            brands = retrieve_all_evaluations() or []
-        except Exception as exc:
-            st.markdown(
-                f'<p style="font-size:11px;color:#EF4444;">Could not load brands: {exc}</p>',
-                unsafe_allow_html=True,
-            )
-
         if brands:
-            def _brand_label(b: dict) -> str:
-                score = b.get("score", 0) or 0
-                dot = _verdict_dot(score)
-                return f"{b.get('brand_name','?')} · {score}/100 · {_verdict_label(score)}"
-
-            _ao_handoff_idx = 0
-            if _handoff_brand:
-                for _i, _b in enumerate(brands):
-                    if _b.get("brand_name", "").lower() == _handoff_brand.lower():
-                        _ao_handoff_idx = _i
-                        break
-
             selected_brand = st.selectbox(
                 "Brand",
                 options=brands,
@@ -695,17 +690,14 @@ def render_admin_ops_page() -> None:
             )
         else:
             st.markdown(
-                '<p style="font-size:13px;color:#9CA3AF;">No brands evaluated yet.<br>'
-                'Run Brand Scout first.</p>',
+                '<p style="font-size:13px;color:#9CA3AF;">No brands yet. Run Brand Scout first.</p>',
                 unsafe_allow_html=True,
             )
             selected_brand = None
 
-        st.markdown("<div style='height:12px;'></div>", unsafe_allow_html=True)
-
-        # Retailer picker
+    with _ao_retailer_col:
         st.markdown(
-            '<p style="font-size:12px;font-weight:600;color:#4A4A4A;margin-bottom:4px;">2 · Pick a retailer</p>',
+            '<p style="font-size:12px;font-weight:700;color:#4A4A4A;margin-bottom:4px;">2 · Pick a retailer</p>',
             unsafe_allow_html=True,
         )
         st.radio(
@@ -715,37 +707,33 @@ def render_admin_ops_page() -> None:
             label_visibility="collapsed",
         )
         st.markdown(
-            '<div style="background:#F3F4F6;border-radius:8px;padding:10px 12px;margin-top:4px;">'
-            '<p style="font-size:12px;color:#9CA3AF;margin:0;line-height:1.6;">'
-            '⚫ KeHE &nbsp;<span style="font-size:11px;">(coming soon)</span><br>'
-            '⚫ UNFI &nbsp;<span style="font-size:11px;">(coming soon)</span><br>'
-            '⚫ Sprouts &nbsp;<span style="font-size:11px;">(coming soon)</span>'
-            '</p></div>',
+            '<p style="font-size:11px;color:#9CA3AF;margin-top:4px;">KeHE · UNFI · Sprouts — coming soon</p>',
             unsafe_allow_html=True,
         )
 
-        st.markdown("<div style='height:16px;'></div>", unsafe_allow_html=True)
-
-        # Run button
-        run_disabled = selected_brand is None
-        if st.button(
+    _ao_run_col, _ao_reset_col = st.columns([4, 1])
+    with _ao_run_col:
+        _ao_run_clicked = st.button(
             "▶  Autofill form",
             key="ao_run_btn",
             use_container_width=True,
-            disabled=run_disabled,
-        ):
-            st.session_state.ao_phase = "running"
-            st.session_state.ao_brand_pick = selected_brand
-            st.session_state.ao_thread_id = str(uuid.uuid4())
-            st.session_state.ao_result = None
-            st.rerun()
-
+            disabled=(selected_brand is None),
+        )
+    with _ao_reset_col:
         if st.session_state.ao_phase != "idle":
-            st.markdown("<hr style='border:none;border-top:1px solid #EBEBEB;margin:20px 0'>", unsafe_allow_html=True)
-            if st.button("↺  New form", key="ao_reset_btn", use_container_width=True):
+            if st.button("↺", key="ao_reset_btn", use_container_width=True):
                 st.session_state.ao_phase = "idle"
                 st.session_state.ao_result = None
                 st.rerun()
+
+    if _ao_run_clicked:
+        st.session_state.ao_phase = "running"
+        st.session_state.ao_brand_pick = selected_brand
+        st.session_state.ao_thread_id = str(uuid.uuid4())
+        st.session_state.ao_result = None
+        st.rerun()
+
+    st.markdown("<hr style='border:none;border-top:1px solid #EBEBEB;margin:16px 0 20px;'>", unsafe_allow_html=True)
 
     # ── Header ────────────────────────────────────────────────────────────────
     st.markdown("""

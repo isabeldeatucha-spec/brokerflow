@@ -25,13 +25,14 @@ Flow:
 import json
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, timezone
 
 import anthropic
 from langgraph.graph import StateGraph, END
 from langgraph.types import interrupt, Command
 
 from state import BrandScoutState, ScoreBreakdown
-from memory import memory, get_config, store_brand_evaluation, retrieve_similar_brands, retrieve_brand_history
+from memory import memory, get_config, store_brand_evaluation, retrieve_similar_brands, retrieve_brand_history, _get_client
 from agents.brand_scout.prompts import SCORE_THRESHOLDS, SCORING_PROMPT, DRAFT_PROMPT, REFLECTION_PROMPT
 from agents.brand_scout.skills.scoring_formula import calculate_score
 from agents.brand_scout.tools import (
@@ -204,6 +205,67 @@ def _compact_signals(obj, max_str: int = 600):
 
 # ── Nodes ─────────────────────────────────────────────────────────────────────
 
+def check_cache(state: BrandScoutState) -> dict:
+    """Return a cached evaluation (<7 days old) to skip research entirely."""
+    brand_name = state.get("brand_name", "").strip().title()
+    if not brand_name or state.get("force_refresh"):
+        return {"cache_hit": False}
+    try:
+        client = _get_client()
+        res = (
+            client.table("brand_evaluations")
+            .select("*")
+            .ilike("brand_name", brand_name)
+            .limit(1)
+            .execute()
+        )
+        if not res.data:
+            return {"cache_hit": False}
+        row = res.data[0]
+        ts = datetime.fromisoformat(row["evaluated_at"].replace("Z", "+00:00"))
+        age_days = (datetime.now(timezone.utc) - ts).days
+        if age_days >= 7:
+            return {"cache_hit": False}
+    except Exception as exc:
+        print(f"[check_cache] error: {exc}")
+        return {"cache_hit": False}
+
+    detail = row.get("score_breakdown", {}) or {}
+
+    def _s(key: str) -> int:
+        entry = detail.get(key, {})
+        return entry.get("score", 0) if isinstance(entry, dict) else (int(entry) if entry else 0)
+
+    print(f"[check_cache] Hit for {brand_name} (age {age_days}d) — skipping research")
+    return {
+        "cache_hit": True,
+        "brand_name": row["brand_name"],
+        "category": row.get("category", ""),
+        "verdict": "above_threshold",
+        "score": {
+            "total": row["score"],
+            "velocity_proof": _s("velocity_proof"),
+            "distribution_density": _s("distribution_density"),
+            "margin_viability": _s("margin_viability"),
+            "brand_story_clarity": _s("brand_story_clarity"),
+            "promotional_independence": _s("promotional_independence"),
+        },
+        "signals_found": {
+            "score_detail": {
+                **detail,
+                "broker_brief": row.get("broker_brief", ""),
+                "key_gaps": row.get("key_gaps") or [],
+                "outreach_angle": row.get("outreach_angle", ""),
+            },
+        },
+        "email_draft": row.get("email_draft", ""),
+        "founder_name": row.get("founder_name", ""),
+        "founder_email": row.get("founder_email", ""),
+        "extracted_fields": row.get("extracted_fields") or {},
+        "reflection_notes": row.get("reflection_notes") or [],
+    }
+
+
 def discover_brands(state: BrandScoutState) -> dict:
     """If brand name already provided, skip scraping and go straight to research."""
     cli_brand = state.get("brand_name", "")
@@ -342,12 +404,12 @@ def reflect_and_decide(state: BrandScoutState) -> dict:
     Max 2 reflection loops.
     """
     reflection_count = state.get("reflection_count", 0)
+    max_loops = int(os.environ.get("REFLECTION_MAX_LOOPS", "1"))
 
-    # Always proceed after 2 loops regardless of gaps
-    if reflection_count >= 2:
+    if reflection_count >= max_loops:
         notes = state.get("reflection_notes", [])
         return {
-            "reflection_notes": notes + ["Reflection limit reached (2/2) — proceeding to score with available data."],
+            "reflection_notes": notes + [f"Reflection limit reached ({max_loops}/{max_loops}) — proceeding to score with available data."],
             "follow_up_queries": [],
         }
 
@@ -799,6 +861,10 @@ def send_email_node(state: BrandScoutState) -> dict:
 
 # ── Routing ───────────────────────────────────────────────────────────────────
 
+def _route_after_cache(state: BrandScoutState) -> str:
+    return "human_approval" if state.get("cache_hit") else "discover_brands"
+
+
 def _route_after_reflect(state: BrandScoutState) -> str:
     """Loop back to research if the agent identified critical gaps; otherwise score."""
     queries = state.get("follow_up_queries", [])
@@ -820,6 +886,7 @@ def _route_after_approval(state: BrandScoutState) -> str:
 def build_graph():
     builder = StateGraph(BrandScoutState)
 
+    builder.add_node("check_cache", check_cache)
     builder.add_node("discover_brands", discover_brands)
     builder.add_node("research_brand", research_brand)
     builder.add_node("reflect_and_decide", reflect_and_decide)
@@ -831,7 +898,12 @@ def build_graph():
     builder.add_node("human_approval", human_approval)
     builder.add_node("send_email", send_email_node)
 
-    builder.set_entry_point("discover_brands")
+    builder.set_entry_point("check_cache")
+    builder.add_conditional_edges(
+        "check_cache",
+        _route_after_cache,
+        {"human_approval": "human_approval", "discover_brands": "discover_brands"},
+    )
     builder.add_edge("discover_brands", "research_brand")
     builder.add_edge("research_brand", "reflect_and_decide")
 

@@ -27,6 +27,8 @@ class BrandScoutState(TypedDict):
     # Input
     brand_name: str
     website_url: str
+    cache_hit: bool      # True when check_cache node served result from Supabase
+    force_refresh: bool  # True to bypass cache and re-research
 
     # Research
     sources_checked: list[str]
