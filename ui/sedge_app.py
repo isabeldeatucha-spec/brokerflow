@@ -120,7 +120,7 @@ def render_landing() -> None:
         '<div style="text-align:center; padding: 48px 0 24px;">'
         '<h1 class="sedge-h1" style="text-align:center;">Sedge</h1>'
         '<p class="sedge-subtitle" style="text-align:center;">'
-        'The operating system for independent food brokers.'
+        'The operating system for CPG brokers.'
         '</p>'
         '</div>',
         unsafe_allow_html=True,
@@ -1026,7 +1026,7 @@ def render_landing_cards() -> None:
             <div style="font-family:'Instrument Serif', Georgia, serif;
                         font-style:italic; font-size:22px; color:#6b6b6b;
                         margin-top:0.5rem;">
-                the operating system for independent CPG brokers
+                the operating system for CPG brokers
             </div>
         </div>
         """,
@@ -1351,103 +1351,228 @@ def render_brand_scout_workspace() -> None:
         _error_card(_exc)
 
 
+# ── Existing business: per-brand activity helpers ─────────────────────────────
+
+_AGENT_KEYS = ["retailer_pitcher", "admin_ops", "brand_scout"]
+_AGENT_LABELS = {
+    "retailer_pitcher": "Retailer Pitcher",
+    "admin_ops":        "Admin & Ops",
+    "brand_scout":      "Brand Scout",
+}
+_STATUS_COLORS = {
+    "completed":       ("#D1FAE5", "#065F46"),
+    "awaiting_review": ("#FEF3C7", "#92400E"),
+    "in_progress":     ("#DBEAFE", "#1E40AF"),
+    "idle":            ("#F3F4F6", "#6B7280"),
+}
+_STATUS_LABELS = {
+    "completed":       "done",
+    "awaiting_review": "review",
+    "in_progress":     "running",
+    "idle":            "idle",
+}
+
+
+def _ago_str(iso: str) -> str:
+    from datetime import datetime, timezone
+    try:
+        ts = datetime.fromisoformat(iso.replace("Z", "+00:00"))
+        delta = datetime.now(timezone.utc) - ts
+        secs = delta.total_seconds()
+        if secs < 60:
+            return "just now"
+        if secs < 3600:
+            return f"{int(secs / 60)} min ago"
+        if secs < 86400:
+            return f"{int(secs / 3600)} hr ago"
+        return f"{delta.days}d ago"
+    except Exception:
+        return ""
+
+
+def _load_brand_activity(client, brand_ids: list) -> dict:
+    """Return {brand_id: {agent_key: message}} — latest per (brand, agent) pair."""
+    if not brand_ids:
+        return {}
+    try:
+        res = (
+            client.table("coordination_messages")
+            .select("brand_id, from_agent, payload, created_at")
+            .in_("brand_id", brand_ids)
+            .order("created_at", desc=True)
+            .limit(200)
+            .execute()
+        )
+        messages = res.data or []
+    except Exception:
+        return {}
+    seen: set = set()
+    result: dict = {}
+    for m in messages:
+        key = (m["brand_id"], m["from_agent"])
+        if key not in seen:
+            seen.add(key)
+            bid = m["brand_id"]
+            result.setdefault(bid, {})[m["from_agent"]] = m
+    return result
+
+
+def _agent_pill_html(agent_key: str, message: dict | None) -> str:
+    label = _AGENT_LABELS.get(agent_key, agent_key)
+    if not message:
+        bg, fg = _STATUS_COLORS["idle"]
+        return (
+            f'<span style="font-size:11px; background:{bg}; color:{fg}; '
+            f'padding:2px 9px; border-radius:99px; margin-right:6px; white-space:nowrap;">'
+            f'{label}: idle</span>'
+        )
+    payload = message.get("payload") or {}
+    status = payload.get("agent_status", "idle")
+    action = payload.get("action_label", "")
+    pending = payload.get("pending_review_count", 0)
+    created_at = message.get("created_at", "")
+
+    bg, fg = _STATUS_COLORS.get(status, _STATUS_COLORS["idle"])
+    status_lbl = _STATUS_LABELS.get(status, status)
+    if status == "awaiting_review" and pending:
+        status_lbl = f"review \xd7{pending}"
+
+    pill = (
+        f'<span style="font-size:11px; background:{bg}; color:{fg}; '
+        f'padding:2px 9px; border-radius:99px; margin-right:6px; white-space:nowrap;">'
+        f'{label}: {status_lbl}</span>'
+    )
+    detail = ""
+    if action:
+        detail += f'<span style="font-size:11px; color:#8B8A83; margin-right:10px;">{action}</span>'
+    if created_at and status in ("completed", "in_progress"):
+        ago = _ago_str(created_at)
+        if ago:
+            detail += f'<span style="font-size:11px; color:#B0AFA8;">{ago}</span>'
+    return pill + detail
+
+
 # ── Existing business: brand roster ──────────────────────────────────────────
 
 def render_brand_roster() -> None:
-    sandbox_on = st.session_state.get("sandbox_mode", False)
-    col_title, col_sandbox = st.columns([3, 1])
-    with col_title:
-        st.markdown(
-            "<h2 style=\"font-family:'Instrument Serif', Georgia, serif; "
-            "font-size:32px; font-weight:400; margin:0 0 4px 0;\">Brand Roster</h2>",
-            unsafe_allow_html=True,
-        )
-    with col_sandbox:
-        sandbox_label = "Clear sandbox" if sandbox_on else "Load sandbox brands"
-        if st.button(sandbox_label, key="sandbox_toggle_btn", use_container_width=True):
-            if sandbox_on:
-                try:
-                    from sandbox.fixtures import clear_sandbox_brands
-                    clear_sandbox_brands()
-                    st.session_state["sandbox_mode"] = False
-                except Exception as e:
-                    st.error(f"Clear failed: {e}")
-            else:
-                try:
-                    from sandbox.fixtures import seed_sandbox_brands
-                    seed_sandbox_brands()
-                    st.session_state["sandbox_mode"] = True
-                except Exception as e:
-                    st.error(f"Seed failed: {e}")
-            st.rerun()
-
+    client = None
+    brands_list: list = []
     try:
         from memory import _get_client
         client = _get_client()
         result = (
             client.table("brands")
-            .select("id, brand_name, category, completeness_pct, status, last_verified_at, is_sandbox, products")
-            .order("created_at", desc=True)
+            .select("id, brand_name, category, completeness_pct, status, onboarded_at, is_sandbox, products")
+            .order("onboarded_at", desc=True)
             .limit(50)
             .execute()
         )
         brands_list = result.data or []
     except Exception:
-        brands_list = []
+        pass
+
+    sandbox_on = any(b.get("is_sandbox") for b in brands_list)
 
     if not brands_list:
+        # ── State A: empty roster ─────────────────────────────────────────────
         st.markdown(
-            '<div class="sedge-card" style="text-align:center; padding:48px 24px;">'
-            '<p style="color:#8B8A83; margin:0;">No brands in your book yet. '
-            "Add one or load sample brands to explore.</p>"
+            '<div style="text-align:center; padding:80px 0 48px;">'
+            '<p style="font-size:11px; font-weight:600; letter-spacing:0.1em; '
+            'color:#8B8A83; margin-bottom:12px;">READY TO RUN</p>'
+            '<h2 style=\'font-family:"Instrument Serif", Georgia, serif; font-size:28px; '
+            'font-weight:400; color:#1A1A18; margin:0 0 12px 0;\'>'
+            'Your agents are ready — add a brand to get started</h2>'
+            '<p style="font-size:14px; color:#8B8A83; max-width:480px; margin:0 auto 32px;">'
+            "Onboard your first brand and Sedge's agents will start pitching, "
+            'processing paperwork, and tracking the book automatically.</p>'
             '</div>',
             unsafe_allow_html=True,
         )
+        col_cta, _ = st.columns([1, 2])
+        with col_cta:
+            if st.button("+ Onboard a brand", type="primary", key="onboard_empty_btn",
+                         use_container_width=True):
+                st.session_state["onboarding_active"] = True
+                st.rerun()
     else:
+        # ── State B: per-brand activity rows ──────────────────────────────────
+        brand_ids = [b["id"] for b in brands_list if b.get("id")]
+        activity_map = _load_brand_activity(client, brand_ids) if client else {}
+
+        st.markdown(
+            "<h2 style='font-family:\"Instrument Serif\", Georgia, serif; "
+            "font-size:28px; font-weight:400; margin:0 0 16px 0;'>Your brands</h2>",
+            unsafe_allow_html=True,
+        )
+
         for brand in brands_list:
+            bid = brand.get("id")
             name = brand.get("brand_name", "?")
             category = brand.get("category") or "—"
-            pct = brand.get("completeness_pct") or 0
-            status = brand.get("status") or "active"
-            is_sb = brand.get("is_sandbox", False)
             product_count = len(brand.get("products") or [])
+            is_sb = brand.get("is_sandbox", False)
+            brand_activity = activity_map.get(bid, {})
+
             sandbox_tag = (
                 '<span style="font-size:10px; background:#E8EDE9; color:#2D5F3F; '
                 'padding:2px 6px; border-radius:99px; margin-left:6px;">sandbox</span>'
                 if is_sb else ""
             )
-            sku_tag = (
-                f'<span style="font-size:11px; color:#8B8A83; margin-left:10px;">'
-                f'📦 {product_count} SKU{"s" if product_count != 1 else ""}</span>'
-                if product_count else ""
+            agent_pills = "".join(
+                _agent_pill_html(ak, brand_activity.get(ak))
+                for ak in _AGENT_KEYS
             )
-            pct_color = "#2D5F3F" if pct >= 70 else ("#B8860B" if pct >= 40 else "#8B2F2F")
+
             st.markdown(
-                f'<div class="sedge-card" style="display:flex; align-items:center; '
-                f'gap:16px; padding:12px 20px; margin-bottom:8px;">'
-                f'<div style="flex:1;">'
+                f'<div class="sedge-card" style="padding:14px 20px; margin-bottom:8px;">'
+                f'<div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">'
                 f'<span style="font-size:15px; font-weight:500; color:#1A1A18;">{name}</span>'
                 f'{sandbox_tag}'
-                f'<span style="font-size:12px; color:#8B8A83; margin-left:12px;">{category}</span>'
-                f'{sku_tag}'
+                f'<span style="font-size:12px; color:#8B8A83;">{category}</span>'
+                f'<span style="font-size:11px; color:#B0AFA8;">'
+                f'&middot; {product_count} SKU{"s" if product_count != 1 else ""}</span>'
                 f'</div>'
-                f'<div style="font-size:13px; font-weight:500; color:{pct_color};">'
-                f'{pct:.0f}% complete'
-                f'</div>'
-                f'<div>'
-                f'<span class="sedge-pill" style="font-size:11px;">{status}</span>'
+                f'<div style="display:flex; flex-wrap:wrap; gap:4px 0; align-items:center;">'
+                f'{agent_pills}'
                 f'</div>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
 
-    st.markdown("<div style='margin-top:16px;'></div>", unsafe_allow_html=True)
-    if st.button("+ Onboard new brand", type="primary", key="onboard_new_btn"):
-        st.session_state["onboarding_active"] = True
-        st.rerun()
+        st.markdown("<div style='margin-top:12px;'></div>", unsafe_allow_html=True)
+        if st.button("+ Onboard new brand", key="onboard_new_btn"):
+            st.session_state["onboarding_active"] = True
+            st.rerun()
+
     if st.session_state.get("onboarding_active"):
         from ui.onboarding_flow import render_onboarding_flow
         render_onboarding_flow()
+
+    # ── Dev / utilities footer ────────────────────────────────────────────────
+    st.markdown(
+        "<div style='margin-top:48px; padding-top:16px; border-top:1px solid #EAEAEA;'>"
+        "<p style='font-size:11px; font-weight:600; letter-spacing:0.08em; "
+        "color:#B0AFA8; margin:0 0 8px 0;'>DEV UTILITIES</p></div>",
+        unsafe_allow_html=True,
+    )
+    col_load, col_clear, _ = st.columns([1, 1, 3])
+    with col_load:
+        if st.button("Load sandbox brands", key="sandbox_load_btn", use_container_width=True):
+            try:
+                from sandbox.fixtures import seed_sandbox_brands
+                seed_sandbox_brands()
+            except Exception as e:
+                st.error(f"Seed failed: {e}")
+            st.rerun()
+    with col_clear:
+        if st.button("Clear sandbox", key="sandbox_clear_btn",
+                     use_container_width=True, disabled=not sandbox_on):
+            try:
+                from sandbox.fixtures import clear_sandbox_brands
+                clear_sandbox_brands()
+            except Exception as e:
+                st.error(f"Clear failed: {e}")
+            st.rerun()
 
 
 # ── Existing business: recent activity feed ───────────────────────────────────
@@ -1617,22 +1742,7 @@ def render_existing_business_workspace() -> None:
             _error_card(exc)
         return
 
-    # Brand roster
     render_brand_roster()
-
-    # Recent activity feed
-    render_recent_activity_feed()
-
-    st.divider()
-
-    # Agents section
-    st.markdown(
-        "<h2 style='font-family:\"Instrument Serif\", Georgia, serif; "
-        "font-size:32px; font-weight:400; margin-top:1.5rem;'>Agents</h2>",
-        unsafe_allow_html=True,
-    )
-    st.caption("Multi-workflow agents working on your book.")
-    render_agent_picker()
 
 
 # ── Top-level workspace router ────────────────────────────────────────────────

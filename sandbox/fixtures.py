@@ -1479,57 +1479,160 @@ def _seed_brand_evaluations(client, names_seeded: list[str]) -> None:
             pass  # non-blocking — brand roster still works without evaluation cache
 
 
+# Per-brand × per-agent activity for the demo roster.
+# Each entry: from_agent, to_agent, message_type, payload (with agent_status / action_label /
+# pending_review_count), hours_ago (float — how old the message should appear).
+_SANDBOX_ACTIVITY: dict[str, list[dict]] = {
+    "Chomps": [
+        {
+            "from_agent": "retailer_pitcher", "to_agent": "admin_ops",
+            "message_type": "pitch_sent",
+            "payload": {"brand_name": "Chomps", "agent_status": "completed",
+                        "action_label": "Sent Whole Foods pitch", "pending_review_count": 0},
+            "hours_ago": 2.0,
+        },
+        {
+            "from_agent": "admin_ops", "to_agent": "brand_onboarding",
+            "message_type": "review_required",
+            "payload": {"brand_name": "Chomps", "agent_status": "awaiting_review",
+                        "action_label": "3 deductions to review", "pending_review_count": 3},
+            "hours_ago": 1.0,
+        },
+        {
+            "from_agent": "brand_scout", "to_agent": "brand_onboarding",
+            "message_type": "idle",
+            "payload": {"brand_name": "Chomps", "agent_status": "idle",
+                        "action_label": "", "pending_review_count": 0},
+            "hours_ago": 48.0,
+        },
+    ],
+    "Fishwife": [
+        {
+            "from_agent": "retailer_pitcher", "to_agent": "admin_ops",
+            "message_type": "pitch_in_progress",
+            "payload": {"brand_name": "Fishwife", "agent_status": "in_progress",
+                        "action_label": "Drafting Erewhon pitch", "pending_review_count": 0},
+            "hours_ago": 0.1,
+        },
+        {
+            "from_agent": "admin_ops", "to_agent": "brand_onboarding",
+            "message_type": "form_completed",
+            "payload": {"brand_name": "Fishwife", "agent_status": "completed",
+                        "action_label": "Filled Whole Foods new-item form", "pending_review_count": 0},
+            "hours_ago": 0.23,
+        },
+        {
+            "from_agent": "brand_scout", "to_agent": "brand_onboarding",
+            "message_type": "evaluation_complete",
+            "payload": {"brand_name": "Fishwife", "agent_status": "completed",
+                        "action_label": "Re-scored brand", "pending_review_count": 0},
+            "hours_ago": 24.0,
+        },
+    ],
+    "Graza": [
+        {
+            "from_agent": "retailer_pitcher", "to_agent": "admin_ops",
+            "message_type": "pitch_sent",
+            "payload": {"brand_name": "Graza", "agent_status": "completed",
+                        "action_label": "Sent Sprouts pitch", "pending_review_count": 0},
+            "hours_ago": 6.0,
+        },
+        {
+            "from_agent": "admin_ops", "to_agent": "brand_onboarding",
+            "message_type": "po_processing",
+            "payload": {"brand_name": "Graza", "agent_status": "in_progress",
+                        "action_label": "Processing PO from Whole Foods", "pending_review_count": 0},
+            "hours_ago": 0.5,
+        },
+        {
+            "from_agent": "brand_scout", "to_agent": "brand_onboarding",
+            "message_type": "idle",
+            "payload": {"brand_name": "Graza", "agent_status": "idle",
+                        "action_label": "", "pending_review_count": 0},
+            "hours_ago": 72.0,
+        },
+    ],
+    "Olipop": [
+        {
+            "from_agent": "retailer_pitcher", "to_agent": "admin_ops",
+            "message_type": "pitches_awaiting_review",
+            "payload": {"brand_name": "Olipop", "agent_status": "awaiting_review",
+                        "action_label": "2 buyer pitches ready", "pending_review_count": 2},
+            "hours_ago": 0.75,
+        },
+        {
+            "from_agent": "admin_ops", "to_agent": "brand_onboarding",
+            "message_type": "spend_reconciled",
+            "payload": {"brand_name": "Olipop", "agent_status": "completed",
+                        "action_label": "Reconciled demo spend", "pending_review_count": 0},
+            "hours_ago": 3.0,
+        },
+        {
+            "from_agent": "brand_scout", "to_agent": "brand_onboarding",
+            "message_type": "idle",
+            "payload": {"brand_name": "Olipop", "agent_status": "idle",
+                        "action_label": "", "pending_review_count": 0},
+            "hours_ago": 72.0,
+        },
+    ],
+    "Magic Spoon": [
+        {
+            "from_agent": "retailer_pitcher", "to_agent": "admin_ops",
+            "message_type": "idle",
+            "payload": {"brand_name": "Magic Spoon", "agent_status": "idle",
+                        "action_label": "", "pending_review_count": 0},
+            "hours_ago": 72.0,
+        },
+        {
+            "from_agent": "admin_ops", "to_agent": "brand_onboarding",
+            "message_type": "review_required",
+            "payload": {"brand_name": "Magic Spoon", "agent_status": "awaiting_review",
+                        "action_label": "1 PO discrepancy flagged", "pending_review_count": 1},
+            "hours_ago": 2.0,
+        },
+        {
+            "from_agent": "brand_scout", "to_agent": "brand_onboarding",
+            "message_type": "evaluation_complete",
+            "payload": {"brand_name": "Magic Spoon", "agent_status": "completed",
+                        "action_label": "Updated velocity signals", "pending_review_count": 0},
+            "hours_ago": 5.0,
+        },
+    ],
+}
+
+
 def _seed_coordination_messages(client, brand_id_map: dict) -> None:
-    """Insert one plausible coordination message per brand for the activity feed."""
+    """Seed per-brand × per-agent activity messages. Delete-first for idempotency."""
     from datetime import timedelta
     now = datetime.now(timezone.utc)
 
-    messages = [
-        {
-            "from_agent":   "brand_onboarding",
-            "to_agent":     "retailer_matcher",
-            "brand_id":     brand_id_map.get("Chomps"),
-            "message_type": "new_brand_onboarded",
-            "payload":      {"brand_name": "Chomps", "category": "snacks"},
-            "created_at":   (now - timedelta(hours=2)).isoformat(),
-        },
-        {
-            "from_agent":   "retailer_pitcher",
-            "to_agent":     "admin_ops",
-            "brand_id":     brand_id_map.get("Fishwife"),
-            "message_type": "pitch_drafted",
-            "payload":      {"brand_name": "Fishwife", "retailer": "Sprouts"},
-            "created_at":   (now - timedelta(hours=5)).isoformat(),
-        },
-        {
-            "from_agent":   "brand_onboarding",
-            "to_agent":     "retailer_matcher",
-            "brand_id":     brand_id_map.get("Graza"),
-            "message_type": "new_brand_onboarded",
-            "payload":      {"brand_name": "Graza", "category": "pantry"},
-            "created_at":   (now - timedelta(hours=8)).isoformat(),
-        },
-        {
-            "from_agent":   "admin_ops",
-            "to_agent":     "retailer_pitcher",
-            "brand_id":     brand_id_map.get("Olipop"),
-            "message_type": "form_completed",
-            "payload":      {"brand_name": "Olipop", "form_type": "WFM_new_item"},
-            "created_at":   (now - timedelta(days=1)).isoformat(),
-        },
-        {
-            "from_agent":   "brand_scout",
-            "to_agent":     "brand_onboarding",
-            "brand_id":     brand_id_map.get("Magic Spoon"),
-            "message_type": "evaluation_complete",
-            "payload":      {"brand_name": "Magic Spoon", "verdict": "established"},
-            "created_at":   (now - timedelta(days=1, hours=3)).isoformat(),
-        },
-    ]
-    valid = [m for m in messages if m.get("brand_id")]
-    if valid:
+    # Delete existing messages for these brands so re-seeding is idempotent
+    brand_ids = [v for v in brand_id_map.values() if v]
+    if brand_ids:
         try:
-            client.table("coordination_messages").insert(valid).execute()
+            client.table("coordination_messages").delete().in_("brand_id", brand_ids).execute()
+        except Exception:
+            pass
+
+    messages = []
+    for brand_name, activity_list in _SANDBOX_ACTIVITY.items():
+        brand_id = brand_id_map.get(brand_name)
+        if not brand_id:
+            continue
+        for entry in activity_list:
+            ts = now - timedelta(hours=entry["hours_ago"])
+            messages.append({
+                "from_agent":   entry["from_agent"],
+                "to_agent":     entry["to_agent"],
+                "brand_id":     brand_id,
+                "message_type": entry["message_type"],
+                "payload":      entry["payload"],
+                "created_at":   ts.isoformat(),
+            })
+
+    if messages:
+        try:
+            client.table("coordination_messages").insert(messages).execute()
         except Exception:
             pass  # activity feed is cosmetic; never block brand seeding
 
@@ -1571,11 +1674,11 @@ def seed_sandbox_brands() -> list[str]:
     except Exception:
         pass
 
-    if seeded:
-        try:
-            _seed_coordination_messages(client, brand_id_map)
-        except Exception:
-            pass
+    # Always reseed activity messages (delete-first inside, so idempotent)
+    try:
+        _seed_coordination_messages(client, brand_id_map)
+    except Exception:
+        pass
 
     return seeded
 
