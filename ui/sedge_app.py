@@ -1018,9 +1018,104 @@ def _error_card(exc: Exception) -> None:
         st.code(tb, language="python")
 
 
-# ── Tab: Discover (existing phase-based UX) ───────────────────────────────────
+# ── Landing: two destination cards ───────────────────────────────────────────
 
-def render_discover_tab() -> None:
+def render_landing_cards() -> None:
+    from ui.labels import (
+        LABEL_EXISTING_BUSINESS, LABEL_EXISTING_BUSINESS_SUB,
+        LABEL_BRAND_SCOUT, LABEL_BRAND_SCOUT_SUB,
+    )
+    st.markdown(
+        """
+        <div style="text-align:center; padding: 4rem 1rem 2.5rem 1rem;">
+            <div style="font-family:'Instrument Serif', Georgia, serif;
+                        font-size:64px; line-height:1.1; color:#1a1a1a;">Sedge</div>
+            <div style="font-family:'Instrument Serif', Georgia, serif;
+                        font-style:italic; font-size:22px; color:#6b6b6b;
+                        margin-top:0.5rem;">
+                the operating system for independent food brokers
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    col1, col2 = st.columns(2, gap="large")
+    with col1:
+        st.markdown(
+            f'<div class="sedge-destination-card">'
+            f'<div class="dest-eyebrow">Operate</div>'
+            f'<div class="dest-title">{LABEL_EXISTING_BUSINESS}</div>'
+            f'<div class="dest-sub">{LABEL_EXISTING_BUSINESS_SUB}</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+        if st.button(
+            "Enter →", key="enter_existing_business",
+            use_container_width=True, type="primary",
+        ):
+            st.session_state["workspace"] = "existing_business"
+            st.rerun()
+
+    with col2:
+        st.markdown(
+            f'<div class="sedge-destination-card">'
+            f'<div class="dest-eyebrow">Discover</div>'
+            f'<div class="dest-title">{LABEL_BRAND_SCOUT}</div>'
+            f'<div class="dest-sub">{LABEL_BRAND_SCOUT_SUB}</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+        if st.button(
+            "Enter →", key="enter_brand_scout",
+            use_container_width=True,
+        ):
+            st.session_state["workspace"] = "brand_scout"
+            st.rerun()
+
+
+def render_back_nav() -> None:
+    from ui.labels import LABEL_EXISTING_BUSINESS, LABEL_BRAND_SCOUT
+    col_back, col_crumb = st.columns([1, 6])
+    with col_back:
+        if st.button("← Sedge", key="back_to_landing"):
+            st.session_state["workspace"] = None
+            # Reset sub-navigation so re-entering starts fresh
+            st.session_state.pop("open_agent", None)
+            st.rerun()
+    with col_crumb:
+        ws_label = (
+            LABEL_EXISTING_BUSINESS
+            if st.session_state.get("workspace") == "existing_business"
+            else LABEL_BRAND_SCOUT
+        )
+        st.markdown(
+            f"<div style='padding-top:8px; color:#6b6b6b; font-size:14px;'>"
+            f"/ {ws_label}</div>",
+            unsafe_allow_html=True,
+        )
+    st.divider()
+
+
+# ── Brand Scout workspace ─────────────────────────────────────────────────────
+
+def render_brand_scout_workspace() -> None:
+    from ui.labels import LABEL_BRAND_SCOUT, LABEL_BRAND_SCOUT_SCOPE
+    st.markdown(
+        f"<h1 style='font-family:\"Instrument Serif\", Georgia, serif; "
+        f"font-size:44px; font-weight:400; margin-bottom:0.25rem;'>{LABEL_BRAND_SCOUT}</h1>",
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        "<p style='font-family:\"Instrument Serif\", Georgia, serif; "
+        "font-style:italic; font-size:18px; color:#6b6b6b; margin-bottom:1rem;'>"
+        "Evaluation, not operations. Score prospects for broker readiness.</p>",
+        unsafe_allow_html=True,
+    )
+    st.caption(LABEL_BRAND_SCOUT_SCOPE)
+    st.divider()
+
+    # Existing triage phase-based flow — unchanged
     phase = st.session_state.get("phase", "idle")
     try:
         if phase == "idle":
@@ -1041,41 +1136,19 @@ def render_discover_tab() -> None:
             render_autonomous_running()
         else:
             render_landing()
-    except Exception as _page_exc:
-        _error_card(_page_exc)
+    except Exception as _exc:
+        _error_card(_exc)
 
 
-# ── Tab: Operate ──────────────────────────────────────────────────────────────
+# ── Existing business: brand roster ──────────────────────────────────────────
 
-def render_operate_tab() -> None:
-    from agents.brand_onboarding.watchdog import get_pending_reverifications, scan_and_flag_stale_brands
-
-    try:
-        scan_and_flag_stale_brands()
-    except Exception:
-        pass
-
-    pending = get_pending_reverifications()
-    if pending:
-        st.warning(
-            f"**{len(pending)} brand{'s' if len(pending) != 1 else ''} need re-verification** "
-            f"— last verified >30 days ago.",
-            icon="⚠️",
-        )
-        with st.expander(f"View {len(pending)} stale brand{'s' if len(pending) != 1 else ''}"):
-            for msg in pending:
-                payload = msg.get("payload", {})
-                st.markdown(
-                    f"- **{payload.get('brand_name', '?')}** — "
-                    f"last verified {payload.get('days_stale', '?')} days ago"
-                )
-
+def render_brand_roster() -> None:
     sandbox_on = st.session_state.get("sandbox_mode", False)
     col_title, col_sandbox = st.columns([3, 1])
     with col_title:
         st.markdown(
-            '<h2 style="font-family:\'Instrument Serif\', serif; font-size:32px; '
-            'font-weight:400; margin:0 0 4px 0;">Brand Roster</h2>',
+            "<h2 style=\"font-family:'Instrument Serif', Georgia, serif; "
+            "font-size:32px; font-weight:400; margin:0 0 4px 0;\">Brand Roster</h2>",
             unsafe_allow_html=True,
         )
     with col_sandbox:
@@ -1115,7 +1188,7 @@ def render_operate_tab() -> None:
         st.markdown(
             '<div class="sedge-card" style="text-align:center; padding:48px 24px;">'
             '<p style="color:#8B8A83; margin:0;">No brands onboarded yet. '
-            'Add one below or load sandbox brands to explore.</p>'
+            "Add one below or load sandbox brands to explore.</p>"
             '</div>',
             unsafe_allow_html=True,
         )
@@ -1157,26 +1230,224 @@ def render_operate_tab() -> None:
                 unsafe_allow_html=True,
             )
 
-    st.markdown("<div style='margin-top:24px;'></div>", unsafe_allow_html=True)
-
+    st.markdown("<div style='margin-top:16px;'></div>", unsafe_allow_html=True)
     if st.button("+ Onboard new brand", type="primary", key="onboard_new_btn"):
         st.session_state["onboarding_active"] = True
         st.rerun()
-
     if st.session_state.get("onboarding_active"):
         from ui.onboarding_flow import render_onboarding_flow
         render_onboarding_flow()
 
 
-# ── Top-level tabs ────────────────────────────────────────────────────────────
+# ── Existing business: recent activity feed ───────────────────────────────────
 
-tab_operate, tab_discover = st.tabs(["🏢 Operate", "🔎 Discover"])
-
-with tab_operate:
+def render_recent_activity_feed() -> None:
+    from datetime import datetime, timezone
+    from ui.labels import AGENT_DISPLAY_NAMES
     try:
-        render_operate_tab()
-    except Exception as _exc:
-        _error_card(_exc)
+        from memory import _get_client
+        client = _get_client()
+        result = (
+            client.table("coordination_messages")
+            .select("from_agent, to_agent, message_type, created_at, payload")
+            .order("created_at", desc=True)
+            .limit(5)
+            .execute()
+        )
+        events = result.data or []
+    except Exception:
+        events = []
 
-with tab_discover:
-    render_discover_tab()
+    if not events:
+        return
+
+    st.markdown(
+        "<h3 style='font-family:\"Instrument Serif\", Georgia, serif; "
+        "font-size:22px; font-weight:400; margin-top:1.5rem;'>Recent agent activity</h3>",
+        unsafe_allow_html=True,
+    )
+    for ev in events:
+        try:
+            ts = datetime.fromisoformat(ev["created_at"].replace("Z", "+00:00"))
+            delta = datetime.now(timezone.utc) - ts
+            if delta.total_seconds() < 3600:
+                ago = f"{int(delta.total_seconds() / 60)} min ago"
+            elif delta.total_seconds() < 86400:
+                ago = f"{int(delta.total_seconds() / 3600)} hr ago"
+            else:
+                ago = f"{delta.days}d ago"
+        except Exception:
+            ago = "?"
+        from_label = AGENT_DISPLAY_NAMES.get(ev["from_agent"], ev["from_agent"])
+        to_label = AGENT_DISPLAY_NAMES.get(ev["to_agent"], ev["to_agent"])
+        brand_name = (ev.get("payload") or {}).get("brand_name", "")
+        msg = ev["message_type"].replace("_", " ")
+        st.markdown(
+            f"<div style='border-bottom:1px solid #EAEAEA; padding:0.5rem 0; "
+            f"font-size:13px; color:#444; line-height:1.5;'>"
+            f"<span style='color:#888; font-size:11px;'>{ago}</span> &nbsp; "
+            f"<strong>{from_label}</strong> → <strong>{to_label}</strong>: "
+            f"{msg}{' (' + brand_name + ')' if brand_name else ''}"
+            f"</div>",
+            unsafe_allow_html=True,
+        )
+
+
+# ── Existing business: agent loop status helper ───────────────────────────────
+
+def _agent_loop_status(internal_agent_name: str) -> dict:
+    from datetime import datetime, timezone
+    try:
+        from memory import _get_client
+        client = _get_client()
+        result = (
+            client.table("coordination_messages")
+            .select("created_at")
+            .eq("from_agent", internal_agent_name)
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+        if result.data:
+            last = datetime.fromisoformat(
+                result.data[0]["created_at"].replace("Z", "+00:00")
+            )
+            delta = datetime.now(timezone.utc) - last
+            if delta.total_seconds() < 3600:
+                last_str = f"{int(delta.total_seconds() / 60)} min ago"
+            elif delta.total_seconds() < 86400:
+                last_str = f"{int(delta.total_seconds() / 3600)} hr ago"
+            else:
+                last_str = f"{delta.days} day(s) ago"
+        else:
+            last_str = "Never"
+    except Exception:
+        last_str = "Unknown"
+    return {"last_run": last_str, "next_run": "On next session start"}
+
+
+# ── Existing business: agent picker ──────────────────────────────────────────
+
+def render_agent_picker() -> None:
+    from ui.labels import (
+        LABEL_RETAILER_AGENT, LABEL_ADMIN_AGENT, LABEL_BRAND_SCOUT_AGENT,
+    )
+    agents = [
+        (
+            "retailer_agent", LABEL_RETAILER_AGENT,
+            "Pitch retailers · promos coming · category reviews coming",
+            _agent_loop_status("retailer_pitcher"),
+        ),
+        (
+            "admin_agent", LABEL_ADMIN_AGENT,
+            "New item forms · deductions coming · POs coming · demos coming",
+            _agent_loop_status("admin_ops"),
+        ),
+        (
+            "brand_scout_agent", LABEL_BRAND_SCOUT_AGENT,
+            "Score brands for broker readiness — evaluation only",
+            None,
+        ),
+    ]
+    col1, col2, col3 = st.columns(3, gap="medium")
+    cols = [col1, col2, col3]
+    for col, (key, name, capabilities, loop_status) in zip(cols, agents):
+        with col:
+            with st.container(border=True):
+                st.markdown(
+                    f"<div style='font-family:\"Instrument Serif\", Georgia, serif; "
+                    f"font-size:24px; font-weight:400; color:#1a1a1a;'>{name}</div>",
+                    unsafe_allow_html=True,
+                )
+                st.caption(capabilities)
+                if loop_status:
+                    st.markdown(
+                        f"<div style='margin-top:0.75rem; font-size:12px; color:#888;'>"
+                        f"↻ Last run: {loop_status['last_run']}<br>"
+                        f"Next: {loop_status['next_run']}</div>",
+                        unsafe_allow_html=True,
+                    )
+                if st.button("Open", key=f"open_{key}", use_container_width=True):
+                    st.session_state["open_agent"] = key
+                    st.rerun()
+
+
+# ── Existing business workspace ───────────────────────────────────────────────
+
+def render_existing_business_workspace() -> None:
+    # Watchdog — run once per session
+    if "watchdog_ran" not in st.session_state:
+        try:
+            from agents.brand_onboarding.watchdog import scan_and_flag_stale_brands
+            scan_and_flag_stale_brands()
+        except Exception:
+            pass
+        st.session_state["watchdog_ran"] = True
+
+    # Watchdog banner
+    try:
+        from agents.brand_onboarding.watchdog import get_pending_reverifications
+        pending = get_pending_reverifications()
+    except Exception:
+        pending = []
+    if pending:
+        st.info(
+            f"⚡ Watchdog flagged {len(pending)} brand(s) for re-verification — "
+            "last verified >30 days ago."
+        )
+        with st.expander("Show flagged brands"):
+            for msg in pending:
+                payload = msg.get("payload", {})
+                st.write(
+                    f"**{payload.get('brand_name', '?')}** — "
+                    f"{payload.get('days_stale', '?')} days stale"
+                )
+
+    # Route: if an agent page is open, render it; otherwise show roster + agents
+    open_agent = st.session_state.get("open_agent")
+    if open_agent:
+        from ui.agent_page import render_agent_page
+        try:
+            render_agent_page(open_agent)
+        except Exception as exc:
+            _error_card(exc)
+        return
+
+    # Brand roster
+    render_brand_roster()
+
+    # Recent activity feed
+    render_recent_activity_feed()
+
+    st.divider()
+
+    # Agents section
+    st.markdown(
+        "<h2 style='font-family:\"Instrument Serif\", Georgia, serif; "
+        "font-size:32px; font-weight:400; margin-top:1.5rem;'>Agents</h2>",
+        unsafe_allow_html=True,
+    )
+    st.caption("Multi-workflow agents working on your portfolio.")
+    render_agent_picker()
+
+
+# ── Top-level workspace router ────────────────────────────────────────────────
+
+if "workspace" not in st.session_state:
+    st.session_state["workspace"] = None
+
+workspace = st.session_state["workspace"]
+
+try:
+    if workspace is None:
+        render_landing_cards()
+    elif workspace == "existing_business":
+        render_back_nav()
+        render_existing_business_workspace()
+    elif workspace == "brand_scout":
+        render_back_nav()
+        render_brand_scout_workspace()
+    else:
+        render_landing_cards()
+except Exception as _top_exc:
+    _error_card(_top_exc)

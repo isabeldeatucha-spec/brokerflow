@@ -459,6 +459,42 @@ div[data-testid="stSelectbox"] [data-baseweb="select"] {
     border-bottom-color: #1A1A18 !important;
 }
 
+/* ── Destination cards (landing page) ───────────────────────────────────── */
+.sedge-destination-card {
+    background: #FAFAF7;
+    border: 1px solid #EAEAEA;
+    border-radius: 12px;
+    padding: 2.5rem 2rem;
+    min-height: 220px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    transition: border-color 0.15s ease;
+}
+.sedge-destination-card:hover { border-color: #C8C8C8; }
+.dest-eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 11px !important;
+    color: #888 !important;
+    margin-bottom: 0.5rem !important;
+    font-family: 'Inter', sans-serif !important;
+}
+.dest-title {
+    font-family: 'Instrument Serif', Georgia, serif !important;
+    font-size: 36px !important;
+    line-height: 1.1 !important;
+    color: #1a1a1a !important;
+    font-weight: 400 !important;
+}
+.dest-sub {
+    font-size: 14px !important;
+    color: #6b6b6b !important;
+    margin-top: 0.5rem !important;
+    line-height: 1.5 !important;
+    font-family: 'Inter', sans-serif !important;
+}
+
 /* ── Scrollbar — thin editorial ─────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }

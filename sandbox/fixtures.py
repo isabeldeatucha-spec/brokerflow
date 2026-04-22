@@ -346,11 +346,66 @@ SANDBOX_BRANDS = [
 ]
 
 
+def _seed_coordination_messages(client, brand_id_map: dict) -> None:
+    """Insert plausible fake coordination messages so the activity feed looks alive."""
+    from datetime import datetime, timezone, timedelta
+    now = datetime.now(timezone.utc)
+
+    fake_msgs = [
+        {
+            "from_agent": "freshness_watchdog",
+            "to_agent": "brand_onboarding",
+            "brand_id": brand_id_map.get("Fishwife"),
+            "message_type": "needs_reverification",
+            "payload": {"brand_name": "Fishwife", "days_stale": 32},
+            "created_at": (now - timedelta(minutes=12)).isoformat(),
+        },
+        {
+            "from_agent": "retailer_pitcher",
+            "to_agent": "admin_ops",
+            "brand_id": brand_id_map.get("Chomps"),
+            "message_type": "pitch_drafted",
+            "payload": {"brand_name": "Chomps", "retailer": "Whole Foods"},
+            "created_at": (now - timedelta(hours=2)).isoformat(),
+        },
+        {
+            "from_agent": "brand_onboarding",
+            "to_agent": "retailer_matcher",
+            "brand_id": brand_id_map.get("Graza"),
+            "message_type": "new_brand_onboarded",
+            "payload": {"brand_name": "Graza", "category": "pantry"},
+            "created_at": (now - timedelta(hours=5)).isoformat(),
+        },
+        {
+            "from_agent": "admin_ops",
+            "to_agent": "retailer_pitcher",
+            "brand_id": brand_id_map.get("Olipop"),
+            "message_type": "form_completed",
+            "payload": {"brand_name": "Olipop", "form_type": "WFM_new_item"},
+            "created_at": (now - timedelta(hours=8)).isoformat(),
+        },
+        {
+            "from_agent": "brand_scout",
+            "to_agent": "brand_onboarding",
+            "brand_id": brand_id_map.get("Magic Spoon"),
+            "message_type": "evaluation_complete",
+            "payload": {"brand_name": "Magic Spoon", "verdict": "broker_ready"},
+            "created_at": (now - timedelta(days=1)).isoformat(),
+        },
+    ]
+    # Drop any with a missing brand_id (brand seeding may have skipped it)
+    fake_msgs = [m for m in fake_msgs if m.get("brand_id")]
+    if fake_msgs:
+        client.table("coordination_messages").insert(fake_msgs).execute()
+
+
 def seed_sandbox_brands() -> list[str]:
-    """Insert sandbox brands. Skips any already present. Returns list of seeded names."""
+    """Insert sandbox brands + fake coordination messages. Skips already-present brands."""
     from memory import _get_client
     client = _get_client()
     seeded = []
+    brand_id_map: dict[str, str] = {}
+
     for brand in SANDBOX_BRANDS:
         existing = (
             client.table("brands")
@@ -360,19 +415,35 @@ def seed_sandbox_brands() -> list[str]:
             .execute()
         )
         if not existing.data:
-            client.table("brands").insert(brand).execute()
+            result = client.table("brands").insert(brand).execute()
+            if result.data:
+                brand_id_map[brand["brand_name"]] = result.data[0]["id"]
             seeded.append(brand["brand_name"])
+        else:
+            brand_id_map[brand["brand_name"]] = existing.data[0]["id"]
+
+    if seeded:  # only seed messages when at least one brand was new
+        try:
+            _seed_coordination_messages(client, brand_id_map)
+        except Exception:
+            pass  # activity feed is cosmetic; never block brand seeding
+
     return seeded
 
 
 def clear_sandbox_brands() -> int:
-    """Delete all rows where is_sandbox=True. Returns count deleted."""
+    """Delete sandbox brands and their coordination messages. Returns brands deleted."""
     from memory import _get_client
     client = _get_client()
-    result = (
-        client.table("brands")
-        .delete()
-        .eq("is_sandbox", True)
-        .execute()
-    )
+
+    # Collect sandbox brand IDs first
+    sandbox = client.table("brands").select("id").eq("is_sandbox", True).execute()
+    sandbox_ids = [r["id"] for r in (sandbox.data or [])]
+
+    if sandbox_ids:
+        # Delete coordination messages tied to sandbox brands
+        client.table("coordination_messages").delete().in_("brand_id", sandbox_ids).execute()
+
+    # Delete the brands (FK CASCADE removes brand_events automatically)
+    result = client.table("brands").delete().eq("is_sandbox", True).execute()
     return len(result.data or [])
