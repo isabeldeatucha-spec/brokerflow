@@ -1637,6 +1637,167 @@ def _seed_coordination_messages(client, brand_id_map: dict) -> None:
             pass  # activity feed is cosmetic; never block brand seeding
 
 
+# Per-brand × per-agent memory objects stored as message_type="agent_memory".
+_SANDBOX_MEMORY: dict[str, dict] = {
+    "Chomps": {
+        "retailer_pitcher": {
+            "runs_completed": 14,
+            "items_flagged_for_review": 0,
+            "learned_preferences": [
+                "Lead with Original Beef Stick — the hero SKU Whole Foods buyers recognise",
+                "West-coast WFM buyers weight velocity data over certifications",
+                "CEO Pete Maldonado personally reviews pitches before submission",
+            ],
+            "open_questions": [
+                "Confirm 2026 promo calendar with Chomps team",
+            ],
+            "hours_ago": 2.0,
+        },
+        "admin_ops": {
+            "runs_completed": 8,
+            "items_flagged_for_review": 3,
+            "learned_preferences": [
+                "WFM form: use 'snack bars' category — 'meat snacks' bounces in Woot",
+            ],
+            "open_questions": [
+                "3 Q4-2025 deductions still missing backup documentation from Chomps",
+            ],
+            "hours_ago": 1.0,
+        },
+    },
+    "Fishwife": {
+        "retailer_pitcher": {
+            "runs_completed": 6,
+            "items_flagged_for_review": 0,
+            "learned_preferences": [
+                "Erewhon buyer responds well to founder-story framing",
+                "Lead with Smoked Atlantic Salmon — the press darling SKU",
+            ],
+            "open_questions": [
+                "Erewhon Q3 category review window — confirm date with buyer",
+            ],
+            "hours_ago": 0.15,
+        },
+        "admin_ops": {
+            "runs_completed": 5,
+            "items_flagged_for_review": 0,
+            "learned_preferences": [
+                "WFM form filed successfully — shelf-stable seafood category confirmed",
+            ],
+            "open_questions": [],
+            "hours_ago": 0.23,
+        },
+    },
+    "Graza": {
+        "retailer_pitcher": {
+            "runs_completed": 9,
+            "items_flagged_for_review": 0,
+            "learned_preferences": [
+                "Sprouts buyer focuses on velocity in CA/AZ/TX — cite Drizzle sell-through",
+                "Lead with the squeeze-bottle format — differentiated from all other OOs",
+            ],
+            "open_questions": [
+                "Sprouts promo calendar Q3 — does Graza want a 4-week TPR?",
+            ],
+            "hours_ago": 6.0,
+        },
+        "admin_ops": {
+            "runs_completed": 4,
+            "items_flagged_for_review": 0,
+            "learned_preferences": [
+                "WFM Drizzle SKU case pack is 6 — confirmed with brand",
+            ],
+            "open_questions": [
+                "WF PO #GRZ-2026-041 in review — pricing delta under 2%, monitoring",
+            ],
+            "hours_ago": 0.5,
+        },
+    },
+    "Olipop": {
+        "retailer_pitcher": {
+            "runs_completed": 11,
+            "items_flagged_for_review": 2,
+            "learned_preferences": [
+                "Target buyer wants 12-count cases, not 24 — confirmed",
+                "Vintage Cola is #1 at Sprouts; Strawberry Vanilla leads at WFM",
+            ],
+            "open_questions": [
+                "Waiting on brand approval for final Kroger pitch language",
+                "Confirm Camila Cabello co-marketing is still active for 2026 decks",
+            ],
+            "hours_ago": 0.75,
+        },
+        "admin_ops": {
+            "runs_completed": 7,
+            "items_flagged_for_review": 0,
+            "learned_preferences": [
+                "Olipop prefers demo events at WFM over shelf-talker programs",
+            ],
+            "open_questions": [],
+            "hours_ago": 3.0,
+        },
+    },
+    "Magic Spoon": {
+        "retailer_pitcher": {
+            "runs_completed": 3,
+            "items_flagged_for_review": 0,
+            "learned_preferences": [
+                "DTC-first brand — retailer pitches need explicit retail-specific CTA",
+            ],
+            "open_questions": [
+                "No active pitch in progress — awaiting brand greenlight on Whole Foods timing",
+            ],
+            "hours_ago": 72.0,
+        },
+        "admin_ops": {
+            "runs_completed": 6,
+            "items_flagged_for_review": 1,
+            "learned_preferences": [
+                "WFM form complete; 6-box case pack confirmed",
+            ],
+            "open_questions": [
+                "PO #MGS-2026-017 has a $0.12/unit pricing delta — flagged for review",
+            ],
+            "hours_ago": 2.0,
+        },
+    },
+}
+
+
+def _seed_agent_memory(client, brand_id_map: dict) -> None:
+    """Insert one agent_memory record per (brand × agent) so the UI can show agent context."""
+    from datetime import timedelta
+    now = datetime.now(timezone.utc)
+
+    records = []
+    for brand_name, agents in _SANDBOX_MEMORY.items():
+        brand_id = brand_id_map.get(brand_name)
+        if not brand_id:
+            continue
+        for agent_key, mem in agents.items():
+            ts = now - timedelta(hours=mem["hours_ago"])
+            records.append({
+                "from_agent":   agent_key,
+                "to_agent":     "coordinator",
+                "brand_id":     brand_id,
+                "message_type": "agent_memory",
+                "payload": {
+                    "brand_name":               brand_name,
+                    "runs_completed":           mem["runs_completed"],
+                    "items_flagged_for_review": mem["items_flagged_for_review"],
+                    "learned_preferences":      mem["learned_preferences"],
+                    "open_questions":           mem["open_questions"],
+                },
+                "created_at": ts.isoformat(),
+            })
+
+    if records:
+        try:
+            client.table("coordination_messages").insert(records).execute()
+        except Exception:
+            pass
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Public API
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1677,6 +1838,12 @@ def seed_sandbox_brands() -> list[str]:
     # Always reseed activity messages (delete-first inside, so idempotent)
     try:
         _seed_coordination_messages(client, brand_id_map)
+    except Exception:
+        pass
+
+    # Always reseed agent memory records
+    try:
+        _seed_agent_memory(client, brand_id_map)
     except Exception:
         pass
 

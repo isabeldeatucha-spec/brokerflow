@@ -1353,11 +1353,10 @@ def render_brand_scout_workspace() -> None:
 
 # ── Existing business: per-brand activity helpers ─────────────────────────────
 
-_AGENT_KEYS = ["retailer_pitcher", "admin_ops", "brand_scout"]
+_AGENT_KEYS = ["retailer_pitcher", "admin_ops"]
 _AGENT_LABELS = {
     "retailer_pitcher": "Retailer Pitcher",
     "admin_ops":        "Admin & Ops",
-    "brand_scout":      "Brand Scout",
 }
 _STATUS_COLORS = {
     "completed":       ("#D1FAE5", "#065F46"),
@@ -1454,7 +1453,181 @@ def _agent_pill_html(agent_key: str, message: dict | None) -> str:
 
 # ── Existing business: brand roster ──────────────────────────────────────────
 
+def _load_agent_memory(client, brand_ids: list) -> dict:
+    """Return {brand_id: {agent_key: memory_payload}} from agent_memory messages."""
+    if not client or not brand_ids:
+        return {}
+    try:
+        res = (
+            client.table("coordination_messages")
+            .select("brand_id, from_agent, payload, created_at")
+            .in_("brand_id", brand_ids)
+            .eq("message_type", "agent_memory")
+            .order("created_at", desc=True)
+            .limit(100)
+            .execute()
+        )
+        msgs = res.data or []
+    except Exception:
+        return {}
+    seen: set = set()
+    result: dict = {}
+    for m in msgs:
+        key = (m["brand_id"], m["from_agent"])
+        if key not in seen:
+            seen.add(key)
+            result.setdefault(m["brand_id"], {})[m["from_agent"]] = m.get("payload") or {}
+    return result
+
+
+def _render_agent_panel_content(brand_id: str, agent_key: str, status: str, client) -> None:
+    """Render the expanded artifact + agent memory for one agent panel."""
+    from datetime import datetime, timezone
+
+    # ── Artifact preview ──────────────────────────────────────────────────────
+    if agent_key == "retailer_pitcher":
+        try:
+            res = (
+                client.table("retailer_pitches")
+                .select("email_subject, email_body, sell_sheet_html, created_at")
+                .ilike("brand_name", st.session_state.get("_expand_brand_name_" + brand_id, "%"))
+                .order("created_at", desc=True)
+                .limit(1)
+                .execute()
+            )
+            pitch = (res.data or [{}])[0]
+        except Exception:
+            pitch = {}
+
+        if pitch.get("email_subject"):
+            st.markdown(
+                f'<p style="font-size:11px; font-weight:600; letter-spacing:0.08em; '
+                f'color:#8B8A83; margin-bottom:4px;">LATEST PITCH</p>'
+                f'<p style="font-size:13px; font-weight:500; color:#1A1A18; margin-bottom:4px;">'
+                f'Subject: {pitch["email_subject"]}</p>',
+                unsafe_allow_html=True,
+            )
+            body_preview = (pitch.get("email_body") or "")[:400]
+            st.markdown(
+                f'<div style="background:#FAFAF7; border:0.5px solid #EAEAEA; border-radius:8px; '
+                f'padding:12px; font-size:13px; color:#444; line-height:1.6; white-space:pre-wrap;">'
+                f'{body_preview}{"…" if len(pitch.get("email_body","")) > 400 else ""}</div>',
+                unsafe_allow_html=True,
+            )
+            if status == "awaiting_review":
+                col_edit, _ = st.columns([1, 2])
+                with col_edit:
+                    if st.button("Edit & send →",
+                                 key=f"edit_pitch_{brand_id}", use_container_width=True):
+                        st.session_state["open_agent"] = "retailer_agent"
+                        st.rerun()
+        elif status == "in_progress":
+            st.markdown(
+                '<p style="color:#1E40AF; font-size:13px;">Agent is drafting the pitch…</p>',
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown(
+                '<p style="color:#8B8A83; font-size:13px;">No pitch drafted yet for this brand.</p>',
+                unsafe_allow_html=True,
+            )
+
+    elif agent_key == "admin_ops":
+        form_data: dict = {}
+        try:
+            if _table_exists("new_item_forms"):
+                res = (
+                    client.table("new_item_forms")
+                    .select("filled_fields, gaps, output_status, generated_at")
+                    .order("generated_at", desc=True)
+                    .limit(1)
+                    .execute()
+                )
+                form_data = (res.data or [{}])[0]
+        except Exception:
+            pass
+
+        if form_data.get("filled_fields"):
+            filled = form_data["filled_fields"]
+            gaps = form_data.get("gaps") or []
+            sample_fields = list(filled.items())[:6]
+            st.markdown(
+                f'<p style="font-size:11px; font-weight:600; letter-spacing:0.08em; '
+                f'color:#8B8A83; margin-bottom:6px;">WFM NEW-ITEM FORM</p>',
+                unsafe_allow_html=True,
+            )
+            rows_html = "".join(
+                f'<tr><td style="padding:4px 12px 4px 0; color:#8B8A83; font-size:12px;'
+                f'white-space:nowrap;">{fid.replace("_"," ").title()}</td>'
+                f'<td style="padding:4px 0; font-size:13px; color:#1A1A18;">{val}</td></tr>'
+                for fid, val in sample_fields
+            )
+            st.markdown(
+                f'<table style="width:100%; border-collapse:collapse;">{rows_html}</table>',
+                unsafe_allow_html=True,
+            )
+            if len(filled) > 6:
+                st.caption(f"… {len(filled) - 6} more fields filled")
+            if gaps:
+                st.markdown(
+                    f'<p style="font-size:13px; color:#92400E; margin-top:8px;">'
+                    f'⚠ {len(gaps)} gap{"s" if len(gaps) != 1 else ""} to fill</p>',
+                    unsafe_allow_html=True,
+                )
+        elif status == "in_progress":
+            st.markdown(
+                '<p style="color:#1E40AF; font-size:13px;">Processing…</p>',
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown(
+                '<p style="color:#8B8A83; font-size:13px;">No form filed yet for this brand.</p>',
+                unsafe_allow_html=True,
+            )
+        if status == "awaiting_review":
+            col_open, _ = st.columns([1, 2])
+            with col_open:
+                if st.button("Review items →",
+                             key=f"review_admin_{brand_id}", use_container_width=True):
+                    st.session_state["open_agent"] = "admin_agent"
+                    st.rerun()
+
+    # ── Agent memory / context ────────────────────────────────────────────────
+    mem_map = st.session_state.get("_agent_memory_map", {})
+    mem = mem_map.get(brand_id, {}).get(agent_key, {})
+    if mem:
+        st.markdown(
+            '<p style="font-size:11px; font-weight:600; letter-spacing:0.08em; '
+            'color:#8B8A83; margin-top:12px; margin-bottom:4px;">AGENT CONTEXT</p>',
+            unsafe_allow_html=True,
+        )
+        runs = mem.get("runs_completed", 0)
+        flagged = mem.get("items_flagged_for_review", 0)
+        st.markdown(
+            f'<p style="font-size:12px; color:#8B8A83; margin-bottom:4px;">'
+            f'{runs} runs completed · {flagged} flagged for review</p>',
+            unsafe_allow_html=True,
+        )
+        prefs = mem.get("learned_preferences") or []
+        for pref in prefs[:2]:
+            st.markdown(
+                f'<p style="font-size:12px; color:#57564F; margin:2px 0; padding-left:8px; '
+                f'border-left:2px solid #EAEAEA;">Learned: {pref}</p>',
+                unsafe_allow_html=True,
+            )
+        questions = mem.get("open_questions") or []
+        for q in questions[:1]:
+            st.markdown(
+                f'<p style="font-size:12px; color:#92400E; margin:2px 0; padding-left:8px; '
+                f'border-left:2px solid #FDE68A;">Open: {q}</p>',
+                unsafe_allow_html=True,
+            )
+
+
 def render_brand_roster() -> None:
+    from datetime import datetime, timezone
+
+    # ── Load data ─────────────────────────────────────────────────────────────
     client = None
     brands_list: list = []
     try:
@@ -1462,7 +1635,8 @@ def render_brand_roster() -> None:
         client = _get_client()
         result = (
             client.table("brands")
-            .select("id, brand_name, category, completeness_pct, status, onboarded_at, is_sandbox, products")
+            .select("id, brand_name, category, completeness_pct, status, onboarded_at, "
+                    "is_sandbox, products, current_retailers, estimated_door_count")
             .order("onboarded_at", desc=True)
             .limit(50)
             .execute()
@@ -1472,9 +1646,13 @@ def render_brand_roster() -> None:
         pass
 
     sandbox_on = any(b.get("is_sandbox") for b in brands_list)
+    brand_ids = [b["id"] for b in brands_list if b.get("id")]
+    activity_map = _load_brand_activity(client, brand_ids) if client else {}
+    memory_map = _load_agent_memory(client, brand_ids) if client else {}
+    st.session_state["_agent_memory_map"] = memory_map
 
+    # ── Empty state ───────────────────────────────────────────────────────────
     if not brands_list:
-        # ── State A: empty roster ─────────────────────────────────────────────
         st.markdown(
             '<div style="text-align:center; padding:80px 0 48px;">'
             '<p style="font-size:11px; font-weight:600; letter-spacing:0.1em; '
@@ -1494,68 +1672,300 @@ def render_brand_roster() -> None:
                          use_container_width=True):
                 st.session_state["onboarding_active"] = True
                 st.rerun()
-    else:
-        # ── State B: per-brand activity rows ──────────────────────────────────
-        brand_ids = [b["id"] for b in brands_list if b.get("id")]
-        activity_map = _load_brand_activity(client, brand_ids) if client else {}
+        _render_sandbox_footer(sandbox_on=False)
+        return
 
+    # ── Build review items list ────────────────────────────────────────────────
+    review_items: list[dict] = []
+    for brand in brands_list:
+        bid = brand.get("id")
+        bname = brand.get("brand_name", "?")
+        for ak in _AGENT_KEYS:
+            msg = (activity_map.get(bid) or {}).get(ak)
+            if not msg:
+                continue
+            payload = msg.get("payload") or {}
+            if payload.get("agent_status") == "awaiting_review":
+                review_items.append({
+                    "brand_id":     bid,
+                    "brand_name":   bname,
+                    "agent_key":    ak,
+                    "agent_label":  _AGENT_LABELS.get(ak, ak),
+                    "action_label": payload.get("action_label", ""),
+                    "pending":      payload.get("pending_review_count", 0),
+                    "created_at":   msg.get("created_at", ""),
+                })
+
+    # ── Section A: Needs your review inbox ───────────────────────────────────
+    if review_items:
         st.markdown(
-            "<h2 style='font-family:\"Instrument Serif\", Georgia, serif; "
-            "font-size:28px; font-weight:400; margin:0 0 16px 0;'>Your brands</h2>",
+            '<h2 style=\'font-family:"Instrument Serif", Georgia, serif; '
+            'font-size:26px; font-weight:400; margin:0 0 2px 0;\'>Needs your review</h2>',
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            f'<p style="font-size:13px; color:#8B8A83; margin-bottom:12px;">'
+            f'{len(review_items)} item{"s" if len(review_items) != 1 else ""} flagged by your agents '
+            f'— everything else is running autonomously</p>',
+            unsafe_allow_html=True,
+        )
+        for item in review_items:
+            ago = _ago_str(item["created_at"])
+            pending_str = f" ×{item['pending']}" if item["pending"] else ""
+            col_badge, col_info, col_btn = st.columns([1, 5, 1])
+            with col_badge:
+                bg = "#DBEAFE" if item["agent_key"] == "retailer_pitcher" else "#D1FAE5"
+                fg = "#1E40AF" if item["agent_key"] == "retailer_pitcher" else "#065F46"
+                st.markdown(
+                    f'<span style="background:{bg}; color:{fg}; font-size:11px; '
+                    f'padding:3px 8px; border-radius:99px; white-space:nowrap;">'
+                    f'{item["agent_label"]}</span>',
+                    unsafe_allow_html=True,
+                )
+            with col_info:
+                st.markdown(
+                    f'<span style="font-weight:500; color:#1A1A18;">{item["brand_name"]}</span>'
+                    f'<span style="color:#8B8A83; margin:0 6px;">·</span>'
+                    f'<span style="color:#57564F;">{item["action_label"]}{pending_str}</span>'
+                    f'<span style="color:#B0AFA8; font-size:11px; margin-left:8px;">'
+                    f'flagged {ago}</span>',
+                    unsafe_allow_html=True,
+                )
+            with col_btn:
+                if st.button("Review →",
+                             key=f"inbox_review_{item['brand_id']}_{item['agent_key']}",
+                             use_container_width=True):
+                    st.session_state[f"expand_{item['brand_id']}_{item['agent_key']}"] = True
+                    st.session_state[f"_expand_brand_name_{item['brand_id']}"] = item["brand_name"]
+                    st.rerun()
+            st.markdown(
+                "<div style='height:1px; background:#F3F3F0; margin:4px 0;'></div>",
+                unsafe_allow_html=True,
+            )
+        st.markdown("<div style='margin-bottom:32px;'></div>", unsafe_allow_html=True)
+    else:
+        st.markdown(
+            '<p style="font-size:13px; color:#8B8A83; margin-bottom:28px;">'
+            'Nothing needs your attention. Agents are running.</p>',
             unsafe_allow_html=True,
         )
 
-        for brand in brands_list:
-            bid = brand.get("id")
-            name = brand.get("brand_name", "?")
-            category = brand.get("category") or "—"
-            product_count = len(brand.get("products") or [])
-            is_sb = brand.get("is_sandbox", False)
-            brand_activity = activity_map.get(bid, {})
+    # ── Section B: Your brands ────────────────────────────────────────────────
+    n = len(brands_list)
+    st.markdown(
+        f'<h2 style=\'font-family:"Instrument Serif", Georgia, serif; '
+        f'font-size:26px; font-weight:400; margin:0 0 2px 0;\'>Your brands</h2>'
+        f'<p style="font-size:13px; color:#8B8A83; margin-bottom:16px;">'
+        f'{n} brand{"s" if n != 1 else ""} · agents working continuously</p>',
+        unsafe_allow_html=True,
+    )
 
-            sandbox_tag = (
-                '<span style="font-size:10px; background:#E8EDE9; color:#2D5F3F; '
-                'padding:2px 6px; border-radius:99px; margin-left:6px;">sandbox</span>'
-                if is_sb else ""
-            )
-            agent_pills = "".join(
-                _agent_pill_html(ak, brand_activity.get(ak))
-                for ak in _AGENT_KEYS
-            )
+    for brand in brands_list:
+        bid = brand.get("id")
+        name = brand.get("brand_name", "?")
+        category = brand.get("category") or "—"
+        product_count = len(brand.get("products") or [])
+        door_count = brand.get("estimated_door_count", "")
+        is_sb = brand.get("is_sandbox", False)
+        brand_activity = activity_map.get(bid, {})
 
+        # Store brand name so artifact loader can use it
+        st.session_state[f"_expand_brand_name_{bid}"] = name
+
+        has_review = any(
+            (brand_activity.get(ak) or {}).get("payload", {}).get("agent_status") == "awaiting_review"
+            for ak in _AGENT_KEYS
+        )
+
+        sandbox_tag = (
+            ' <span style="font-size:10px; background:#E8EDE9; color:#2D5F3F; '
+            'padding:2px 6px; border-radius:99px;">sandbox</span>'
+            if is_sb else ""
+        )
+        door_tag = (
+            f'<span style="font-size:12px; color:#8B8A83; margin-left:4px;">'
+            f'{door_count} stores</span>' if door_count else ""
+        )
+
+        # Accent bar for cards needing review
+        if has_review:
             st.markdown(
-                f'<div class="sedge-card" style="padding:14px 20px; margin-bottom:8px;">'
-                f'<div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">'
-                f'<span style="font-size:15px; font-weight:500; color:#1A1A18;">{name}</span>'
+                '<div style="height:3px; background:#F59E0B; border-radius:2px 2px 0 0;'
+                ' margin-bottom:-1px;"></div>',
+                unsafe_allow_html=True,
+            )
+
+        with st.container(border=True):
+            # Brand identity row
+            st.markdown(
+                f'<div style="display:flex; align-items:baseline; gap:8px; '
+                f'margin-bottom:10px; flex-wrap:wrap;">'
+                f'<span style="font-family:\'Instrument Serif\', Georgia, serif; '
+                f'font-size:22px; font-weight:400; color:#1A1A18;">{name}</span>'
                 f'{sandbox_tag}'
                 f'<span style="font-size:12px; color:#8B8A83;">{category}</span>'
-                f'<span style="font-size:11px; color:#B0AFA8;">'
+                f'{door_tag}'
+                f'<span style="font-size:12px; color:#B0AFA8;">'
                 f'&middot; {product_count} SKU{"s" if product_count != 1 else ""}</span>'
-                f'</div>'
-                f'<div style="display:flex; flex-wrap:wrap; gap:4px 0; align-items:center;">'
-                f'{agent_pills}'
-                f'</div>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
 
-        st.markdown("<div style='margin-top:12px;'></div>", unsafe_allow_html=True)
-        if st.button("+ Onboard new brand", key="onboard_new_btn"):
-            st.session_state["onboarding_active"] = True
-            st.rerun()
+            # Agent panels side by side
+            col1, col2 = st.columns(2, gap="small")
+            for col, ak in zip([col1, col2], _AGENT_KEYS):
+                with col:
+                    msg = brand_activity.get(ak)
+                    payload = (msg or {}).get("payload") or {}
+                    status = payload.get("agent_status", "idle")
+                    action = payload.get("action_label", "")
+                    pending = payload.get("pending_review_count", 0)
+                    created_at = (msg or {}).get("created_at", "")
 
+                    status_lbl = {
+                        "completed":       "done",
+                        "awaiting_review": f"review \xd7{pending}" if pending else "review",
+                        "in_progress":     "running",
+                        "idle":            "idle",
+                    }.get(status, status)
+
+                    exp_label = f"**{_AGENT_LABELS[ak]}** · {status_lbl}"
+                    if action:
+                        exp_label += f" — {action}"
+                    if created_at and status in ("completed", "in_progress"):
+                        exp_label += f" · {_ago_str(created_at)}"
+
+                    auto_expand = st.session_state.pop(f"expand_{bid}_{ak}", False)
+
+                    with st.expander(exp_label, expanded=auto_expand):
+                        _render_agent_panel_content(bid, ak, status, client)
+
+        st.markdown("<div style='margin-bottom:6px;'></div>", unsafe_allow_html=True)
+
+    # ── Section C: Activity feed ──────────────────────────────────────────────
+    st.markdown("<div style='margin-top:32px;'></div>", unsafe_allow_html=True)
+    _render_book_activity_feed(client, brand_ids)
+
+    # ── Section D: Browse by agent ────────────────────────────────────────────
+    st.markdown(
+        f'<h2 style=\'font-family:"Instrument Serif", Georgia, serif; '
+        f'font-size:24px; font-weight:400; margin:32px 0 2px;\'>Browse by agent</h2>'
+        f'<p style="font-size:13px; color:#8B8A83; margin-bottom:16px;">'
+        f'See what each agent has been doing across your entire book.</p>',
+        unsafe_allow_html=True,
+    )
+    ba_col1, ba_col2 = st.columns(2, gap="medium")
+
+    # Compute quick stats for each agent browse card
+    def _agent_stats(ak: str) -> tuple[int, str]:
+        total = sum(1 for b in brands_list if (activity_map.get(b.get("id")) or {}).get(ak))
+        msgs_with_status = [
+            (activity_map.get(b.get("id")) or {}).get(ak) for b in brands_list
+        ]
+        review_n = sum(
+            1 for m in msgs_with_status
+            if m and (m.get("payload") or {}).get("agent_status") == "awaiting_review"
+        )
+        latest = None
+        for m in msgs_with_status:
+            if m and m.get("created_at"):
+                if not latest or m["created_at"] > latest:
+                    latest = m["created_at"]
+        last_str = _ago_str(latest) if latest else "No activity"
+        return total, last_str, review_n
+
+    for ba_col, ak in zip([ba_col1, ba_col2], _AGENT_KEYS):
+        with ba_col:
+            total, last_str, review_n = _agent_stats(ak)
+            review_indicator = (
+                f'<span style="font-size:12px; color:#92400E;">'
+                f' · {review_n} pending review</span>' if review_n else ""
+            )
+            with st.container(border=True):
+                st.markdown(
+                    f'<div style="font-family:\'Instrument Serif\', Georgia, serif; '
+                    f'font-size:20px; font-weight:400; color:#1A1A18; margin-bottom:4px;">'
+                    f'{_AGENT_LABELS[ak]}</div>'
+                    f'<div style="font-size:13px; color:#8B8A83; margin-bottom:8px;">'
+                    f'{total} brand{"s" if total != 1 else ""} · last active {last_str}'
+                    f'{review_indicator}</div>',
+                    unsafe_allow_html=True,
+                )
+                dest = "book/retailer_pitcher" if ak == "retailer_pitcher" else "book/admin_ops"
+                if st.button(f"Open {_AGENT_LABELS[ak]} →",
+                             key=f"browse_{ak}", use_container_width=True):
+                    st.session_state["workspace"] = dest
+                    st.rerun()
+
+    # ── Onboarding modal ──────────────────────────────────────────────────────
     if st.session_state.get("onboarding_active"):
         from ui.onboarding_flow import render_onboarding_flow
         render_onboarding_flow()
 
     # ── Dev / utilities footer ────────────────────────────────────────────────
+    _render_sandbox_footer(sandbox_on)
+
+
+def _render_book_activity_feed(client, brand_ids: list) -> None:
+    """Cross-brand activity feed — last 10 non-idle, non-memory events."""
+    if not client or not brand_ids:
+        return
+    try:
+        res = (
+            client.table("coordination_messages")
+            .select("brand_id, from_agent, message_type, payload, created_at")
+            .in_("brand_id", brand_ids)
+            .neq("message_type", "agent_memory")
+            .neq("message_type", "idle")
+            .order("created_at", desc=True)
+            .limit(10)
+            .execute()
+        )
+        events = res.data or []
+    except Exception:
+        return
+    if not events:
+        return
+
+    # Fetch brand names
+    try:
+        br = client.table("brands").select("id, brand_name").in_("id", brand_ids).execute()
+        bn_map = {r["id"]: r["brand_name"] for r in (br.data or [])}
+    except Exception:
+        bn_map = {}
+
     st.markdown(
-        "<div style='margin-top:48px; padding-top:16px; border-top:1px solid #EAEAEA;'>"
+        '<h2 style=\'font-family:"Instrument Serif", Georgia, serif; '
+        'font-size:24px; font-weight:400; margin-bottom:4px;\'>What the agents have been doing</h2>',
+        unsafe_allow_html=True,
+    )
+    for ev in events:
+        payload = ev.get("payload") or {}
+        agent = _AGENT_LABELS.get(ev["from_agent"], ev["from_agent"])
+        action = payload.get("action_label") or ev["message_type"].replace("_", " ")
+        brand = bn_map.get(ev.get("brand_id", ""), "?")
+        ago = _ago_str(ev.get("created_at", ""))
+        st.markdown(
+            f'<div style="padding:7px 0; border-bottom:0.5px solid #F3F3F0; '
+            f'font-size:13px; color:#444;">'
+            f'<span style="font-weight:500; color:#1A1A18;">{agent}</span> &nbsp;'
+            f'<span>{action}</span> &nbsp;'
+            f'<span style="color:#8B8A83;">for {brand}</span> &nbsp;'
+            f'<span style="color:#B0AFA8; font-size:11px;">{ago}</span>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+    st.markdown("<div style='margin-bottom:8px;'></div>", unsafe_allow_html=True)
+
+
+def _render_sandbox_footer(sandbox_on: bool) -> None:
+    st.markdown(
+        "<div style='margin-top:48px; padding-top:16px; border-top:0.5px solid #EAEAEA;'>"
         "<p style='font-size:11px; font-weight:600; letter-spacing:0.08em; "
         "color:#B0AFA8; margin:0 0 8px 0;'>DEV UTILITIES</p></div>",
         unsafe_allow_html=True,
     )
-    col_load, col_clear, _ = st.columns([1, 1, 3])
+    col_load, col_clear, col_run, _ = st.columns([1, 1, 1, 2])
     with col_load:
         if st.button("Load sandbox brands", key="sandbox_load_btn", use_container_width=True):
             try:
@@ -1572,6 +1982,16 @@ def render_brand_roster() -> None:
                 clear_sandbox_brands()
             except Exception as e:
                 st.error(f"Clear failed: {e}")
+            st.rerun()
+    with col_run:
+        if st.button("Run agents now", key="run_agents_btn", use_container_width=True,
+                     disabled=not sandbox_on):
+            try:
+                from sandbox.fixtures import seed_sandbox_brands
+                seed_sandbox_brands()
+                st.toast("Agent cycle complete — activity refreshed.")
+            except Exception as e:
+                st.error(f"Run failed: {e}")
             st.rerun()
 
 
