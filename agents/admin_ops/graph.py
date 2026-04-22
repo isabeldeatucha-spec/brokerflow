@@ -100,6 +100,15 @@ def _cert_flag(certs: list[str] | None, *keywords: str) -> str | None:
     return "Y" if any(kw in lower for kw in keywords) else "N"
 
 
+def _get_flagship_sku(brand_record: dict) -> dict:
+    """Return the flagship SKU dict from the products array, or empty dict if none."""
+    products = brand_record.get("products") or []
+    for p in products:
+        if isinstance(p, dict) and p.get("is_flagship"):
+            return p
+    return products[0] if products else {}
+
+
 # ── Nodes ─────────────────────────────────────────────────────────────────────
 
 def load_brand_context(state: AdminOpsFormFillState) -> dict:
@@ -225,6 +234,11 @@ def rule_based_autofill(state: AdminOpsFormFillState) -> dict:
         confidence[field_id] = conf
         sources[field_id] = source
 
+    # -- Flagship SKU (prefer brands table products array) --------------------
+    # When ctx comes from the brands table, extracted_fields IS the canonical record
+    brands_record: dict = ctx.get("extracted_fields", {}) or {}
+    flagship = _get_flagship_sku(brands_record) or _get_flagship_sku(ctx)
+
     # -- Direct copies --------------------------------------------------------
     _set("brand",               ctx.get("brand_name"),   "high", "Brand Scout · brand_name")
     _set("category",            ctx.get("category"),     "high", "Brand Scout · category")
@@ -232,18 +246,32 @@ def rule_based_autofill(state: AdminOpsFormFillState) -> dict:
     _set("vendor_contact_name", ctx.get("founder_name"), "high", "Brand Scout · founder_name")
     _set("vendor_contact_email", ctx.get("founder_email"), "high", "Brand Scout · founder_email")
 
+    # -- Flagship SKU fields: real unit-level data, not brand-level ranges ----
+    if flagship:
+        _set("upc",         flagship.get("upc"),             "high", "brands · flagship_sku.upc")
+        _set("case_pack",   flagship.get("case_pack"),        "high", "brands · flagship_sku.case_pack")
+        _set("shelf_life",  flagship.get("shelf_life_days"),  "high", "brands · flagship_sku.shelf_life_days")
+        _set("net_weight",  flagship.get("net_weight"),       "high", "brands · flagship_sku.net_weight")
+        _set("storage_temp", flagship.get("storage_temp"),   "high", "brands · flagship_sku.storage_temp")
+        wc = flagship.get("wholesale_cost")
+        if wc is not None:
+            _set("wholesale_cost", wc, "high", "brands · flagship_sku.wholesale_cost")
+        msrp = flagship.get("msrp")
+        if msrp is not None:
+            _set("srp", msrp, "high", "brands · flagship_sku.msrp")
+
     # -- Description: first 200 chars of broker_brief -------------------------
     broker_brief: str = ctx.get("broker_brief", "") or ""
     if broker_brief:
         _set("description", broker_brief[:200].strip(), "high", "Brand Scout · broker_brief")
 
-    # -- SRP: try srp_hero first, fall back to srp_min ------------------------
-    srp = extracted.get("srp_hero") or extracted.get("srp_min")
-    if srp is None:
-        # Also try key_signals top-level (some stores put it there)
-        srp = key_signals.get("srp_hero") or key_signals.get("srp_min")
-    if srp is not None:
-        _set("srp", srp, "high", "Brand Scout · extracted_fields.srp_hero")
+    # -- SRP: flagship msrp already set above; fall back to extracted signals --
+    if "srp" not in filled:
+        srp = extracted.get("srp_hero") or extracted.get("srp_min")
+        if srp is None:
+            srp = key_signals.get("srp_hero") or key_signals.get("srp_min")
+        if srp is not None:
+            _set("srp", srp, "high", "Brand Scout · extracted_fields.srp_hero")
 
     # -- Certification flags (yes_no) — medium confidence because inferred ----
     usda = _cert_flag(certs, "usda organic", "organic")

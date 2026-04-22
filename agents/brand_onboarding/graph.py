@@ -27,7 +27,91 @@ from agents.orchestrator.contracts import (
     PriorKnowledge, OnboardingHandoff
 )
 
-# Canonical target schema (~18 fields) for demo reliability
+
+def _normalize_products(raw) -> list[dict]:
+    """Coerce the LLM's products output into a clean, consistent shape.
+
+    Drops entries without sku_name. Fills missing keys with None/empty.
+    Ensures exactly one is_flagship=true (picks first if multiple, sets first if none).
+    """
+    if not raw or not isinstance(raw, list):
+        return []
+
+    required_shape = {
+        "sku_name": None,
+        "upc": None,
+        "case_pack": None,
+        "cases_per_pallet": None,
+        "net_weight": None,
+        "wholesale_cost": None,
+        "msrp": None,
+        "margin_pct": None,
+        "shelf_life_days": None,
+        "storage_temp": None,
+        "launch_date": None,
+        "ingredients": None,
+        "allergens": [],
+        "is_flagship": False,
+    }
+
+    cleaned = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        sku_name = item.get("sku_name")
+        if not sku_name or not isinstance(sku_name, str):
+            continue
+
+        normalized = {**required_shape}
+        for key in required_shape:
+            if key in item:
+                normalized[key] = item[key]
+
+        for int_key in ("case_pack", "cases_per_pallet", "shelf_life_days"):
+            val = normalized[int_key]
+            if val is not None and not isinstance(val, int):
+                try:
+                    normalized[int_key] = int(float(val))
+                except (TypeError, ValueError):
+                    normalized[int_key] = None
+
+        for float_key in ("wholesale_cost", "msrp", "margin_pct"):
+            val = normalized[float_key]
+            if val is not None and not isinstance(val, (int, float)):
+                s = str(val).replace("$", "").replace(",", "").replace("%", "").strip()
+                try:
+                    normalized[float_key] = float(s)
+                except (TypeError, ValueError):
+                    normalized[float_key] = None
+
+        if not isinstance(normalized["allergens"], list):
+            if isinstance(normalized["allergens"], str):
+                normalized["allergens"] = [
+                    a.strip() for a in normalized["allergens"].split(",") if a.strip()
+                ]
+            else:
+                normalized["allergens"] = []
+
+        normalized["is_flagship"] = bool(normalized["is_flagship"])
+        cleaned.append(normalized)
+
+    if cleaned:
+        flagship_count = sum(1 for p in cleaned if p["is_flagship"])
+        if flagship_count == 0:
+            cleaned[0]["is_flagship"] = True
+        elif flagship_count > 1:
+            found_first = False
+            for p in cleaned:
+                if p["is_flagship"]:
+                    if found_first:
+                        p["is_flagship"] = False
+                    else:
+                        found_first = True
+
+    return cleaned
+
+
+# Canonical target schema for LLM extraction
 TARGET_SCHEMA = {
     "category": "string (e.g., 'snacks', 'beverages')",
     "subcategory": "string (e.g., 'meat snacks', 'sparkling water')",
@@ -47,6 +131,32 @@ TARGET_SCHEMA = {
     "certifications": "array of strings (e.g., ['Non-GMO','Organic'])",
     "brand_story": "string, 2-3 sentences max",
     "key_differentiators": "array of strings, 3-5 items",
+
+    # Commercial brand-level scalars
+    "unit_velocity_range": "string: typical units/store/week at comparable retailers, e.g. '8-12 units/store/week'. Null if unknown.",
+    "slotting_fees_paid": "string: free-text summary of slotting fees paid at launch, per retailer, e.g. '$15k at Sprouts, $0 at Whole Foods'. Null if unknown.",
+    "best_seller_sku": "string: name of the top-selling SKU, e.g. 'Original Jalapeno Beef Stick'. Null if unknown.",
+
+    # Product catalog (JSON array, one entry per SKU)
+    "products": (
+        "array of product objects. Each object has:\n"
+        "  - sku_name (string, required)\n"
+        "  - upc (string, 12-digit code, null if unknown)\n"
+        "  - case_pack (integer: units per case, null if unknown)\n"
+        "  - cases_per_pallet (integer, null if unknown)\n"
+        "  - net_weight (string: '4 oz', '330 ml', etc, null if unknown)\n"
+        "  - wholesale_cost (number in USD, null if unknown)\n"
+        "  - msrp (number in USD, null if unknown)\n"
+        "  - margin_pct (number 0-100, null if unknown)\n"
+        "  - shelf_life_days (integer, null if unknown)\n"
+        "  - storage_temp (string: 'ambient' | 'refrigerated' | 'frozen', null if unknown)\n"
+        "  - launch_date (string 'YYYY-MM-DD', null if unknown)\n"
+        "  - ingredients (string, full ingredient statement, null if unknown)\n"
+        "  - allergens (array of strings like ['soy','wheat','milk'], empty array if none)\n"
+        "  - is_flagship (boolean: true if this is the brand's hero/top SKU, false otherwise)\n"
+        "Extract up to 10 SKUs. Mark exactly ONE as is_flagship=true. "
+        "If you cannot identify any products, return an empty array."
+    ),
 }
 
 
@@ -177,12 +287,46 @@ def node_merge_and_reconcile(state: OnboardingState) -> dict:
 
 
 def node_score_completeness(state: OnboardingState) -> dict:
-    """Compute % of target schema fields that are populated."""
+    """Compute % of target schema fields that are populated.
+
+    Special handling for 'products': gets partial credit based on avg per-SKU
+    completeness across all SKUs found. A brand with 3 fully-detailed SKUs
+    scores higher on this field than a brand with 1 sparsely-detailed SKU.
+    """
     merged = state.get("merged_record", {})
     required = list(TARGET_SCHEMA.keys())
-    filled = [k for k in required if merged.get(k) not in (None, "", [], {})]
-    missing = [k for k in required if k not in filled]
-    pct = round(100 * len(filled) / len(required), 1) if required else 0.0
+
+    scalar_fields = [f for f in required if f != "products"]
+    filled_scalars = [
+        k for k in scalar_fields
+        if merged.get(k) not in (None, "", [], {})
+    ]
+
+    products = merged.get("products") or []
+    if not products:
+        product_score = 0.0
+    else:
+        per_sku_keys = [
+            "sku_name", "upc", "case_pack", "cases_per_pallet", "net_weight",
+            "wholesale_cost", "msrp", "margin_pct", "shelf_life_days",
+            "storage_temp", "launch_date", "ingredients", "allergens",
+        ]
+        per_sku_scores = []
+        for p in products:
+            filled_keys = sum(
+                1 for k in per_sku_keys
+                if p.get(k) not in (None, "", [], {})
+            )
+            per_sku_scores.append(filled_keys / len(per_sku_keys))
+        product_score = sum(per_sku_scores) / len(per_sku_scores)
+
+    total_possible = len(scalar_fields) + 1
+    total_earned = len(filled_scalars) + product_score
+    pct = round(100 * total_earned / total_possible, 1) if total_possible else 0.0
+
+    missing = [k for k in scalar_fields if k not in filled_scalars]
+    if not products:
+        missing.append("products")
 
     return {
         "completeness_pct": pct,
@@ -197,6 +341,7 @@ def node_persist_and_log(state: OnboardingState) -> dict:
     merged["completeness_pct"] = state["completeness_pct"]
     merged["is_sandbox"] = False  # real onboardings are never sandbox; prevents collision with sandbox seed data
     merged["last_verified_at"] = datetime.now(timezone.utc).isoformat()
+    merged["products"] = _normalize_products(merged.get("products"))
 
     persist_result = tool_persist_brand_record(merged)
     tool_log = [f"persist_brand:{'ok' if persist_result['ok'] else 'fail'}"]

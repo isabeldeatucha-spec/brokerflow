@@ -242,6 +242,61 @@ def _render_step_3() -> None:
 
     record = (handoff.canonical_record if handoff else {}) or {}
 
+    # Product catalog section
+    _section("PRODUCT CATALOG")
+    products = record.get("products") or []
+    if not products:
+        st.info("No products extracted. Add them manually below, or confirm and add later.")
+    else:
+        st.caption(f"{len(products)} SKU(s) extracted. ⭐ marks the flagship product.")
+        for i, sku in enumerate(products):
+            flagship_marker = "⭐ " if sku.get("is_flagship") else ""
+            with st.expander(
+                f"{flagship_marker}{sku.get('sku_name', 'Unnamed SKU')}",
+                expanded=sku.get("is_flagship", False),
+            ):
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.text_input("SKU name", sku.get("sku_name", ""), key=f"sku_{i}_name", disabled=True)
+                    st.text_input("UPC", sku.get("upc") or "", key=f"sku_{i}_upc", disabled=True)
+                    st.text_input("Net weight", sku.get("net_weight") or "", key=f"sku_{i}_weight", disabled=True)
+                with col2:
+                    st.number_input(
+                        "Wholesale cost ($)",
+                        value=float(sku.get("wholesale_cost") or 0),
+                        key=f"sku_{i}_wholesale", disabled=True,
+                    )
+                    st.number_input(
+                        "MSRP ($)",
+                        value=float(sku.get("msrp") or 0),
+                        key=f"sku_{i}_msrp", disabled=True,
+                    )
+                    st.number_input(
+                        "Margin %",
+                        value=float(sku.get("margin_pct") or 0),
+                        key=f"sku_{i}_margin", disabled=True,
+                    )
+                with col3:
+                    st.number_input(
+                        "Case pack",
+                        value=int(sku.get("case_pack") or 0),
+                        key=f"sku_{i}_pack", disabled=True,
+                    )
+                    st.number_input(
+                        "Cases/pallet",
+                        value=int(sku.get("cases_per_pallet") or 0),
+                        key=f"sku_{i}_pallet", disabled=True,
+                    )
+                    st.text_input(
+                        "Storage",
+                        sku.get("storage_temp") or "",
+                        key=f"sku_{i}_storage", disabled=True,
+                    )
+                if sku.get("ingredients"):
+                    st.caption(f"**Ingredients:** {sku['ingredients']}")
+                if sku.get("allergens"):
+                    st.caption(f"**Allergens:** {', '.join(sku['allergens'])}")
+
     if record:
         _section("CANONICAL RECORD")
         editable: dict = {}

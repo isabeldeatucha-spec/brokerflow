@@ -1102,7 +1102,7 @@ def render_operate_tab() -> None:
         client = _get_client()
         result = (
             client.table("brands")
-            .select("id, brand_name, category, completeness_pct, status, last_verified_at, is_sandbox")
+            .select("id, brand_name, category, completeness_pct, status, last_verified_at, is_sandbox, products")
             .order("created_at", desc=True)
             .limit(50)
             .execute()
@@ -1126,10 +1126,16 @@ def render_operate_tab() -> None:
             pct = brand.get("completeness_pct") or 0
             status = brand.get("status") or "active"
             is_sb = brand.get("is_sandbox", False)
+            product_count = len(brand.get("products") or [])
             sandbox_tag = (
                 '<span style="font-size:10px; background:#E8EDE9; color:#2D5F3F; '
                 'padding:2px 6px; border-radius:99px; margin-left:6px;">sandbox</span>'
                 if is_sb else ""
+            )
+            sku_tag = (
+                f'<span style="font-size:11px; color:#8B8A83; margin-left:10px;">'
+                f'📦 {product_count} SKU{"s" if product_count != 1 else ""}</span>'
+                if product_count else ""
             )
             pct_color = "#2D5F3F" if pct >= 70 else ("#B8860B" if pct >= 40 else "#8B2F2F")
             st.markdown(
@@ -1139,6 +1145,7 @@ def render_operate_tab() -> None:
                 f'<span style="font-size:15px; font-weight:500; color:#1A1A18;">{name}</span>'
                 f'{sandbox_tag}'
                 f'<span style="font-size:12px; color:#8B8A83; margin-left:12px;">{category}</span>'
+                f'{sku_tag}'
                 f'</div>'
                 f'<div style="font-size:13px; font-weight:500; color:{pct_color};">'
                 f'{pct:.0f}% complete'
