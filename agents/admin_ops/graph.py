@@ -238,6 +238,8 @@ def rule_based_autofill(state: AdminOpsFormFillState) -> dict:
     # When ctx comes from the brands table, extracted_fields IS the canonical record
     brands_record: dict = ctx.get("extracted_fields", {}) or {}
     flagship = _get_flagship_sku(brands_record) or _get_flagship_sku(ctx)
+    if not certs:
+        certs = brands_record.get("certifications")
 
     # -- Direct copies --------------------------------------------------------
     _set("brand",               ctx.get("brand_name"),   "high", "Brand Scout · brand_name")
