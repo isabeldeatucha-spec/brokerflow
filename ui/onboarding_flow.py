@@ -466,9 +466,9 @@ def _render_step_3() -> None:
                       "ob_brand_description", "ob_current_retailers", "ob_distributor",
                       "ob_door_count", "ob_hero_sku", "ob_srp_range", "ob_wholesale_price",
                       "ob_instagram", "ob_tiktok", "ob_press",
-                      "ob_file_paths", "ob_overrides", "ob_handoff", "ob_final_state",
-                      "onboarding_active"]:
+                      "ob_file_paths", "ob_overrides", "ob_handoff", "ob_final_state"]:
                 st.session_state.pop(k, None)
+            # keep onboarding_active=True so the form re-opens
             st.rerun()
     with col_done:
         if st.button(
@@ -489,8 +489,20 @@ def _render_step_3() -> None:
 
 
 def render_onboarding_flow() -> None:
+    col_cancel, _ = st.columns([1, 5])
+    with col_cancel:
+        if st.button("← Your brands", key="ob_cancel_btn"):
+            for k in ["ob_step", "ob_brand_name", "ob_website_url", "ob_founder_name",
+                      "ob_brand_description", "ob_current_retailers", "ob_distributor",
+                      "ob_door_count", "ob_hero_sku", "ob_srp_range", "ob_wholesale_price",
+                      "ob_instagram", "ob_tiktok", "ob_press",
+                      "ob_file_paths", "ob_overrides", "ob_handoff", "ob_final_state",
+                      "onboarding_active"]:
+                st.session_state.pop(k, None)
+            st.rerun()
+
     st.markdown(
-        "<hr style='border:none; border-top:1px solid #EAEAE4; margin:32px 0 24px;'>",
+        "<hr style='border:none; border-top:1px solid #EAEAE4; margin:16px 0 24px;'>",
         unsafe_allow_html=True,
     )
 

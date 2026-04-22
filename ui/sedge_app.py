@@ -1679,6 +1679,12 @@ def render_brand_roster() -> None:
         _render_sandbox_footer(sandbox_on=False)
         return
 
+    # If onboarding was triggered from the roster, show the form and return
+    if st.session_state.get("onboarding_active"):
+        from ui.onboarding_flow import render_onboarding_flow
+        render_onboarding_flow()
+        return
+
     # ── Build review items list ────────────────────────────────────────────────
     review_items: list[dict] = []
     for brand in brands_list:
@@ -1808,13 +1814,21 @@ def render_brand_roster() -> None:
 
     # ── Section C: Your brands ────────────────────────────────────────────────
     n = len(brands_list)
-    st.markdown(
-        f'<h2 style=\'font-family:"Instrument Serif", Georgia, serif; '
-        f'font-size:26px; font-weight:400; margin:0 0 2px 0;\'>Your brands</h2>'
-        f'<p style="font-size:13px; color:#8B8A83; margin-bottom:16px;">'
-        f'{n} brand{"s" if n != 1 else ""} · agents working continuously</p>',
-        unsafe_allow_html=True,
-    )
+    head_col, btn_col = st.columns([5, 1])
+    with head_col:
+        st.markdown(
+            f'<h2 style=\'font-family:"Instrument Serif", Georgia, serif; '
+            f'font-size:26px; font-weight:400; margin:0 0 2px 0;\'>Your brands</h2>'
+            f'<p style="font-size:13px; color:#8B8A83; margin-bottom:16px;">'
+            f'{n} brand{"s" if n != 1 else ""} · agents working continuously</p>',
+            unsafe_allow_html=True,
+        )
+    with btn_col:
+        st.markdown("<div style='padding-top:4px;'></div>", unsafe_allow_html=True)
+        if st.button("+ Onboard new brand", key="onboard_roster_btn",
+                     use_container_width=True, type="primary"):
+            st.session_state["onboarding_active"] = True
+            st.rerun()
 
     for brand in brands_list:
         bid = brand.get("id")
@@ -1901,11 +1915,6 @@ def render_brand_roster() -> None:
     # ── Section D: Activity feed ──────────────────────────────────────────────
     st.markdown("<div style='margin-top:32px;'></div>", unsafe_allow_html=True)
     _render_book_activity_feed(client, brand_ids)
-
-    # ── Onboarding modal ──────────────────────────────────────────────────────
-    if st.session_state.get("onboarding_active"):
-        from ui.onboarding_flow import render_onboarding_flow
-        render_onboarding_flow()
 
     # ── Dev / utilities footer ────────────────────────────────────────────────
     _render_sandbox_footer(sandbox_on)
