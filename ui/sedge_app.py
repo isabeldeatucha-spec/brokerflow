@@ -1750,7 +1750,59 @@ def render_brand_roster() -> None:
             unsafe_allow_html=True,
         )
 
-    # ── Section B: Your brands ────────────────────────────────────────────────
+    # ── Section B: Browse by agent ────────────────────────────────────────────
+    st.markdown(
+        f'<h2 style=\'font-family:"Instrument Serif", Georgia, serif; '
+        f'font-size:26px; font-weight:400; margin:0 0 2px 0;\'>Your agents</h2>'
+        f'<p style="font-size:13px; color:#8B8A83; margin-bottom:16px;">'
+        f'See what each agent has been doing across your entire book.</p>',
+        unsafe_allow_html=True,
+    )
+    ba_col1, ba_col2 = st.columns(2, gap="medium")
+
+    def _agent_stats(ak: str) -> tuple[int, str, int]:
+        total = sum(1 for b in brands_list if (activity_map.get(b.get("id")) or {}).get(ak))
+        msgs_with_status = [
+            (activity_map.get(b.get("id")) or {}).get(ak) for b in brands_list
+        ]
+        review_n = sum(
+            1 for m in msgs_with_status
+            if m and (m.get("payload") or {}).get("agent_status") == "awaiting_review"
+        )
+        latest = None
+        for m in msgs_with_status:
+            if m and m.get("created_at"):
+                if not latest or m["created_at"] > latest:
+                    latest = m["created_at"]
+        last_str = _ago_str(latest) if latest else "No activity"
+        return total, last_str, review_n
+
+    for ba_col, ak in zip([ba_col1, ba_col2], _AGENT_KEYS):
+        with ba_col:
+            total, last_str, review_n = _agent_stats(ak)
+            review_indicator = (
+                f'<span style="font-size:12px; color:#92400E;">'
+                f' · {review_n} pending review</span>' if review_n else ""
+            )
+            with st.container(border=True):
+                st.markdown(
+                    f'<div style="font-family:\'Instrument Serif\', Georgia, serif; '
+                    f'font-size:20px; font-weight:400; color:#1A1A18; margin-bottom:4px;">'
+                    f'{_AGENT_LABELS[ak]}</div>'
+                    f'<div style="font-size:13px; color:#8B8A83; margin-bottom:8px;">'
+                    f'{total} brand{"s" if total != 1 else ""} · last active {last_str}'
+                    f'{review_indicator}</div>',
+                    unsafe_allow_html=True,
+                )
+                dest = "book/retailer_pitcher" if ak == "retailer_pitcher" else "book/admin_ops"
+                if st.button(f"Open {_AGENT_LABELS[ak]} →",
+                             key=f"browse_{ak}", use_container_width=True):
+                    st.session_state["workspace"] = dest
+                    st.rerun()
+
+    st.markdown("<div style='margin-bottom:32px;'></div>", unsafe_allow_html=True)
+
+    # ── Section C: Your brands ────────────────────────────────────────────────
     n = len(brands_list)
     st.markdown(
         f'<h2 style=\'font-family:"Instrument Serif", Georgia, serif; '
@@ -1842,60 +1894,9 @@ def render_brand_roster() -> None:
 
         st.markdown("<div style='margin-bottom:6px;'></div>", unsafe_allow_html=True)
 
-    # ── Section C: Activity feed ──────────────────────────────────────────────
+    # ── Section D: Activity feed ──────────────────────────────────────────────
     st.markdown("<div style='margin-top:32px;'></div>", unsafe_allow_html=True)
     _render_book_activity_feed(client, brand_ids)
-
-    # ── Section D: Browse by agent ────────────────────────────────────────────
-    st.markdown(
-        f'<h2 style=\'font-family:"Instrument Serif", Georgia, serif; '
-        f'font-size:24px; font-weight:400; margin:32px 0 2px;\'>Browse by agent</h2>'
-        f'<p style="font-size:13px; color:#8B8A83; margin-bottom:16px;">'
-        f'See what each agent has been doing across your entire book.</p>',
-        unsafe_allow_html=True,
-    )
-    ba_col1, ba_col2 = st.columns(2, gap="medium")
-
-    # Compute quick stats for each agent browse card
-    def _agent_stats(ak: str) -> tuple[int, str]:
-        total = sum(1 for b in brands_list if (activity_map.get(b.get("id")) or {}).get(ak))
-        msgs_with_status = [
-            (activity_map.get(b.get("id")) or {}).get(ak) for b in brands_list
-        ]
-        review_n = sum(
-            1 for m in msgs_with_status
-            if m and (m.get("payload") or {}).get("agent_status") == "awaiting_review"
-        )
-        latest = None
-        for m in msgs_with_status:
-            if m and m.get("created_at"):
-                if not latest or m["created_at"] > latest:
-                    latest = m["created_at"]
-        last_str = _ago_str(latest) if latest else "No activity"
-        return total, last_str, review_n
-
-    for ba_col, ak in zip([ba_col1, ba_col2], _AGENT_KEYS):
-        with ba_col:
-            total, last_str, review_n = _agent_stats(ak)
-            review_indicator = (
-                f'<span style="font-size:12px; color:#92400E;">'
-                f' · {review_n} pending review</span>' if review_n else ""
-            )
-            with st.container(border=True):
-                st.markdown(
-                    f'<div style="font-family:\'Instrument Serif\', Georgia, serif; '
-                    f'font-size:20px; font-weight:400; color:#1A1A18; margin-bottom:4px;">'
-                    f'{_AGENT_LABELS[ak]}</div>'
-                    f'<div style="font-size:13px; color:#8B8A83; margin-bottom:8px;">'
-                    f'{total} brand{"s" if total != 1 else ""} · last active {last_str}'
-                    f'{review_indicator}</div>',
-                    unsafe_allow_html=True,
-                )
-                dest = "book/retailer_pitcher" if ak == "retailer_pitcher" else "book/admin_ops"
-                if st.button(f"Open {_AGENT_LABELS[ak]} →",
-                             key=f"browse_{ak}", use_container_width=True):
-                    st.session_state["workspace"] = dest
-                    st.rerun()
 
     # ── Onboarding modal ──────────────────────────────────────────────────────
     if st.session_state.get("onboarding_active"):
@@ -1959,40 +1960,36 @@ def _render_book_activity_feed(client, brand_ids: list) -> None:
 
 
 def _render_sandbox_footer(sandbox_on: bool) -> None:
-    st.markdown(
-        "<div style='margin-top:48px; padding-top:16px; border-top:0.5px solid #EAEAEA;'>"
-        "<p style='font-size:11px; font-weight:600; letter-spacing:0.08em; "
-        "color:#B0AFA8; margin:0 0 8px 0;'>DEV UTILITIES</p></div>",
-        unsafe_allow_html=True,
-    )
-    col_load, col_clear, col_run, _ = st.columns([1, 1, 1, 2])
-    with col_load:
-        if st.button("Load sandbox brands", key="sandbox_load_btn", use_container_width=True):
-            try:
-                from sandbox.fixtures import seed_sandbox_brands
-                seed_sandbox_brands()
-            except Exception as e:
-                st.error(f"Seed failed: {e}")
-            st.rerun()
-    with col_clear:
-        if st.button("Clear sandbox", key="sandbox_clear_btn",
-                     use_container_width=True, disabled=not sandbox_on):
-            try:
-                from sandbox.fixtures import clear_sandbox_brands
-                clear_sandbox_brands()
-            except Exception as e:
-                st.error(f"Clear failed: {e}")
-            st.rerun()
-    with col_run:
-        if st.button("Run agents now", key="run_agents_btn", use_container_width=True,
-                     disabled=not sandbox_on):
-            try:
-                from sandbox.fixtures import seed_sandbox_brands
-                seed_sandbox_brands()
-                st.toast("Agent cycle complete — activity refreshed.")
-            except Exception as e:
-                st.error(f"Run failed: {e}")
-            st.rerun()
+    st.markdown("<div style='margin-top:48px;'></div>", unsafe_allow_html=True)
+    with st.expander("Dev utilities", expanded=False):
+        col_load, col_clear, col_run, _ = st.columns([1, 1, 1, 2])
+        with col_load:
+            if st.button("Load sandbox brands", key="sandbox_load_btn", use_container_width=True):
+                try:
+                    from sandbox.fixtures import seed_sandbox_brands
+                    seed_sandbox_brands()
+                except Exception as e:
+                    st.error(f"Seed failed: {e}")
+                st.rerun()
+        with col_clear:
+            if st.button("Clear sandbox", key="sandbox_clear_btn",
+                         use_container_width=True, disabled=not sandbox_on):
+                try:
+                    from sandbox.fixtures import clear_sandbox_brands
+                    clear_sandbox_brands()
+                except Exception as e:
+                    st.error(f"Clear failed: {e}")
+                st.rerun()
+        with col_run:
+            if st.button("Run agents now", key="run_agents_btn", use_container_width=True,
+                         disabled=not sandbox_on):
+                try:
+                    from sandbox.fixtures import seed_sandbox_brands
+                    seed_sandbox_brands()
+                    st.toast("Agent cycle complete — activity refreshed.")
+                except Exception as e:
+                    st.error(f"Run failed: {e}")
+                st.rerun()
 
 
 # ── Existing business: recent activity feed ───────────────────────────────────
@@ -2181,6 +2178,9 @@ try:
     elif workspace == "brand_scout":
         render_back_nav()
         render_brand_scout_workspace()
+    elif workspace in ("book/retailer_pitcher", "book/admin_ops"):
+        from ui.per_agent_page import render_per_agent_page
+        render_per_agent_page(workspace.split("/")[1])
     else:
         render_landing_cards()
 except Exception as _top_exc:
