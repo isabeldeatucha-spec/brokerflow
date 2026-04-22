@@ -1653,6 +1653,10 @@ def render_brand_roster() -> None:
 
     # ── Empty state ───────────────────────────────────────────────────────────
     if not brands_list:
+        if st.session_state.get("onboarding_active"):
+            from ui.onboarding_flow import render_onboarding_flow
+            render_onboarding_flow()
+            return
         st.markdown(
             '<div style="text-align:center; padding:80px 0 48px;">'
             '<p style="font-size:11px; font-weight:600; letter-spacing:0.1em; '
