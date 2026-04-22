@@ -1636,7 +1636,7 @@ def render_brand_roster() -> None:
         result = (
             client.table("brands")
             .select("id, brand_name, category, completeness_pct, status, onboarded_at, "
-                    "is_sandbox, products, current_retailers, estimated_door_count")
+                    "is_sandbox, products, current_retailers, product_count")
             .order("onboarded_at", desc=True)
             .limit(50)
             .execute()
@@ -1821,7 +1821,7 @@ def render_brand_roster() -> None:
         name = brand.get("brand_name", "?")
         category = brand.get("category") or "—"
         product_count = len(brand.get("products") or [])
-        door_count = brand.get("estimated_door_count", "")
+        door_count = brand.get("product_count", "")
         is_sb = brand.get("is_sandbox", False)
         brand_activity = activity_map.get(bid, {})
 
@@ -1840,7 +1840,7 @@ def render_brand_roster() -> None:
         )
         door_tag = (
             f'<span style="font-size:12px; color:#8B8A83; margin-left:4px;">'
-            f'{door_count} stores</span>' if door_count else ""
+            f'{door_count} SKU{"s" if door_count != 1 else ""}</span>' if door_count else ""
         )
 
         # Accent bar for cards needing review

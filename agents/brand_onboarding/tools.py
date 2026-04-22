@@ -101,14 +101,54 @@ Return JSON only. No markdown fences, no commentary."""
         return {"ok": False, "error": str(e)}
 
 
+_VALID_BRAND_COLUMNS = {
+    "brand_name", "website_url", "category", "subcategory", "founded_year",
+    "hq_city", "hq_state", "founder_name", "founder_email", "product_count",
+    "flagship_sku", "wholesale_price_range", "retail_price_range", "margin_range",
+    "distributor_list", "current_retailers", "target_retailers", "certifications",
+    "brand_story", "key_differentiators", "completeness_pct", "source_files",
+    "is_sandbox", "last_verified_at", "status", "unit_velocity_range",
+    "slotting_fees_paid", "best_seller_sku", "products",
+}
+
+_BRAND_FIELD_REMAP = {
+    "brand_description": "brand_story",
+    "distributor":       "distributor_list",
+    "hero_sku":          "flagship_sku",
+    "srp_range":         "retail_price_range",
+    "wholesale_price":   "wholesale_price_range",
+}
+
+_ARRAY_BRAND_COLUMNS = {
+    "distributor_list", "current_retailers", "target_retailers",
+    "certifications", "key_differentiators", "source_files",
+}
+
+
+def _coerce_brand_field(key: str, value):
+    if key in _ARRAY_BRAND_COLUMNS:
+        if isinstance(value, list):
+            return value
+        if isinstance(value, str) and value.strip():
+            return [v.strip() for v in value.split(",") if v.strip()]
+        return []
+    return value
+
+
 def tool_persist_brand_record(record: dict) -> dict:
     """TOOL 4: Upsert canonical brand record to Supabase."""
+    remapped = {_BRAND_FIELD_REMAP.get(k, k): v for k, v in record.items()}
+    clean = {
+        k: _coerce_brand_field(k, v)
+        for k, v in remapped.items()
+        if k in _VALID_BRAND_COLUMNS
+    }
     from memory import _get_client
     client = _get_client()
     try:
         result = (
             client.table("brands")
-            .upsert(record, on_conflict="brand_name")
+            .upsert(clean, on_conflict="brand_name")
             .execute()
         )
         return {"ok": True, "brand_id": result.data[0]["id"]}
