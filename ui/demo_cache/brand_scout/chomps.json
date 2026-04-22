@@ -1,0 +1,67 @@
+{
+  "brand_name": "Chomps",
+  "website_url": "https://chomps.com",
+  "category": "meat_snack_protein",
+  "verdict": "established",
+  "score": {
+    "total": 87,
+    "velocity_proof": 22,
+    "distribution_density": 18,
+    "margin_viability": 15,
+    "brand_story_clarity": 19,
+    "promotional_independence": 13
+  },
+  "founder_name": "Rashid Ali",
+  "founder_email": "",
+  "email_draft": "Subject: Regional expansion opportunities for Chomps\n\nHi Rashid,\n\nImpressive work building Chomps into the #1 BSR meat snack on Amazon with that 4.7-star rating across 600+ reviews. Your premium positioning at Whole Foods, Target, and Walmart clearly resonates with consumers who value grass-fed quality and those 7+ certifications.\n\nAs an established F&B broker in the region, I'm seeing strong demand for premium protein snacks like yours, but notice potential gaps in regional coverage within your existing retail partnerships. My relationships with regional buyers at your current accounts, plus untapped doors, could accelerate your expansion without diluting the premium brand equity you've built.\n\nGiven your trajectory toward $500M revenue, strategic regional partnerships matter more than ever. Worth a 15-minute conversation to explore specific opportunities in my territory?\n\nBest,\n[Your name]",
+  "reflection_notes": [
+    "Initial research confirmed strong signals across all dimensions. Amazon performance is exceptional (#1 BSR, 4.7/5.0 stars, 600+ reviews). Retail footprint spans Whole Foods, Target, Walmart, Costco, and Sprouts. Certifications (B Corp, USDA Organic, Keto, Whole30, Paleo) add strong brand story clarity. Revenue trajectory toward $500M in 2024 validates premium positioning.",
+    "Follow-up confirmed Faire presence and wholesale performance data. Core business metrics and distribution signals are clear and consistent. B Corp certification and DTC presence well-established. No major contradictions between claimed performance and actual retail presence."
+  ],
+  "extracted_fields": {
+    "amazon_review_count": 606,
+    "amazon_rating": 4.7,
+    "amazon_subscribe_save": true,
+    "instacart_banner_count": 5,
+    "spins_mentioned": true,
+    "sell_through_press": true,
+    "estimated_door_count": 450,
+    "whole_foods_confirmed": true,
+    "sprouts_confirmed": true,
+    "target_confirmed": true,
+    "costco_confirmed": true,
+    "walmart_confirmed": true,
+    "faire_listed": true,
+    "srp_hero": 16.99,
+    "srp_min": 14.99,
+    "funding_amount_usd": 0,
+    "hero_product_clear": true,
+    "founder_story_clear": true,
+    "instagram_followers": 110000,
+    "tiktok_followers": 45000,
+    "press_trade_mentions": 5,
+    "certifications": ["B Corp", "USDA Organic", "Keto Certified", "Whole30 Approved", "Paleo Certified"],
+    "expo_west_confirmed": true,
+    "dtc_channel": true,
+    "subscription_available": true,
+    "promo_frequency_tpr_per_year": 2,
+    "bogo_detected": false
+  },
+  "signals_found": {
+    "score_detail": {
+      "broker_brief": "Chomps is a premium meat snack brand with exceptional market positioning — #1 BSR on Amazon with 4.7/5 stars across 600+ reviews and distribution in major retailers including Whole Foods, Target, Walmart, and Costco. The brand has strong premium credentials with 7+ certifications (B Corp, Keto, Paleo, Whole30) and proven consumer loyalty with subscribe & save functionality. At $16.99+ SRP, they command premium pricing in the competitive protein snack category.",
+      "key_gaps": [
+        "Verify current regional coverage gaps within existing retail partners — which markets/stores need expansion",
+        "Confirm promotional calendar and co-op requirements across their major retail partnerships",
+        "Validate velocity metrics and category performance benchmarks at key accounts"
+      ],
+      "outreach_angle": "Established player with clear regional expansion gaps — pitch around unlocking specific doors within their existing retail partners",
+      "velocity_proof": {"score": 22, "reasoning": "Amazon #1 BSR, 4.7 stars, 600+ reviews, Subscribe & Save active. 5 Instacart banners. SPINS-mentioned brand with strong sell-through press."},
+      "distribution_density": {"score": 18, "reasoning": "Present in 5 major national chains (WFM, Target, Walmart, Costco, Sprouts). Estimated 450 doors nationally. Faire listed."},
+      "margin_viability": {"score": 15, "reasoning": "$16.99 SRP comfortably above category benchmark. Bootstrapped with strong revenue trajectory."},
+      "brand_story_clarity": {"score": 19, "reasoning": "Clear hero product, compelling founder story, 110K Instagram followers, 5 trade press mentions, 5 certifications, ExpoWest confirmed."},
+      "promotional_independence": {"score": 13, "reasoning": "DTC + subscription available, 110K social following, 2 TPR/year (disciplined), Subscribe & Save active."}
+    },
+    "brand_history": "Previously scored 67/100 on first evaluation"
+  }
+}

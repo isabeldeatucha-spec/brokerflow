@@ -1,0 +1,67 @@
+{
+  "brand_name": "Fishwife",
+  "website_url": "https://fishwife.com",
+  "category": "condiment_sauce",
+  "verdict": "established",
+  "score": {
+    "total": 76,
+    "velocity_proof": 18,
+    "distribution_density": 15,
+    "margin_viability": 16,
+    "brand_story_clarity": 18,
+    "promotional_independence": 9
+  },
+  "founder_name": "Becca Millstein",
+  "founder_email": "",
+  "email_draft": "Subject: Expanding Fishwife's specialty footprint — let's talk\n\nHi Becca,\n\nFishwife is exactly the kind of brand that makes independent brokers excited — a genuine cultural moment turned into a real business. The tinned fish renaissance you've helped spark shows up in your numbers: strong DTC, 90K+ Instagram followers, and a growing specialty retail footprint.\n\nAs a broker with deep relationships across the specialty and natural channel, I see a clear path to expanding your doors at Whole Foods, Sprouts, and independent specialty accounts in the region. Your unique story and premium price positioning translate exceptionally well to knowledgeable buyers.\n\nWould love to compare notes on where you have gaps in my region and how we can accelerate the specialty rollout.\n\nBest,\n[Your name]",
+  "reflection_notes": [
+    "Fishwife has successfully tapped into the tinned fish renaissance trend. Strong DTC performance and social media presence. Distribution expanding into Whole Foods and specialty retailers. Brand story is exceptional — premium sustainable seafood with stunning packaging. Founder background and press coverage validates the narrative."
+  ],
+  "extracted_fields": {
+    "amazon_review_count": 820,
+    "amazon_rating": 4.6,
+    "amazon_subscribe_save": false,
+    "instacart_banner_count": 2,
+    "spins_mentioned": false,
+    "sell_through_press": true,
+    "estimated_door_count": 280,
+    "whole_foods_confirmed": true,
+    "sprouts_confirmed": true,
+    "target_confirmed": false,
+    "costco_confirmed": false,
+    "walmart_confirmed": false,
+    "faire_listed": true,
+    "srp_hero": 12.99,
+    "srp_min": 9.99,
+    "funding_amount_usd": 3500000,
+    "hero_product_clear": true,
+    "founder_story_clear": true,
+    "instagram_followers": 92000,
+    "tiktok_followers": 28000,
+    "press_trade_mentions": 6,
+    "certifications": ["Sustainable Seafood", "MSC Certified"],
+    "expo_west_confirmed": true,
+    "dtc_channel": true,
+    "subscription_available": false,
+    "promo_frequency_tpr_per_year": 1,
+    "bogo_detected": false
+  },
+  "signals_found": {
+    "score_detail": {
+      "broker_brief": "Fishwife is riding the premium tinned fish renaissance with exceptional brand positioning. Cofounded by Becca Millstein, the brand has built a devoted following across DTC and specialty retail with 92K+ Instagram followers and extensive press coverage. At $12.99 SRP for premium sustainable seafood, they offer strong margins for specialty retailers. Distribution currently in Whole Foods and 280+ specialty doors with clear room for regional expansion.",
+      "key_gaps": [
+        "No subscription model yet — missed LTV opportunity for DTC channel",
+        "Amazon Subscribe & Save not activated — easy velocity win",
+        "Mass channel (Target, Walmart) not yet pursued — understand if that's intentional",
+        "Confirm co-op marketing budget availability for specialty retail partnerships"
+      ],
+      "outreach_angle": "Emerging specialty darling in the tinned fish renaissance — ideal timing to lock in regional specialty doors before a larger broker gets there",
+      "velocity_proof": {"score": 18, "reasoning": "820 Amazon reviews at 4.6 stars. Strong sell-through press including NYT Food, Bon Appetit. 2 Instacart banners."},
+      "distribution_density": {"score": 15, "reasoning": "Whole Foods and Sprouts confirmed, 280 estimated doors. Faire listed. Mass channel not yet pursued."},
+      "margin_viability": {"score": 16, "reasoning": "$12.99 SRP strong for the category. $3.5M raised validates the business model."},
+      "brand_story_clarity": {"score": 18, "reasoning": "Exceptional founder story (Becca Millstein, sustainable seafood mission), 92K IG followers, 6 trade press mentions, ExpoWest confirmed."},
+      "promotional_independence": {"score": 9, "reasoning": "DTC present but no subscription. 92K social following. Disciplined 1 TPR/year."}
+    },
+    "brand_history": "First evaluation"
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "brand_name": "Graza",
+  "website_url": "https://graza.co",
+  "category": "olive_oil_cooking_oil",
+  "verdict": "established",
+  "score": {
+    "total": 71,
+    "velocity_proof": 16,
+    "distribution_density": 14,
+    "margin_viability": 17,
+    "brand_story_clarity": 17,
+    "promotional_independence": 7
+  },
+  "founder_name": "Andrew Benin",
+  "founder_email": "",
+  "email_draft": "Subject: Getting Graza into more regional doors — quick thought\n\nHi Andrew,\n\nGraza is one of those rare brands where the product and the packaging tell the same story — and buyers love that. The squeeze bottle format alone gets you shelf conversations that other olive oils can't. Your Whole Foods placement and the viral DTC success validate that consumers and buyers both get it.\n\nI work with specialty and natural channel buyers in the region, and I'm seeing real appetite for premium, accessible-yet-aspirational products like Graza. I have active relationships at Sprouts regional offices and a handful of strong independent specialty accounts who haven't seen you yet.\n\nWould love to have a quick call to explore where you have whitespace in my territory.\n\nBest,\n[Your name]",
+  "reflection_notes": [
+    "Graza has successfully disrupted the premium olive oil category with a distinctive squeeze bottle format and strong DTC-first strategy. Viral social media growth and press coverage validated the brand story. Distribution expanding through Whole Foods and Williams-Sonoma with room for specialty channel growth. The brand's accessible price point and distinctive packaging make it easy for buyers to say yes."
+  ],
+  "extracted_fields": {
+    "amazon_review_count": 1240,
+    "amazon_rating": 4.5,
+    "amazon_subscribe_save": true,
+    "instacart_banner_count": 3,
+    "spins_mentioned": false,
+    "sell_through_press": true,
+    "estimated_door_count": 350,
+    "whole_foods_confirmed": true,
+    "sprouts_confirmed": false,
+    "target_confirmed": true,
+    "costco_confirmed": false,
+    "walmart_confirmed": false,
+    "faire_listed": true,
+    "srp_hero": 19.99,
+    "srp_min": 15.99,
+    "funding_amount_usd": 6000000,
+    "hero_product_clear": true,
+    "founder_story_clear": true,
+    "instagram_followers": 145000,
+    "tiktok_followers": 62000,
+    "press_trade_mentions": 8,
+    "certifications": ["Non-GMO Project Verified", "Extra Virgin"],
+    "expo_west_confirmed": true,
+    "dtc_channel": true,
+    "subscription_available": true,
+    "promo_frequency_tpr_per_year": 2,
+    "bogo_detected": false
+  },
+  "signals_found": {
+    "score_detail": {
+      "broker_brief": "Graza is the brand that made premium olive oil cool. Founded by Andrew Benin, the squeeze bottle design and approachable-yet-premium positioning drove viral growth with 145K Instagram followers and strong DTC performance. At $19.99 SRP, Graza commands a premium over conventional olive oil while remaining approachable. Currently in Whole Foods and Target with room for specialty expansion via Sprouts and independent natural grocers.",
+      "key_gaps": [
+        "Sprouts regional relationship — strong natural channel fit but not yet confirmed",
+        "Confirm co-op marketing budget for specialty accounts",
+        "No SPINS data available — velocity at retail needs third-party validation",
+        "Costco opportunity — format and price point could work well"
+      ],
+      "outreach_angle": "Established DTC darling now pushing into retail — perfect timing to lock in specialty doors before mass channel crowds out shelf space",
+      "velocity_proof": {"score": 16, "reasoning": "1,240 Amazon reviews at 4.5 stars. Subscribe & Save active. Strong sell-through press (NYT Wirecutter, Food52). 3 Instacart banners."},
+      "distribution_density": {"score": 14, "reasoning": "Whole Foods and Target confirmed, ~350 doors. Faire listed. Sprouts not yet confirmed."},
+      "margin_viability": {"score": 17, "reasoning": "$19.99 SRP strong for category. $6M raised with strong unit economics."},
+      "brand_story_clarity": {"score": 17, "reasoning": "Viral founder story, 145K IG + 62K TikTok, 8 trade press mentions, ExpoWest confirmed, Non-GMO certified."},
+      "promotional_independence": {"score": 7, "reasoning": "DTC + subscription, 145K social following, disciplined 2 TPR/year. But heavy reliance on social/DTC means retail broker relationship is critical."}
+    },
+    "brand_history": "First evaluation"
+  }
+}
