@@ -120,6 +120,34 @@ def retrieve_brand_history(brand_name: str) -> str:
         return ""
 
 
+def store_new_item_form(
+    brand_name: str,
+    retailer: str,
+    filled_fields: dict,
+    field_confidence: dict,
+    field_sources: dict,
+    gaps: list,
+    output_xlsx_path: str,
+    output_status: str,
+) -> None:
+    try:
+        client = _get_client()
+        client.table("new_item_forms").upsert({
+            "brand_name":       brand_name.strip().title(),
+            "retailer":         retailer,
+            "filled_fields":    filled_fields,
+            "field_confidence": field_confidence,
+            "field_sources":    field_sources,
+            "gaps":             gaps,
+            "output_xlsx_path": output_xlsx_path,
+            "output_status":    output_status,
+            "generated_at":     datetime.now().isoformat(),
+        }, on_conflict="brand_name,retailer").execute()
+        print(f"[Memory] Stored new_item_form for {brand_name} / {retailer}")
+    except Exception as e:
+        print(f"[Memory] store_new_item_form failed: {e}")
+
+
 def retrieve_similar_brands(category: str, score_range: tuple) -> str:
     try:
         client = _get_client()

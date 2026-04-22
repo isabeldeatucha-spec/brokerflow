@@ -150,6 +150,11 @@ section[data-testid="stSidebar"] .stButton > button {
     border-color: #1B4F72 !important;
     box-shadow: 0 0 0 3px rgba(27,79,114,0.08) !important;
 }
+
+.material-icons, .material-symbols-rounded, .material-symbols-outlined,
+[class*="material-icon"] { font-size: 0 !important; line-height: 0 !important; }
+span.ejhh0er0,
+[data-testid="stExpanderToggleIcon"] { font-size: 0 !important; width: 0 !important; overflow: hidden !important; }
 </style>
 """,
     unsafe_allow_html=True,
@@ -462,10 +467,11 @@ def render_coming_soon(title: str) -> None:
 
 def _error_card(exc: Exception) -> None:
     import traceback, sys
-    print(traceback.format_exc(), file=sys.stderr)
-    with st.expander("Debug details", expanded=False):
-        st.code(traceback.format_exc())
-    st.error("Something went wrong. The team has been notified.")
+    tb = traceback.format_exc()
+    print(tb, file=sys.stderr)
+    st.error(f"Something went wrong: **{type(exc).__name__}: {exc}**")
+    with st.expander("🐛 Debug details", expanded=True):
+        st.code(tb, language="python")
 
 
 page = NAV_OPTIONS[st.session_state["_nav_idx"]]

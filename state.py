@@ -86,6 +86,38 @@ class RetailerPitcherState(TypedDict):
     rejection_reason: Optional[str]
 
 
+# ── Admin & Ops ───────────────────────────────────────────────────────────────
+
+class AdminOpsFormFillState(TypedDict):
+    # Input
+    brand_name: str
+    retailer: str              # "whole_foods" | future: "kehe", "unfi"
+
+    # Handoff context
+    scout_context: dict        # loaded from brand_evaluations (Supabase)
+    pitcher_context: dict      # loaded from retailer_pitches if exists, else {}
+    handoff_status: str        # "ok" | "miss" | "stale"
+    handoff_error: Optional[str]
+
+    # Form schema and fill results
+    form_schema: list[dict]              # static list of WFM form fields
+    filled_fields: dict[str, Any]        # field_id -> value the agent filled
+    field_confidence: dict[str, str]     # field_id -> "high" | "medium" | "low" | "missing"
+    field_sources: dict[str, str]        # field_id -> provenance string
+
+    # Gaps — fields the agent couldn't fill
+    # each gap: {field_id, label, reason, suggested_action}
+    gaps: list[dict]
+
+    # Output
+    output_xlsx_path: str      # path to the filled .xlsx written to disk
+    output_status: str         # "ok" | "partial" | "failed"
+    artifact_errors: Annotated[list[str], operator.add]
+
+    # Human gate
+    approved: Optional[bool]
+    rejection_reason: Optional[str]
+
+
 # ── Future agents — add state classes here as they're built ──────────────────
-# class AdminOpsState(TypedDict): ...
 # class PortfolioManagerState(TypedDict): ...
