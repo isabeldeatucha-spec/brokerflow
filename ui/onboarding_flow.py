@@ -16,12 +16,12 @@ import streamlit as st
 SANDBOX_BRAND_NAMES = {"Chomps", "Fishwife", "Graza", "Olipop", "Magic Spoon"}
 
 _NODE_LABELS = {
-    "load_prior_knowledge": ("Load prior knowledge", "Checking Brand Scout for existing signals"),
-    "extract_from_uploads": ("Extract from uploads", "Parsing files and running LLM extraction"),
-    "merge_and_reconcile":  ("Merge & reconcile",   "Resolving conflicts autonomously"),
-    "score_completeness":   ("Score completeness",   "Computing field coverage"),
-    "persist_and_log":      ("Persist & log",        "Writing to brands table + event log"),
-    "notify_downstream":    ("Notify downstream",    "Signalling Matcher and Admin"),
+    "load_prior_knowledge": ("Check what we already know",          ""),
+    "extract_from_uploads": ("Read the files you uploaded",         ""),
+    "merge_and_reconcile":  ("Reconcile conflicts",                 ""),
+    "score_completeness":   ("Check what's missing",                ""),
+    "persist_and_log":      ("Save to your book",                   ""),
+    "notify_downstream":    ("Hand off to Retailer & Admin agents", ""),
 }
 
 _NODE_ORDER = list(_NODE_LABELS.keys())
@@ -38,7 +38,7 @@ def _render_step_1() -> None:
     _section("STEP 1 OF 3 — BRAND INFO")
     st.markdown(
         '<h2 style="font-family:\'Instrument Serif\', serif; font-size:28px; '
-        'font-weight:400; margin:0 0 20px 0;">Onboard a brand</h2>',
+        'font-weight:400; margin:0 0 20px 0;">Add a brand to your book</h2>',
         unsafe_allow_html=True,
     )
 

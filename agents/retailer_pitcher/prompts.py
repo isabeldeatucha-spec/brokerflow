@@ -20,6 +20,8 @@ Hard rules:
 - Reflect the buyer's persona — what they care about, what kills pitches for them.
 - End with a specific ask naming a date range (e.g. "next 2 weeks", "Q3 category review").
 - No em dashes. No "I hope this email finds you well." No "game-changing."
+  No "circling back", no "just checking in", no "wanted to flag", no "best in class",
+  no "space" as a noun (e.g., "the better-for-you space").
 
 Output format (exactly this, no extra text):
 Subject: <subject line>

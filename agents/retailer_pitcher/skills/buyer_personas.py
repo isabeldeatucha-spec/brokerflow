@@ -41,7 +41,7 @@ BUYER_PERSONAS: dict[str, BuyerPersona] = {
             "third-party certifications (Non-GMO, Organic, Fair Trade)",
             "press in NOSH, FoodNavigator, New Hope",
         ],
-        "tone": "warm, specific, confident — treat the buyer as a peer running a category, not a gatekeeper",
+        "tone": "warm, specific, confident — the buyer runs a category like a P&L. Pitch them like a peer, not a supplicant.",
     },
     "sprouts": {
         "retailer": "Sprouts Farmers Market",
@@ -61,6 +61,7 @@ BUYER_PERSONAS: dict[str, BuyerPersona] = {
             "case pack and cost structure aligned with Sprouts TPR cadence",
             "social proof (>50k engaged Instagram followers)",
             "clear hero SKU with high reorder rate",
+            "Regional velocity in CA, AZ, TX, or CO carries weight; East Coast velocity carries less.",
         ],
         "tone": "pragmatic, numbers-forward — the Sprouts IC is a data-driven team",
     },
@@ -83,7 +84,7 @@ BUYER_PERSONAS: dict[str, BuyerPersona] = {
             "press in goop, Well+Good, Vogue",
             "existing LA-based velocity or cultural moments",
         ],
-        "tone": "narrative-led, aspirational — the pitch reads like a founder letter with proof",
+        "tone": "narrative-led, aspirational — the pitch reads like a founder letter: short, voice-driven, with one or two specific proof points.",
     },
 }
 

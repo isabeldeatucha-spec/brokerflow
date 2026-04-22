@@ -33,7 +33,7 @@ def render_retailer_pitcher_page() -> None:
     st.markdown(
         '<div style="margin-bottom:32px;">'
         '<h1 class="sedge-h1">Retailer Pitcher</h1>'
-        '<p class="sedge-subtitle">Draft a retailer-ready outreach email and 1-page sell sheet for any brand in your book.</p>'
+        '<p class="sedge-subtitle">Buyer-ready outreach and a one-pager for any brand in your book.</p>'
         '</div>',
         unsafe_allow_html=True,
     )
@@ -151,8 +151,7 @@ def render_retailer_pitcher_page() -> None:
 
     if not go:
         st.info(
-            "Pick a brand and a buyer above, then click **Draft pitch**. "
-            "You'll get a ready-to-send email and a printable 1-page sell sheet."
+            "Pick a brand and a buyer. We'll draft the email and a one-pager you can send today."
         )
         return
 
@@ -197,7 +196,7 @@ def render_retailer_pitcher_page() -> None:
             sell_sheet_html = _cached.get("sell_sheet_html", "")
             st.success(f"Pitch ready for **{pick['brand_name']}** → **{persona['retailer']}**")
             slug = f"{pick['brand_name'].lower().replace(' ', '_')}_{buyer_key}"
-            tab_email, tab_sheet = st.tabs(["📧  Outreach email", "📄  1-page sell sheet"])
+            tab_email, tab_sheet = st.tabs(["📧  Email to buyer", "📄  One-pager"])
             with tab_email:
                 if email_subject:
                     st.markdown(f"### Subject: {email_subject}")

@@ -31,7 +31,7 @@ def render_agent_page(agent_key: str) -> None:
     if agent_key == "retailer_agent":
         _render_tabbed_agent(
             name=LABEL_RETAILER_AGENT,
-            tagline="Continuously pitching, promoting, and tracking retailer windows for your portfolio.",
+            tagline="Pitching, promoting, and tracking submission windows across your book.",
             workflows=RETAILER_AGENT_WORKFLOWS,
             active_renderers={"pitching": _render_retailer_pitching},
             internal_agent_name="retailer_pitcher",
@@ -39,7 +39,7 @@ def render_agent_page(agent_key: str) -> None:
     elif agent_key == "admin_agent":
         _render_tabbed_agent(
             name=LABEL_ADMIN_AGENT,
-            tagline="Continuously processing forms, deductions, POs, and demo spend on your behalf.",
+            tagline="The paperwork side of your job — forms, POs, deductions, and demo spend — handled.",
             workflows=ADMIN_AGENT_WORKFLOWS,
             active_renderers={"new_item_forms": _render_admin_new_item_forms},
             internal_agent_name="admin_ops",
@@ -168,7 +168,7 @@ def _render_brand_scout_summary() -> None:
     st.markdown(
         "<p style='font-family:\"Instrument Serif\", Georgia, serif; "
         "font-style:italic; font-size:18px; color:#6b6b6b; margin-bottom:1.5rem;'>"
-        "Evaluation only — triage and scoring lives in the Brand Scout workspace.</p>",
+        "Evaluation only — qualifying and scoring lives in the Brand Scout workspace.</p>",
         unsafe_allow_html=True,
     )
     st.info(LABEL_BRAND_SCOUT_SCOPE)

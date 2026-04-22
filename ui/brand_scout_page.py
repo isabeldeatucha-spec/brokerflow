@@ -561,7 +561,7 @@ document.getElementById('copy-btn').style.background = '#1A1A18';
                     st.session_state["forced_page"] = "Admin & Ops"
                     st.rerun()
 
-            reject = st.button("Discard", key="reject_btn", use_container_width=True)
+            reject = st.button("Pass — not a fit", key="reject_btn", use_container_width=True)
             return {"approve": False, "reject": reject, "edited_draft": edited_body}
 
         else:
@@ -759,9 +759,9 @@ def render_brand_scout_page() -> None:
         )
         tier_cols = st.columns(3)
         for col, (label, score_range, cta, desc, cls) in zip(tier_cols, [
-            ("Broker Ready",  "45–69", "Reach out now",         "Enough traction to be credible, not yet locked into national distribution.", "badge-ready"),
-            ("Established",   "70+",   "Verify broker need",    "Proven brand, likely working with brokers. Pitch angle: why you're better.", "badge-established"),
-            ("Too Early",     "< 45",  "Check back in 6 months","Missing velocity proof, distribution, or brand story clarity.",              "badge-early"),
+            ("Broker Ready",  "45–69", "Worth a meeting",        "Enough traction to be credible, not yet locked into national distribution.", "badge-ready"),
+            ("Established",   "70+",   "Check who reps them now","Proven brand, likely working with brokers. Pitch angle: why you're better.", "badge-established"),
+            ("Too Early",     "< 45",  "Check back in 6 months", "Missing velocity proof, distribution, or brand story clarity.",              "badge-early"),
         ]):
             with col:
                 col.markdown(
@@ -872,8 +872,8 @@ def render_brand_scout_page() -> None:
     elif st.session_state.phase == "rejected":
         st.markdown("""
         <div class="sedge-card" style="text-align:center;padding:40px;">
-            <p class="sedge-section-title" style="margin-bottom:12px;">Discarded</p>
-            <h1 class="sedge-h1" style="margin-bottom:8px;">Brand discarded</h1>
+            <p class="sedge-section-title" style="margin-bottom:12px;">Passed</p>
+            <h1 class="sedge-h1" style="margin-bottom:8px;">Marked as not a fit</h1>
             <p class="sedge-caption">No email was sent.</p>
         </div>
         """, unsafe_allow_html=True)

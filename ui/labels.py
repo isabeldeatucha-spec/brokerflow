@@ -5,11 +5,11 @@ blackboard message types) are NOT renamed. Only display strings.
 """
 
 # Top-level navigation
-LABEL_EXISTING_BUSINESS = "Existing business"
-LABEL_EXISTING_BUSINESS_SUB = "Pitch, manage, and operate the brands you represent"
+LABEL_EXISTING_BUSINESS = "Your book of business"
+LABEL_EXISTING_BUSINESS_SUB = "Service the brands you already represent"
 
 LABEL_BRAND_SCOUT = "Brand Scout"
-LABEL_BRAND_SCOUT_SUB = "Score new prospects for broker readiness"
+LABEL_BRAND_SCOUT_SUB = "Qualify new brands before you take a meeting"
 
 # Agent display names (NOT module names)
 LABEL_BRAND_SCOUT_AGENT = "Brand Scout"
@@ -18,9 +18,9 @@ LABEL_ADMIN_AGENT = "Admin Agent"          # was "Admin & Ops"
 
 # Brand Scout scope statement (shown on its page)
 LABEL_BRAND_SCOUT_SCOPE = (
-    "Brand Scout has one job: evaluate prospects and tell you whether they're "
-    "broker-ready. It doesn't pitch, fill forms, or manage operations — those "
-    "live in your Existing business workspace."
+    "Brand Scout has one job: qualify new brand requests and tell you whether "
+    "they're worth a meeting. It doesn't pitch or run ops — those live in your "
+    "book of business."
 )
 
 # Retailer Agent workflows
@@ -36,8 +36,8 @@ WORKFLOW_PROMOS = {
     "status": "coming_q3",
     "description": "Coordinate price promotions across retailers and distributors",
     "details": (
-        "Schedule and track promotional pricing windows. Auto-generate "
-        "promo sell sheets. Reconcile lift vs. baseline post-event."
+        "Schedule TPRs, generate promo sheets, and reconcile lift vs. baseline "
+        "after each event. Rule of thumb: 4 TPRs/year max."
     ),
 }
 WORKFLOW_CATEGORY_REVIEWS = {
@@ -48,7 +48,7 @@ WORKFLOW_CATEGORY_REVIEWS = {
     "details": (
         "Track each retailer's category review calendar. Surface the next "
         "open window per category. Pre-stage pitch materials so you never "
-        "miss a deadline."
+        "miss a window."
     ),
 }
 RETAILER_AGENT_WORKFLOWS = [
@@ -68,9 +68,8 @@ WORKFLOW_DEDUCTIONS = {
     "status": "coming_q3",
     "description": "Track and dispute distributor deductions",
     "details": (
-        "Ingest distributor deduction reports. Categorize each deduction "
-        "(slotting, MCB, freight, damage). Flag disputes worth pursuing. "
-        "Generate dispute letters."
+        "Pull deduction reports from distributors. Tag each one (slotting, MCB, "
+        "freight, damage). Flag the ones worth disputing — and draft the dispute."
     ),
 }
 WORKFLOW_PO_PROCESSING = {
@@ -79,8 +78,8 @@ WORKFLOW_PO_PROCESSING = {
     "status": "coming_q4",
     "description": "Process incoming purchase orders end-to-end",
     "details": (
-        "Parse incoming PO PDFs/EDI. Validate against brand pricing. "
-        "Confirm with brand. Submit confirmation back to retailer."
+        "Parse POs from email or EDI. Check pricing against the brand's cost "
+        "sheet. Confirm with the brand. Send back to the retailer."
     ),
 }
 WORKFLOW_DEMO_SPEND = {

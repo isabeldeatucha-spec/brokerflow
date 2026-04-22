@@ -163,10 +163,10 @@ def _section_table_html(
 def _render_empty_state() -> None:
     st.markdown("""
     <div style="padding:48px 0 32px;">
-        <h1 class="sedge-h1" style="margin-bottom:8px;">Pick a brand to generate a new item form</h1>
+        <h1 class="sedge-h1" style="margin-bottom:8px;">Pick a brand to fill its new-item form</h1>
         <p class="sedge-caption" style="max-width:420px;">
-            Select a brand from your book above. Sedge will autofill a
-            Whole Foods new item setup form from your Brand Scout data.
+            Select a brand from your book above. Sedge will fill a
+            Whole Foods new-item form from your book — and flag what's missing before you submit.
         </p>
     </div>
     """, unsafe_allow_html=True)
@@ -408,14 +408,14 @@ def _render_footer(result: dict) -> None:
                 xlsx_bytes = fh.read()
         if xlsx_bytes:
             st.download_button(
-                label="Download filled Excel",
+                label="Download the filled form",
                 data=xlsx_bytes,
                 file_name=download_name,
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 use_container_width=True,
             )
         else:
-            st.button("Download filled Excel", disabled=True, use_container_width=True)
+            st.button("Download the filled form", disabled=True, use_container_width=True)
 
     with col_slack:
         st.html(f"""
@@ -426,7 +426,7 @@ function copySlackSummary() {{
     btn.innerText = '✓ Copied!';
     btn.style.background = '#1B7A4A';
     setTimeout(() => {{
-      btn.innerText = '📋 Copy summary to Slack';
+      btn.innerText = 'Copy summary';
       btn.style.background = '#1B4F72';
     }}, 2500);
   }});
@@ -435,7 +435,7 @@ function copySlackSummary() {{
 <button id="ao-slack-btn" onclick="copySlackSummary()"
   style="width:100%;background:#1A1A18;color:#FAFAF7;border:none;border-radius:6px;
   padding:10px 16px;font-size:14px;font-weight:500;cursor:pointer;font-family:Inter,sans-serif;">
-  Copy summary to Slack
+  Copy summary
 </button>
 """)
 
@@ -607,7 +607,7 @@ def render_admin_ops_page() -> None:
     st.markdown(
         '<div style="margin-bottom:32px;">'
         '<h1 class="sedge-h1">Admin &amp; Ops</h1>'
-        '<p class="sedge-subtitle">Autofill retailer new item forms from your Brand Scout data.</p>'
+        '<p class="sedge-subtitle">Fill the new-item paperwork retailers require, using everything we already know about the brand.</p>'
         '</div>',
         unsafe_allow_html=True,
     )
@@ -728,7 +728,7 @@ def render_admin_ops_page() -> None:
         _render_footer(result)
 
         if st.button(
-            "Pitch this to a buyer",
+            "Send this to a buyer",
             key="ao_handoff_pitcher",
             use_container_width=False,
         ):
