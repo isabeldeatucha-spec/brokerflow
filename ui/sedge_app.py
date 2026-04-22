@@ -1033,14 +1033,13 @@ def render_landing_cards() -> None:
         unsafe_allow_html=True,
     )
 
-    col1, col2 = st.columns([2, 1], gap="large")
+    col1, col2 = st.columns(2, gap="large")
     with col1:
         st.markdown(
-            f'<div class="sedge-destination-card">'
-            f'<div class="dest-eyebrow">Run your book</div>'
-            f'<div class="dest-title">{LABEL_EXISTING_BUSINESS}</div>'
-            f'<div class="dest-sub">{LABEL_EXISTING_BUSINESS_SUB}</div>'
-            f'</div>',
+            '<div class="sedge-destination-card">'
+            '<div class="dest-title">Manage your existing business</div>'
+            '<div class="dest-sub">Service the brands you already represent</div>'
+            '</div>',
             unsafe_allow_html=True,
         )
         if st.button(
@@ -1052,11 +1051,10 @@ def render_landing_cards() -> None:
 
     with col2:
         st.markdown(
-            f'<div class="sedge-destination-card">'
-            f'<div class="dest-eyebrow">Discover</div>'
-            f'<div class="dest-title">{LABEL_BRAND_SCOUT}</div>'
-            f'<div class="dest-sub">{LABEL_BRAND_SCOUT_SUB}</div>'
-            f'</div>',
+            '<div class="sedge-destination-card">'
+            '<div class="dest-title">Scout new brands</div>'
+            '<div class="dest-sub">Qualify new brands before you take a meeting</div>'
+            '</div>',
             unsafe_allow_html=True,
         )
         if st.button(
