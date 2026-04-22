@@ -1540,9 +1540,7 @@ def _agent_loop_status(internal_agent_name: str) -> dict:
 # ── Existing business: agent picker ──────────────────────────────────────────
 
 def render_agent_picker() -> None:
-    from ui.labels import (
-        LABEL_RETAILER_AGENT, LABEL_ADMIN_AGENT, LABEL_BRAND_SCOUT_AGENT,
-    )
+    from ui.labels import LABEL_RETAILER_AGENT, LABEL_ADMIN_AGENT
     agents = [
         (
             "retailer_agent", LABEL_RETAILER_AGENT,
@@ -1554,14 +1552,9 @@ def render_agent_picker() -> None:
             "New-item forms · POs (Q2) · deductions (Q2) · demo spend (Q3)",
             _agent_loop_status("admin_ops"),
         ),
-        (
-            "brand_scout_agent", LABEL_BRAND_SCOUT_AGENT,
-            "Qualify new brand requests — decide who's worth a meeting",
-            None,
-        ),
     ]
-    col1, col2, col3 = st.columns(3, gap="medium")
-    cols = [col1, col2, col3]
+    col1, col2 = st.columns(2, gap="medium")
+    cols = [col1, col2]
     for col, (key, name, capabilities, loop_status) in zip(cols, agents):
         with col:
             with st.container(border=True):

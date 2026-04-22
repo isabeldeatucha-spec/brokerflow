@@ -51,30 +51,120 @@ def _render_step_1() -> None:
         )
 
     with st.form("onboarding_input_form"):
-        brand_name = st.text_input(
-            "Brand name *",
-            placeholder="e.g. Fishwife",
-            value=st.session_state.get("ob_brand_name", ""),
+        # ── Basics ────────────────────────────────────────────────────────────
+        _section("BASICS")
+        col_a, col_b = st.columns(2)
+        with col_a:
+            brand_name = st.text_input(
+                "Brand name *",
+                placeholder="e.g. Fishwife",
+                value=st.session_state.get("ob_brand_name", ""),
+            )
+        with col_b:
+            website_url = st.text_input(
+                "Website URL",
+                placeholder="https://eatfishwife.com",
+                value=st.session_state.get("ob_website_url", ""),
+            )
+
+        col_c, col_d = st.columns(2)
+        with col_c:
+            category = st.selectbox(
+                "Category",
+                ["", "Beverages", "Snacks", "Condiments & Sauces", "Dairy & Alternatives",
+                 "Bakery & Bread", "Frozen", "Pantry & Dry Goods", "Chocolate & Confections",
+                 "Coffee & Tea", "Personal Care & Beauty", "Supplements", "Other"],
+                index=0,
+            )
+        with col_d:
+            founder_name = st.text_input(
+                "Founder name",
+                placeholder="e.g. Caroline Goldfarb",
+                value=st.session_state.get("ob_founder_name", ""),
+            )
+
+        brand_description = st.text_area(
+            "Brand description (optional — 2–3 sentences on positioning and consumer)",
+            placeholder="e.g. Tinned fish for the weeknight pantry. Sustainably sourced, chef-designed, sold direct and at Whole Foods.",
+            height=90,
+            value=st.session_state.get("ob_brand_description", ""),
         )
-        website_url = st.text_input(
-            "Website URL",
-            placeholder="https://eatfishwife.com",
-            value=st.session_state.get("ob_website_url", ""),
-        )
+
+        # ── Distribution & Pricing ────────────────────────────────────────────
+        _section("DISTRIBUTION & PRICING")
+        col_e, col_f, col_g = st.columns(3)
+        with col_e:
+            current_retailers = st.text_input(
+                "Current retail banners",
+                placeholder="e.g. Whole Foods, Sprouts",
+                value=st.session_state.get("ob_current_retailers", ""),
+            )
+        with col_f:
+            distributor = st.text_input(
+                "Distributor(s)",
+                placeholder="e.g. UNFI, KeHE",
+                value=st.session_state.get("ob_distributor", ""),
+            )
+        with col_g:
+            door_count = st.text_input(
+                "Approx. door count",
+                placeholder="e.g. 150",
+                value=st.session_state.get("ob_door_count", ""),
+            )
+
+        col_h, col_i, col_j = st.columns(3)
+        with col_h:
+            hero_sku = st.text_input(
+                "Hero SKU",
+                placeholder="e.g. Smoked Atlantic Salmon",
+                value=st.session_state.get("ob_hero_sku", ""),
+            )
+        with col_i:
+            srp_range = st.text_input(
+                "SRP range",
+                placeholder="e.g. $6.99–$9.99",
+                value=st.session_state.get("ob_srp_range", ""),
+            )
+        with col_j:
+            wholesale_price = st.text_input(
+                "Wholesale / case cost",
+                placeholder="e.g. $42/case of 6",
+                value=st.session_state.get("ob_wholesale_price", ""),
+            )
+
+        # ── Social & Press ────────────────────────────────────────────────────
+        _section("SOCIAL & PRESS")
+        col_k, col_l, col_m = st.columns(3)
+        with col_k:
+            instagram = st.text_input(
+                "Instagram handle",
+                placeholder="@fishwife",
+                value=st.session_state.get("ob_instagram", ""),
+            )
+        with col_l:
+            tiktok = st.text_input(
+                "TikTok handle",
+                placeholder="@fishwife",
+                value=st.session_state.get("ob_tiktok", ""),
+            )
+        with col_m:
+            press = st.text_input(
+                "Key press / awards",
+                placeholder="e.g. NYT, Bon Appétit, Oprah Faves",
+                value=st.session_state.get("ob_press", ""),
+            )
+
+        # ── Upload Materials ──────────────────────────────────────────────────
+        _section("UPLOAD MATERIALS")
+        st.caption("Sell sheets, line sheets, buy docs, press releases, sell-through reports — anything you have.")
         uploaded_files = st.file_uploader(
-            "Upload brand materials (PDF, DOCX, CSV, TXT)",
+            "Upload brand materials",
             accept_multiple_files=True,
-            type=["pdf", "docx", "csv", "txt", "md"],
-        )
-        st.markdown("**Manual overrides** (optional — key: value, one per line)")
-        overrides_raw = st.text_area(
-            "Manual overrides",
-            placeholder="category: beverages\nwholesale_price_range: $3.00–$4.00",
-            height=100,
+            type=["pdf", "docx", "xlsx", "csv", "txt", "md", "png", "jpg", "jpeg"],
             label_visibility="collapsed",
-            value=st.session_state.get("ob_overrides_raw", ""),
         )
-        submitted = st.form_submit_button("Run onboarding →", type="primary", use_container_width=True)
+
+        submitted = st.form_submit_button("Start onboarding →", type="primary", use_container_width=True)
 
     if submitted:
         if not brand_name.strip():
@@ -90,16 +180,43 @@ def _render_step_1() -> None:
                 dest.write_bytes(uf.read())
                 file_paths.append(str(dest))
 
-        # Parse overrides
+        # Build overrides from structured fields + any raw text
         overrides: dict = {}
-        for line in overrides_raw.strip().splitlines():
-            if ":" in line:
-                k, _, v = line.partition(":")
-                overrides[k.strip()] = v.strip()
+        for key, val in [
+            ("category",          category),
+            ("founder_name",      founder_name),
+            ("brand_description", brand_description),
+            ("current_retailers", current_retailers),
+            ("distributor",       distributor),
+            ("door_count",        door_count),
+            ("hero_sku",          hero_sku),
+            ("srp_range",         srp_range),
+            ("wholesale_price",   wholesale_price),
+            ("instagram",         instagram),
+            ("tiktok",            tiktok),
+            ("press",             press),
+        ]:
+            if val and val.strip():
+                overrides[key] = val.strip()
 
-        st.session_state["ob_brand_name"] = brand_name.strip()
-        st.session_state["ob_website_url"] = website_url.strip()
-        st.session_state["ob_overrides_raw"] = overrides_raw
+        # Persist field values so the form repopulates on re-run
+        for k, v in [
+            ("ob_brand_name", brand_name.strip()),
+            ("ob_website_url", website_url.strip()),
+            ("ob_founder_name", founder_name.strip()),
+            ("ob_brand_description", brand_description.strip()),
+            ("ob_current_retailers", current_retailers.strip()),
+            ("ob_distributor", distributor.strip()),
+            ("ob_door_count", door_count.strip()),
+            ("ob_hero_sku", hero_sku.strip()),
+            ("ob_srp_range", srp_range.strip()),
+            ("ob_wholesale_price", wholesale_price.strip()),
+            ("ob_instagram", instagram.strip()),
+            ("ob_tiktok", tiktok.strip()),
+            ("ob_press", press.strip()),
+        ]:
+            st.session_state[k] = v
+
         st.session_state["ob_file_paths"] = file_paths
         st.session_state["ob_overrides"] = overrides
         st.session_state["ob_step"] = 2
@@ -345,7 +462,10 @@ def _render_step_3() -> None:
     col_back, col_done = st.columns([1, 2])
     with col_back:
         if st.button("← Onboard another", key="ob_another_btn", use_container_width=True):
-            for k in ["ob_step", "ob_brand_name", "ob_website_url", "ob_overrides_raw",
+            for k in ["ob_step", "ob_brand_name", "ob_website_url", "ob_founder_name",
+                      "ob_brand_description", "ob_current_retailers", "ob_distributor",
+                      "ob_door_count", "ob_hero_sku", "ob_srp_range", "ob_wholesale_price",
+                      "ob_instagram", "ob_tiktok", "ob_press",
                       "ob_file_paths", "ob_overrides", "ob_handoff", "ob_final_state",
                       "onboarding_active"]:
                 st.session_state.pop(k, None)
@@ -358,7 +478,10 @@ def _render_step_3() -> None:
             use_container_width=True,
             disabled=is_colliding,
         ):
-            for k in ["ob_step", "ob_brand_name", "ob_website_url", "ob_overrides_raw",
+            for k in ["ob_step", "ob_brand_name", "ob_website_url", "ob_founder_name",
+                      "ob_brand_description", "ob_current_retailers", "ob_distributor",
+                      "ob_door_count", "ob_hero_sku", "ob_srp_range", "ob_wholesale_price",
+                      "ob_instagram", "ob_tiktok", "ob_press",
                       "ob_file_paths", "ob_overrides", "ob_handoff", "ob_final_state",
                       "onboarding_active"]:
                 st.session_state.pop(k, None)
