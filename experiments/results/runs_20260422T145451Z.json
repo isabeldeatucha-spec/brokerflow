@@ -1,0 +1,66 @@
+{
+  "sequenced": [
+    {
+      "brand_name": "Chomps",
+      "strategy": "sequenced_gated",
+      "success": false,
+      "total_seconds": 7.593609833,
+      "stage_seconds": {
+        "scout": 7.593607208000001
+      },
+      "error_class": "scout",
+      "error_message": "Brand Scout failed"
+    },
+    {
+      "brand_name": "Fishwife",
+      "strategy": "sequenced_gated",
+      "success": false,
+      "total_seconds": 43.061640542,
+      "stage_seconds": {
+        "scout": 43.061638375
+      },
+      "error_class": "scout",
+      "error_message": "Brand Scout failed"
+    },
+    {
+      "brand_name": "Graza",
+      "strategy": "sequenced_gated",
+      "success": false,
+      "total_seconds": 41.064328167,
+      "stage_seconds": {
+        "scout": 41.06432512500001
+      },
+      "error_class": "scout",
+      "error_message": "Brand Scout failed"
+    }
+  ],
+  "concurrent": [
+    {
+      "brand_name": "Chomps",
+      "strategy": "concurrent",
+      "success": false,
+      "total_seconds": 3.294602459,
+      "stage_seconds": {},
+      "error_class": "AuthenticationError",
+      "error_message": "Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CaJzwihUcQh2mP6XVAFGu'}\nTraceback (most recent call last):\n  File \"/Users/isabelatucha/sedge/experiments/compare_strategies.py\", line 167, in run_concurrent\n    for _ in scout_graph.stream(initial_state, config=config, stream_mode=\"updates\"):\n  File \"/Users/isabelatucha/Library/Python/3.9/lib/python/site-packages/langgraph/pregel/main.py\", line 2674, in stream\n    for _ in runner.tick(\n  File \"/Users/isabelatucha/Library/Python/3.9/lib/python/site-packages/langgraph/pregel/_runner.py\", line 162, in tick\n    run_with_retry(\nanthropic.AuthenticationError: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CaJzwihUcQh2mP6XVAFGu'}\n"
+    },
+    {
+      "brand_name": "Fishwife",
+      "strategy": "concurrent",
+      "success": false,
+      "total_seconds": 12.398027417000002,
+      "stage_seconds": {},
+      "error_class": "AuthenticationError",
+      "error_message": "Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CaK11odVuEb7EGV1oqKkZ'}\nTraceback (most recent call last):\n  File \"/Users/isabelatucha/sedge/experiments/compare_strategies.py\", line 167, in run_concurrent\n    for _ in scout_graph.stream(initial_state, config=config, stream_mode=\"updates\"):\n  File \"/Users/isabelatucha/Library/Python/3.9/lib/python/site-packages/langgraph/pregel/main.py\", line 2674, in stream\n    for _ in runner.tick(\n  File \"/Users/isabelatucha/Library/Python/3.9/lib/python/site-packages/langgraph/pregel/_runner.py\", line 162, in tick\n    run_with_retry(\nanthropic.AuthenticationError: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CaK11odVuEb7EGV1oqKkZ'}\n"
+    },
+    {
+      "brand_name": "Graza",
+      "strategy": "concurrent",
+      "success": false,
+      "total_seconds": 10.965503833,
+      "stage_seconds": {},
+      "error_class": "AuthenticationError",
+      "error_message": "Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CaK15eUwoJh4JjJHwQJyY'}\nTraceback (most recent call last):\n  File \"/Users/isabelatucha/sedge/experiments/compare_strategies.py\", line 167, in run_concurrent\n    for _ in scout_graph.stream(initial_state, config=config, stream_mode=\"updates\"):\n  File \"/Users/isabelatucha/Library/Python/3.9/lib/python/site-packages/langgraph/pregel/main.py\", line 2674, in stream\n    for _ in runner.tick(\n  File \"/Users/isabelatucha/Library/Python/3.9/lib/python/site-packages/langgraph/pregel/_runner.py\", line 162, in tick\n    run_with_retry(\nanthropic.AuthenticationError: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CaK15eUwoJh4JjJHwQJyY'}\n"
+    }
+  ]
+}

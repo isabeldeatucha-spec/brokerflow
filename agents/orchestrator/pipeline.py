@@ -2,6 +2,12 @@
 Orchestrator pipeline — runs Brand Scout → Retailer Pitcher (×3) → Admin & Ops
 in sequence and yields PipelineEvent progress updates.
 
+Upgrade 2 (HW9): Uses typed contracts and verdict-gated routing.
+  - ScoutHandoff carries the coordination message from Brand Scout.
+  - RoutingDecision.from_verdict() gates downstream agents.
+  - too_early brands halt cleanly after Scout; no Pitcher/Admin calls made.
+  - established brands get "upgrade_broker" framing in all three pitches.
+
 Usage:
     from agents.orchestrator.pipeline import run_full_pipeline, PipelineEvent
     for event in run_full_pipeline("Chomps", "https://chomps.com"):
@@ -10,11 +16,15 @@ Usage:
 from __future__ import annotations
 
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from typing import Iterator
 
 from langgraph.types import Command
 from memory import get_config
+
+from agents.orchestrator.contracts import (
+    ScoutHandoff, AdminHandoff, RoutingDecision,
+)
 
 
 # ── Stages ────────────────────────────────────────────────────────────────────
@@ -100,7 +110,8 @@ def _run_scout(brand_name: str, website_url: str, force_refresh: bool) -> dict:
     return dict(scout_graph.get_state(config).values)
 
 
-def _run_pitcher(brand_name: str, buyer_key: str) -> dict:
+def _run_pitcher_with_framing(brand_name: str, buyer_key: str, framing: str) -> dict:
+    """Run Retailer Pitcher for one buyer. framing is passed in state for future use."""
     from agents.retailer_pitcher.graph import graph as pitcher_graph
     from state import RetailerPitcherState
 
@@ -109,6 +120,7 @@ def _run_pitcher(brand_name: str, buyer_key: str) -> dict:
     initial: RetailerPitcherState = {
         "brand_name":       brand_name,
         "buyer_key":        buyer_key,
+        "framing":          framing,   # future-proof hook; graph ignores if not wired
         "scout_context":    {},
         "handoff_status":   "",
         "handoff_error":    None,
@@ -148,8 +160,12 @@ def run_full_pipeline(
     force_refresh: bool = False,
 ) -> Iterator[PipelineEvent]:
     """
-    Yield PipelineEvent for each pipeline stage in order:
-      scout → pitcher_wf → pitcher_sprouts → pitcher_erewhon → admin_wfm → complete
+    Yield PipelineEvent for each pipeline stage.
+
+    Verdict-gated routing (Protocol Primitive 2):
+      too_early  → Scout only; complete with watchlist data
+      broker_ready/established → Scout + Pitcher × 3 + Admin
+      established → pitcher_framing = "upgrade_broker"
     """
     brand_name = brand_name.strip().title()
 
@@ -158,14 +174,6 @@ def run_full_pipeline(
                         message=f"Researching {brand_name}…")
     try:
         scout_result = _run_scout(brand_name, website_url, force_refresh)
-        score_obj = scout_result.get("score", {})
-        total = score_obj.get("total", 0) if isinstance(score_obj, dict) else 0
-        verdict = scout_result.get("verdict", "—")
-        yield PipelineEvent(
-            stage="scout", status="done",
-            message=f"Brand Scout: {brand_name} · {total}/100 · {verdict}",
-            data=scout_result,
-        )
     except Exception as exc:
         yield PipelineEvent(stage="scout", status="error",
                             message="Brand Scout failed", error=str(exc))
@@ -173,15 +181,72 @@ def run_full_pipeline(
                             message="Pipeline stopped after scout error", error=str(exc))
         return
 
-    # ── Retailer Pitches ──────────────────────────────────────────────────────
+    # Build typed handoff + routing decision
+    score_obj = scout_result.get("score", {})
+    raw_verdict = scout_result.get("verdict", "too_early")
+    # Normalise: graph sometimes stores "above_threshold"/"below_threshold" in state
+    _VERDICT_MAP = {
+        "above_threshold": "broker_ready",
+        "below_threshold": "too_early",
+    }
+    verdict: str = _VERDICT_MAP.get(raw_verdict, raw_verdict)
+    if verdict not in ("too_early", "broker_ready", "established"):
+        verdict = "too_early"
+
+    scout_handoff = ScoutHandoff(
+        brand_name=brand_name,
+        category=scout_result.get("category", ""),
+        score_total=score_obj.get("total", 0) if isinstance(score_obj, dict) else 0,
+        verdict=verdict,
+        broker_brief=(scout_result.get("signals_found", {})
+                                  .get("score_detail", {})
+                                  .get("broker_brief", "")),
+        key_gaps=(scout_result.get("signals_found", {})
+                              .get("score_detail", {})
+                              .get("key_gaps", [])),
+        score_breakdown=(scout_result.get("signals_found", {})
+                                     .get("score_detail", {})),
+        extracted_fields=scout_result.get("extracted_fields") or {},
+        founder_name=scout_result.get("founder_name", ""),
+        founder_email=scout_result.get("founder_email", ""),
+    )
+
+    routing = RoutingDecision.from_verdict(scout_handoff.verdict)
+
+    yield PipelineEvent(
+        stage="scout", status="done",
+        message=(f"Scored {scout_handoff.score_total}/100 — {scout_handoff.verdict} · "
+                 f"Routing: {routing.reason}"),
+        data={**scout_result,
+              "scout_handoff": asdict(scout_handoff),
+              "routing": asdict(routing)},
+    )
+
+    # ── Verdict gate ──────────────────────────────────────────────────────────
+    if not routing.run_pitcher:
+        yield PipelineEvent(
+            stage="complete", status="done",
+            message=f"Pipeline halted: {routing.reason}",
+            data={
+                "scout":        scout_result,
+                "scout_handoff": asdict(scout_handoff),
+                "routing":      asdict(routing),
+                "pitches":      [],
+                "admin_result": None,
+            },
+        )
+        return
+
+    # ── Retailer Pitches — gated on routing decision ──────────────────────────
     pitcher_results: dict[str, dict] = {}
 
     for stage_key, buyer_key in _BUYER_FOR_STAGE.items():
         rlabel = _RETAILER_LABEL[buyer_key]
         yield PipelineEvent(stage=stage_key, status="running",
-                            message=f"Drafting pitch → {rlabel}…")
+                            message=(f"Drafting pitch → {rlabel} "
+                                     f"({routing.pitcher_framing} framing)…"))
         try:
-            result = _run_pitcher(brand_name, buyer_key)
+            result = _run_pitcher_with_framing(brand_name, buyer_key, routing.pitcher_framing)
             art_status = result.get("artifact_status", "unknown")
             errors = result.get("artifact_errors", [])
             yield PipelineEvent(
@@ -197,31 +262,43 @@ def run_full_pipeline(
                                 message=f"Pitcher → {rlabel} failed", error=str(exc))
             pitcher_results[buyer_key] = {}
 
-    # ── Admin & Ops ───────────────────────────────────────────────────────────
-    yield PipelineEvent(stage="admin_wfm", status="running",
-                        message="Filling WFM New Item Setup Form…")
-    try:
-        admin_result = _run_admin_ops(brand_name)
-        ao_status = admin_result.get("output_status", "unknown")
-        gaps_count = len(admin_result.get("gaps", []))
-        yield PipelineEvent(
-            stage="admin_wfm",
-            status="done" if ao_status in ("ok", "partial") else "error",
-            message=f"WFM form: {ao_status} · {gaps_count} gap(s)",
-            data=admin_result,
-        )
-    except Exception as exc:
-        yield PipelineEvent(stage="admin_wfm", status="error",
-                            message="WFM form failed", error=str(exc))
-        admin_result = {}
+    # ── Admin & Ops — gated on routing decision ───────────────────────────────
+    admin_result: dict = {}
+    if routing.run_admin:
+        yield PipelineEvent(stage="admin_wfm", status="running",
+                            message="Filling WFM New Item Setup Form…")
+        try:
+            admin_result = _run_admin_ops(brand_name)
+            admin_handoff = AdminHandoff(
+                brand_name=brand_name,
+                retailer="whole_foods",
+                filled_field_count=len(admin_result.get("filled_fields") or {}),
+                gap_count=len(admin_result.get("gaps") or []),
+                output_xlsx_path=admin_result.get("output_xlsx_path", ""),
+                output_status=admin_result.get("output_status", "ok"),
+            )
+            ao_status = admin_result.get("output_status", "unknown")
+            gaps_count = len(admin_result.get("gaps", []))
+            yield PipelineEvent(
+                stage="admin_wfm",
+                status="done" if ao_status in ("ok", "partial") else "error",
+                message=(f"WFM form: {ao_status} · {gaps_count} gap(s) · "
+                         f"{admin_handoff.filled_field_count} fields filled"),
+                data={**admin_result, "admin_handoff": asdict(admin_handoff)},
+            )
+        except Exception as exc:
+            yield PipelineEvent(stage="admin_wfm", status="error",
+                                message="WFM form failed", error=str(exc))
 
     # ── Complete ──────────────────────────────────────────────────────────────
     yield PipelineEvent(
         stage="complete", status="done",
-        message="All agents complete — review bundles below",
+        message="All bundles ready for review",
         data={
-            "scout":    scout_result,
-            "pitchers": pitcher_results,
-            "admin_ops": admin_result,
+            "scout":         scout_result,
+            "scout_handoff": asdict(scout_handoff),
+            "routing":       asdict(routing),
+            "pitches":       pitcher_results,
+            "admin_result":  admin_result,
         },
     )

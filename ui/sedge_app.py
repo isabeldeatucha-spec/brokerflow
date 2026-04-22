@@ -466,14 +466,16 @@ def render_dashboard() -> None:
                 # ── Live mode: iterate generator ─────────────────────────────
                 from agents.orchestrator.pipeline import run_full_pipeline
                 for event in run_full_pipeline(brand, pipe_url or ""):
-                    if event.stage == "complete":
-                        break
                     evt_dict = {
                         "status":  event.status,
                         "message": event.message,
                         "data":    event.data,
                         "error":   event.error,
                     }
+                    if event.stage == "complete":
+                        # Store complete event data for verdict-gated UI
+                        st.session_state["pipe_results"]["_complete"] = evt_dict
+                        break
                     st.session_state["pipe_results"][event.stage] = evt_dict
                     if event.stage in stage_slots:
                         with stage_slots[event.stage].container():
@@ -492,9 +494,38 @@ def render_dashboard() -> None:
             st.rerun()
         st.markdown("<div style='margin-top:16px;'></div>", unsafe_allow_html=True)
 
-    # ── Approval screen ───────────────────────────────────────────────────────
+    # ── Post-pipeline: watchlist or approval screen ───────────────────────────
     elif st.session_state.get("pipe_complete") and not st.session_state.get("pipe_sent"):
-        _render_approval_screen(st.session_state["pipe_results"])
+        _complete = st.session_state["pipe_results"].get("_complete", {})
+        _routing  = (_complete.get("data") or {}).get("routing", {})
+        if not _routing.get("run_pitcher", True):
+            # Verdict-gated halt — show watchlist card
+            _scout_d  = (_complete.get("data") or {}).get("scout", {})
+            _handoff  = (_complete.get("data") or {}).get("scout_handoff", {})
+            _score    = (_handoff.get("score_total") or
+                         (_scout_d.get("score") or {}).get("total", 0))
+            _gaps     = _handoff.get("key_gaps") or []
+            _reason   = _routing.get("reason", "Brand scored too early for outreach.")
+            gaps_html = "".join(f'<div class="gap-item">{g}</div>' for g in _gaps[:3])
+            st.markdown(
+                f'<div class="sedge-card" style="padding:28px;margin-top:24px;">'
+                f'<p class="sedge-section-title" style="margin-bottom:8px;">Added to watchlist</p>'
+                f'<h1 class="sedge-h1" style="margin-bottom:8px;">'
+                f'{st.session_state.get("pipe_brand","Brand")} — '
+                f'<span class="sedge-number">{_score}</span>/100</h1>'
+                f'<p class="sedge-caption" style="margin-bottom:16px;">{_reason}</p>'
+                f'{gaps_html}'
+                f'<p class="sedge-caption" style="margin-top:16px;">'
+                f'Check back in 3–6 months as distribution and velocity grow.</p>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+            if st.button("Run another brand", key="dash_watchlist_reset", use_container_width=False):
+                for k in ["pipe_results", "pipe_complete", "pipe_brand", "pipe_sent"]:
+                    st.session_state.pop(k, None)
+                st.rerun()
+        else:
+            _render_approval_screen(st.session_state["pipe_results"])
 
     st.markdown("<div style='margin-top:32px;'></div>", unsafe_allow_html=True)
 
