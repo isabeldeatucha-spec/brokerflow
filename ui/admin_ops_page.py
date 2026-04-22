@@ -21,6 +21,7 @@ if _REPO_ROOT not in sys.path:
 
 from memory import get_config, retrieve_all_evaluations
 from agents.admin_ops.skills.wfm_form_schema import WFM_FORM_FIELDS, FIELD_SECTIONS
+from ui.global_css import inject_global_css
 
 
 # ── Constants ─────────────────────────────────────────────────────────────────
@@ -28,148 +29,16 @@ from agents.admin_ops.skills.wfm_form_schema import WFM_FORM_FIELDS, FIELD_SECTI
 _TOTAL_FIELDS = len(WFM_FORM_FIELDS)
 
 _NODE_LABELS: dict[str, str] = {
-    "load_brand_context":   "📂 Loading brand data…",
-    "rule_based_autofill":  "🔗 Matching fields from Brand Scout…",
-    "llm_inference_pass":   "🧠 Running inference pass…",
-    "flag_gaps":            "⚠️  Flagging gaps…",
-    "generate_filled_xlsx": "📊 Generating Excel file…",
+    "load_brand_context":   "Loading brand data",
+    "rule_based_autofill":  "Matching fields from Brand Scout",
+    "llm_inference_pass":   "Running inference pass",
+    "flag_gaps":            "Flagging gaps",
+    "generate_filled_xlsx": "Generating Excel file",
 }
 
 _RETAILER_LABELS: dict[str, str] = {
     "whole_foods": "Whole Foods",
 }
-
-# ── CSS (same palette as app.py — safe to inject multiple times) ──────────────
-
-_CSS = """
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
-* { font-family: 'Inter', sans-serif !important; }
-
-.stApp { background: #F7F5F2; }
-
-.main { overflow-y: auto !important; }
-.block-container {
-    overflow-y: auto !important;
-    max-height: none !important;
-    padding-bottom: 120px !important;
-}
-section[data-testid="stMain"] { overflow-y: auto !important; }
-section[data-testid="stMain"] > div { overflow-y: auto !important; }
-.element-container { overflow: visible !important; }
-
-section[data-testid="stSidebar"] {
-    background: #FFFFFF !important;
-    border-right: 1px solid #E5E5E5 !important;
-    min-width: 260px !important;
-    transform: none !important;
-    left: 0 !important;
-    visibility: visible !important;
-}
-section[data-testid="stSidebar"] > div {
-    background: #FFFFFF !important;
-    padding: 24px 16px 80px 16px !important;
-}
-[data-testid="stSidebarCollapseButton"],
-[data-testid="collapsedControl"] { display: none !important; }
-
-#MainMenu, footer, header { visibility: hidden; }
-.stDeployButton { display: none; }
-
-h1 { font-size: 28px !important; font-weight: 700 !important; color: #1A1A1A !important; letter-spacing: -0.5px !important; }
-h2 { font-size: 20px !important; font-weight: 600 !important; color: #1A1A1A !important; }
-h3 { font-size: 16px !important; font-weight: 600 !important; color: #1A1A1A !important; }
-p, li { color: #4A4A4A !important; font-size: 14px !important; line-height: 1.6 !important; }
-
-.sedge-card {
-    background: #FFFFFF;
-    border-radius: 16px;
-    padding: 24px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-    border: 1px solid #F0EDEA;
-    margin-bottom: 16px;
-}
-
-.badge-established { background: #FEF3C7; color: #92400E; padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; }
-.badge-ready       { background: #D1FAE5; color: #065F46; padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; }
-.badge-early       { background: #FEE2E2; color: #991B1B; padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; }
-
-.category-pill { background: #EBF5FB; color: #1B4F72; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
-
-.stButton > button,
-div[data-testid="stButton"] button {
-    background: #1B4F72 !important;
-    color: #FFFFFF !important;
-    -webkit-text-fill-color: #FFFFFF !important;
-    border: none !important;
-    border-radius: 10px !important;
-    font-weight: 600 !important;
-    font-size: 14px !important;
-    padding: 12px 16px !important;
-    width: 100% !important;
-    cursor: pointer !important;
-}
-.stButton > button:hover { background: #154360 !important; }
-.stButton > button * { color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important; }
-
-section[data-testid="stSidebar"] .stButton > button {
-    background: #1B4F72 !important;
-    color: white !important;
-    -webkit-text-fill-color: white !important;
-    border: none !important;
-    border-radius: 10px !important;
-    font-weight: 600 !important;
-    width: 100% !important;
-}
-section[data-testid="stSidebar"] .stButton > button:hover { background: #154360 !important; }
-section[data-testid="stSidebar"] .stButton > button p,
-section[data-testid="stSidebar"] .stButton > button span,
-section[data-testid="stSidebar"] .stButton > button div {
-    color: white !important; -webkit-text-fill-color: white !important;
-}
-
-div[data-testid="stRadio"] input[type="radio"] { accent-color: #1B4F72 !important; }
-div[data-testid="stRadio"] label { font-size: 14px !important; color: #4A4A4A !important; }
-section[data-testid="stSidebar"] .stRadio > div { gap: 8px !important; }
-section[data-testid="stSidebar"] .stRadio input[type="radio"] {
-    accent-color: #1B4F72 !important; width: 16px !important; height: 16px !important;
-}
-section[data-testid="stSidebar"] .stRadio label { color: #4A4A4A !important; font-size: 14px !important; }
-
-.stTextInput input {
-    color: #111111 !important;
-    -webkit-text-fill-color: #111111 !important;
-    background-color: #FFFFFF !important;
-    border-radius: 10px !important;
-    border: 1.5px solid #E5E7EB !important;
-    padding: 10px 14px !important;
-    font-size: 14px !important;
-}
-.stTextInput input::placeholder { color: #9CA3AF !important; -webkit-text-fill-color: #9CA3AF !important; }
-.stTextInput input:focus { border-color: #1B4F72 !important; box-shadow: 0 0 0 3px rgba(27,79,114,0.08) !important; }
-
-.gap-item {
-    background: #FFFBEB;
-    border-left: 3px solid #F59E0B;
-    padding: 10px 14px;
-    border-radius: 0 8px 8px 0;
-    margin-bottom: 8px;
-    font-size: 13px;
-    color: #4A4A4A;
-}
-
-.material-icons, .material-symbols-rounded, .material-symbols-outlined,
-[class*="material-icon"] { font-size: 0 !important; line-height: 0 !important; }
-span.ejhh0er0,
-[data-testid="stExpanderToggleIcon"],
-details > summary > span:first-child > span:first-child > span:first-child {
-    font-size: 0 !important; width: 0 !important; overflow: hidden !important;
-}
-[data-testid="collapsedControl"],
-[data-testid="stSidebarCollapsedControl"] { display: none !important; }
-</style>
-"""
 
 
 # ── Small helpers ─────────────────────────────────────────────────────────────
@@ -181,42 +50,40 @@ def _verdict_label(score: int) -> str:
 
 
 def _verdict_dot(score: int) -> str:
-    if score >= 70: return "🟡"
-    if score >= 45: return "🟢"
-    return "🔴"
+    return ""
 
 
 def _verdict_badge_html(score: int) -> str:
     if score >= 70:
-        return '<span class="badge-established">Established 🟡</span>'
+        return '<span class="badge-established">Established</span>'
     if score >= 45:
-        return '<span class="badge-ready">Broker Ready 🟢</span>'
-    return '<span class="badge-early">Too Early 🔴</span>'
+        return '<span class="badge-ready">Broker Ready</span>'
+    return '<span class="badge-early">Too Early</span>'
 
 
 def _conf_badge_html(confidence: str) -> str:
-    STYLES: dict[str, tuple[str, str, str]] = {
-        "high":   ("🟢", "#D1FAE5", "#065F46"),
-        "medium": ("🟡", "#FEF3C7", "#92400E"),
-        "low":    ("🟠", "#FED7AA", "#9A3412"),
+    STYLES: dict[str, tuple[str, str]] = {
+        "high":   ("#E8EDE9", "#2D5F3F"),
+        "medium": ("#FEF3C7", "#8B6914"),
+        "low":    ("#FEE2E2", "#8B2F2F"),
     }
-    emoji, bg, color = STYLES.get(confidence, ("⚪", "#F3F4F6", "#6B7280"))
+    bg, color = STYLES.get(confidence, ("#F2F2EE", "#57564F"))
     return (
         f'<span style="background:{bg};color:{color};padding:2px 8px;'
         f'border-radius:99px;font-size:11px;font-weight:600;">'
-        f'{emoji} {confidence.title()}</span>'
+        f'{confidence.title()}</span>'
     )
 
 
 def _gap_badge_html(required: bool) -> str:
     if required:
         return (
-            '<span style="background:#FEE2E2;color:#991B1B;padding:2px 8px;'
-            'border-radius:99px;font-size:11px;font-weight:600;">🔴 Required</span>'
+            '<span style="background:#FEE2E2;color:#8B2F2F;padding:2px 8px;'
+            'border-radius:99px;font-size:11px;font-weight:600;">Required</span>'
         )
     return (
-        '<span style="background:#F3F4F6;color:#6B7280;padding:2px 8px;'
-        'border-radius:99px;font-size:11px;font-weight:600;">⚫ Optional</span>'
+        '<span style="background:#F2F2EE;color:#57564F;padding:2px 8px;'
+        'border-radius:99px;font-size:11px;font-weight:600;">Optional</span>'
     )
 
 
@@ -295,11 +162,10 @@ def _section_table_html(
 
 def _render_empty_state() -> None:
     st.markdown("""
-    <div style="text-align:center;padding:48px 0 32px;">
-        <div style="font-size:52px;margin-bottom:16px;">📋</div>
-        <h2 style="color:#111111;margin-bottom:8px;">Pick a brand to generate a new item form</h2>
-        <p style="color:#9CA3AF;max-width:420px;margin:0 auto;font-size:14px;line-height:1.6;">
-            Select a brand from your book on the left. Sedge will autofill a
+    <div style="padding:48px 0 32px;">
+        <h1 class="sedge-h1" style="margin-bottom:8px;">Pick a brand to generate a new item form</h1>
+        <p class="sedge-caption" style="max-width:420px;">
+            Select a brand from your book above. Sedge will autofill a
             Whole Foods new item setup form from your Brand Scout data.
         </p>
     </div>
@@ -365,8 +231,8 @@ def _render_brand_header(result: dict) -> None:
     with col2:
         st.markdown(
             f'<div style="text-align:center;">'
-            f'<div style="font-size:52px;font-weight:700;color:#1A1A1A;line-height:1;">{score}</div>'
-            f'<div style="font-size:12px;color:#9CA3AF;margin-top:4px;">Brand Scout score</div>'
+            f'<div class="sedge-score-display sedge-number">{score}</div>'
+            f'<p class="sedge-caption" style="margin-top:4px;">Brand Scout score</p>'
             f'</div>',
             unsafe_allow_html=True,
         )
@@ -403,8 +269,8 @@ def _render_fill_stat(result: dict) -> None:
         f'<div style="height:6px;width:{fill_pct_display}%;background:{progress_color};border-radius:99px;"></div>'
         f'</div>'
         f'<div style="display:flex;gap:16px;margin-top:12px;">'
-        f'<span style="font-size:12px;color:#EF4444;font-weight:600;">✱ {required_gaps} required gaps</span>'
-        f'<span style="font-size:12px;color:#9CA3AF;">⚫ {optional_gaps} optional gaps</span>'
+        f'<span style="font-size:12px;color:#8B2F2F;font-weight:600;">✱ {required_gaps} required gaps</span>'
+        f'<span class="sedge-caption">{optional_gaps} optional gaps</span>'
         f'</div>'
         f'</div>',
         unsafe_allow_html=True,
@@ -446,8 +312,8 @@ def _render_gaps_tab(result: dict) -> None:
     if not gaps:
         st.markdown(
             '<div class="sedge-card" style="text-align:center;padding:40px;">'
-            '<div style="font-size:36px;margin-bottom:12px;">✅</div>'
-            '<h3>No gaps — all fields filled!</h3>'
+            '<p class="sedge-section-title" style="margin-bottom:8px;">Complete</p>'
+            '<h1 class="sedge-h1">All fields filled</h1>'
             '</div>',
             unsafe_allow_html=True,
         )
@@ -455,8 +321,7 @@ def _render_gaps_tab(result: dict) -> None:
 
     if required:
         st.markdown(
-            f'<p style="font-size:11px;font-weight:700;color:#EF4444;text-transform:uppercase;'
-            f'letter-spacing:0.1em;margin:0 0 12px;">Required gaps · {len(required)}</p>',
+            f'<p class="sedge-section-title" style="color:#8B2F2F;margin:0 0 12px;">Required gaps · {len(required)}</p>',
             unsafe_allow_html=True,
         )
         for gap in required:
@@ -470,8 +335,8 @@ def _render_gaps_tab(result: dict) -> None:
                     f'{gap["label"]} <span style="color:#EF4444;">✱</span></p>'
                     f'<p style="font-size:12px;color:#6B7280;margin:0 0 2px;">'
                     f'Section: {section_label}</p>'
-                    f'<p style="font-size:12px;color:#9CA3AF;margin:0;">'
-                    f'💡 {gap.get("suggested_action","")}</p>'
+                    f'<p class="sedge-caption" style="margin:0;">'
+                    f'{gap.get("suggested_action","")}</p>'
                     f'</div>',
                     unsafe_allow_html=True,
                 )
@@ -485,14 +350,13 @@ def _render_gaps_tab(result: dict) -> None:
 
     if required and optional:
         st.markdown(
-            '<hr style="border:none;border-top:1px solid #E5E7EB;margin:20px 0 16px;">',
+            '<hr style="border:none;border-top:1px solid #EAEAE4;margin:20px 0 16px;">',
             unsafe_allow_html=True,
         )
 
     if optional:
         st.markdown(
-            f'<p style="font-size:11px;font-weight:700;color:#9CA3AF;text-transform:uppercase;'
-            f'letter-spacing:0.1em;margin:0 0 12px;">Optional gaps · {len(optional)}</p>',
+            f'<p class="sedge-section-title" style="margin:0 0 12px;">Optional gaps · {len(optional)}</p>',
             unsafe_allow_html=True,
         )
         for gap in optional:
@@ -501,9 +365,9 @@ def _render_gaps_tab(result: dict) -> None:
             with col_info:
                 st.markdown(
                     f'<div class="gap-item">'
-                    f'<p style="font-size:14px;font-weight:500;color:#111111;margin:0 0 2px;">{gap["label"]}</p>'
-                    f'<p style="font-size:12px;color:#6B7280;margin:0 0 2px;">Section: {section_label}</p>'
-                    f'<p style="font-size:12px;color:#9CA3AF;margin:0;">💡 {gap.get("suggested_action","")}</p>'
+                    f'<p style="font-size:14px;font-weight:500;color:#1A1A18;margin:0 0 2px;">{gap["label"]}</p>'
+                    f'<p class="sedge-caption" style="margin:0 0 2px;">Section: {section_label}</p>'
+                    f'<p class="sedge-caption" style="margin:0;">{gap.get("suggested_action","")}</p>'
                     f'</div>',
                     unsafe_allow_html=True,
                 )
@@ -544,14 +408,14 @@ def _render_footer(result: dict) -> None:
                 xlsx_bytes = fh.read()
         if xlsx_bytes:
             st.download_button(
-                label="⬇  Download filled Excel",
+                label="Download filled Excel",
                 data=xlsx_bytes,
                 file_name=download_name,
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 use_container_width=True,
             )
         else:
-            st.button("⬇  Download filled Excel", disabled=True, use_container_width=True)
+            st.button("Download filled Excel", disabled=True, use_container_width=True)
 
     with col_slack:
         st.html(f"""
@@ -569,14 +433,14 @@ function copySlackSummary() {{
 }}
 </script>
 <button id="ao-slack-btn" onclick="copySlackSummary()"
-  style="width:100%;background:#1B4F72;color:#FFFFFF;border:none;border-radius:10px;
-  padding:12px 16px;font-size:14px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif;">
-  📋 Copy summary to Slack
+  style="width:100%;background:#1A1A18;color:#FAFAF7;border:none;border-radius:6px;
+  padding:10px 16px;font-size:14px;font-weight:500;cursor:pointer;font-family:Inter,sans-serif;">
+  Copy summary to Slack
 </button>
 """)
 
     with col_regen:
-        if st.button("↻  Regenerate", key="ao_regen_btn", use_container_width=True):
+        if st.button("Regenerate", key="ao_regen_btn", use_container_width=True):
             st.session_state.ao_phase = "idle"
             st.session_state.ao_result = None
             st.rerun()
@@ -613,14 +477,13 @@ def _run_graph(brand_name: str, retailer: str) -> dict:
 
     for chunk in graph.stream(initial, config=config, stream_mode="updates"):
         for node in chunk:
-            label = _NODE_LABELS.get(node, f"⚙️  {node}…")
+            label = _NODE_LABELS.get(node, node)
             completed.append(label)
             cards_html = "".join(
-                f'<div style="background:#FFFFFF;border-radius:12px;padding:12px 20px;'
-                f'box-shadow:0 1px 6px rgba(0,0,0,0.05);border:1px solid #F0EDEA;'
-                f'margin-bottom:8px;display:flex;align-items:center;gap:10px;">'
-                f'<span style="color:#10B981;font-size:16px;">✓</span>'
-                f'<p style="color:#4A4A4A;font-weight:500;margin:0;font-size:14px;">{lbl}</p>'
+                f'<div style="display:flex;align-items:center;gap:12px;padding:10px 0;'
+                f'border-bottom:1px solid #F2F2EE;">'
+                f'<span style="color:#2D5F3F;font-size:13px;">&#10003;</span>'
+                f'<span style="font-size:13px;color:#57564F;">{lbl}</span>'
                 f'</div>'
                 for lbl in completed
             )
@@ -633,10 +496,10 @@ def _run_graph(brand_name: str, retailer: str) -> dict:
 # ── Main exported function ────────────────────────────────────────────────────
 
 def render_admin_ops_page() -> None:
-    st.markdown(_CSS, unsafe_allow_html=True)
+    inject_global_css()
 
     st.info(
-        "💡 **Tip:** Use the Dashboard's full pipeline to run Brand Scout, "
+        "Tip: Use the Dashboard's full pipeline to run Brand Scout, "
         "all three Retailer Pitches, and this WFM form automatically in one click.",
         icon=None,
     )
@@ -668,7 +531,6 @@ def render_admin_ops_page() -> None:
 
     def _brand_label(b: dict) -> str:
         score = b.get("score", 0) or 0
-        dot = _verdict_dot(score)
         return f"{b.get('brand_name','?')} · {score}/100 · {_verdict_label(score)}"
 
     _ao_handoff_idx = 0
@@ -720,7 +582,7 @@ def render_admin_ops_page() -> None:
     _ao_run_col, _ao_reset_col = st.columns([4, 1])
     with _ao_run_col:
         _ao_run_clicked = st.button(
-            "▶  Autofill form",
+            "Autofill form",
             key="ao_run_btn",
             use_container_width=True,
             disabled=(selected_brand is None),
@@ -742,23 +604,20 @@ def render_admin_ops_page() -> None:
     st.markdown("<hr style='border:none;border-top:1px solid #EBEBEB;margin:16px 0 20px;'>", unsafe_allow_html=True)
 
     # ── Header ────────────────────────────────────────────────────────────────
-    st.markdown("""
-    <div style="padding:8px 0 4px;">
-        <span style="font-size:26px;font-weight:700;color:#111111;font-family:Inter,sans-serif;">Admin &amp; Ops</span>
-        <span style="font-size:14px;color:#9CA3AF;margin-left:8px;font-family:Inter,sans-serif;">by Sedge</span>
-    </div>
-    <p style="color:#9CA3AF;font-size:13px;margin-top:2px;margin-bottom:0;">
-        Autofill retailer new item forms from your Brand Scout data
-    </p>
-    <hr style="border:none;border-top:1px solid #EBEBEB;margin-top:16px;margin-bottom:28px;">
-    """, unsafe_allow_html=True)
+    st.markdown(
+        '<div style="margin-bottom:32px;">'
+        '<h1 class="sedge-h1">Admin &amp; Ops</h1>'
+        '<p class="sedge-subtitle">Autofill retailer new item forms from your Brand Scout data.</p>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
 
     # ── Demo mode banner ──────────────────────────────────────────────────────
     if st.session_state.get("demo_mode"):
         st.markdown(
-            '<div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;'
-            'padding:6px 14px;margin-bottom:12px;font-size:12px;color:#92400E;font-weight:500;">'
-            '🎬 Demo mode · LLM inference skipped — rule-based autofill only</div>',
+            '<div style="background:#FAFAF7;border:1px solid #EAEAE4;border-radius:6px;'
+            'padding:6px 14px;margin-bottom:12px;font-size:12px;color:#57564F;font-weight:500;">'
+            'Demo mode · LLM inference skipped — rule-based autofill only</div>',
             unsafe_allow_html=True,
         )
 
@@ -778,9 +637,9 @@ def render_admin_ops_page() -> None:
             except Exception:
                 pass
             st.markdown(
-                f'<div style="background:#EBF5FB;border:1px solid #BFDBFE;border-radius:10px;'
-                f'padding:10px 16px;margin-bottom:16px;font-size:13px;color:#1B4F72;font-weight:500;">'
-                f'👋 Handed off from Brand Scout — <strong>{_handoff_brand}</strong>'
+                f'<div style="background:#FAFAF7;border:1px solid #EAEAE4;border-radius:6px;'
+                f'padding:10px 16px;margin-bottom:16px;font-size:13px;color:#57564F;">'
+                f'Handed off from Brand Scout — <strong style="color:#1A1A18;">{_handoff_brand}</strong>'
                 f' ({_hs_score}/100, {_hs_verdict})</div>',
                 unsafe_allow_html=True,
             )
@@ -799,10 +658,9 @@ def render_admin_ops_page() -> None:
         brand_name = brand_pick.get("brand_name", "brand")
 
         st.markdown(
-            f'<div class="sedge-card" style="text-align:center;padding:32px;">'
-            f'<div style="font-size:36px;margin-bottom:12px;">📋</div>'
-            f'<h2 style="margin-bottom:4px;">Autofilling form for {brand_name}…</h2>'
-            f'<p style="color:#9CA3AF;">Matching Brand Scout data to WFM form fields.</p>'
+            f'<div style="padding:32px 0;">'
+            f'<h1 class="sedge-h1" style="margin-bottom:8px;">Autofilling form for {brand_name}</h1>'
+            f'<p class="sedge-caption">Matching Brand Scout data to WFM form fields.</p>'
             f'</div>',
             unsafe_allow_html=True,
         )
@@ -823,11 +681,10 @@ def render_admin_ops_page() -> None:
         error_msg = result.get("handoff_error", "Unknown error loading brand data.")
         st.markdown(
             f'<div class="sedge-card" style="text-align:center;padding:40px;">'
-            f'<div style="font-size:36px;margin-bottom:12px;">⚠️</div>'
-            f'<h2>Could not load brand data</h2>'
-            f'<p style="color:#EF4444;">{error_msg}</p>'
-            f'<p style="color:#9CA3AF;font-size:13px;">Status: <code>{status}</code><br>'
-            f'Run Brand Scout on this brand first, then try again.</p>'
+            f'<p class="sedge-section-title" style="color:#8B2F2F;margin-bottom:8px;">Error</p>'
+            f'<h1 class="sedge-h1" style="margin-bottom:8px;">Could not load brand data</h1>'
+            f'<p class="sedge-caption" style="color:#8B2F2F;">{error_msg}</p>'
+            f'<p class="sedge-caption">Status: {status} — run Brand Scout on this brand first.</p>'
             f'</div>',
             unsafe_allow_html=True,
         )
@@ -846,9 +703,9 @@ def render_admin_ops_page() -> None:
         other_errors = [e for e in errors if "llm_inference" not in e]
         if llm_errors:
             st.markdown(
-                '<div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;'
-                'padding:10px 14px;margin-bottom:12px;font-size:12px;color:#92400E;">'
-                '⚠️ LLM inference pass was skipped (API key not configured for this environment). '
+                '<div style="background:#FAFAF7;border:1px solid #EAEAE4;border-radius:6px;'
+                'padding:10px 14px;margin-bottom:12px;font-size:12px;color:#8B6914;">'
+                'LLM inference pass was skipped (API key not configured for this environment). '
                 'Fields that require inference (family, GM%, line extension) will appear as gaps.'
                 '</div>',
                 unsafe_allow_html=True,
@@ -858,8 +715,8 @@ def render_admin_ops_page() -> None:
 
         gaps_count = len(result.get("gaps", []))
         tab_preview, tab_gaps = st.tabs([
-            "📋  Form Preview",
-            f"⚠️  Gaps to fill  ({gaps_count})",
+            "Form Preview",
+            f"Gaps to fill ({gaps_count})",
         ])
 
         with tab_preview:
@@ -871,12 +728,12 @@ def render_admin_ops_page() -> None:
         _render_footer(result)
 
         if st.button(
-            "📬 Pitch this to a buyer →",
+            "Pitch this to a buyer",
             key="ao_handoff_pitcher",
             use_container_width=False,
         ):
             st.session_state["handoff_brand"] = result.get("brand_name", "")
-            st.session_state["forced_page"] = "📬  Retailer Pitcher"
+            st.session_state["forced_page"] = "Retailer Pitcher"
             st.rerun()
 
 

@@ -26,24 +26,20 @@ def render_retailer_pitcher_page() -> None:
     from memory import _get_client, get_config
     from agents.retailer_pitcher.skills.buyer_personas import BUYER_PERSONAS
     from state import RetailerPitcherState
+    from ui.global_css import inject_global_css
+
+    inject_global_css()
 
     st.markdown(
-        """
-        <div style="padding: 4px 0 18px">
-          <div style="font-size: 28px; font-weight: 700; letter-spacing: -0.4px;">
-            Retailer Pitcher
-          </div>
-          <div style="font-size: 14px; color: #9CA3AF;">
-            Draft a retailer-ready outreach email and 1-page sell sheet for any brand in your book.
-          </div>
-        </div>
-        <hr style="border:none; border-top:1px solid #EBEBEB; margin-bottom:24px;">
-        """,
+        '<div style="margin-bottom:32px;">'
+        '<h1 class="sedge-h1">Retailer Pitcher</h1>'
+        '<p class="sedge-subtitle">Draft a retailer-ready outreach email and 1-page sell sheet for any brand in your book.</p>'
+        '</div>',
         unsafe_allow_html=True,
     )
 
     st.info(
-        "💡 **Tip:** Use the Dashboard's full pipeline to pitch all three retailers "
+        "Tip: Use the Dashboard's full pipeline to pitch all three retailers "
         "(Whole Foods, Sprouts, Erewhon) and fill the WFM form in one click.",
         icon=None,
     )

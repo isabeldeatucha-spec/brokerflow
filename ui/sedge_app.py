@@ -21,191 +21,76 @@ import agents.llm_shim  # noqa: F401, E402
 import streamlit as st
 
 from memory import _get_client
+from ui.global_css import inject_global_css
 
 # ── Page config ───────────────────────────────────────────────────────────────
 
 st.set_page_config(
     page_title="Sedge",
-    page_icon="🌾",
+    page_icon="",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# ── Global CSS ────────────────────────────────────────────────────────────────
-
-st.markdown(
-    """
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
-* { font-family: 'Inter', sans-serif !important; }
-
-.stApp { background: #F7F5F2; }
-
-.main { overflow-y: auto !important; }
-.block-container {
-    overflow-y: auto !important;
-    max-height: none !important;
-    padding-bottom: 120px !important;
-}
-section[data-testid="stMain"]       { overflow-y: auto !important; }
-section[data-testid="stMain"] > div { overflow-y: auto !important; }
-.element-container                  { overflow: visible !important; }
-
-section[data-testid="stSidebar"] {
-    background: #FFFFFF !important;
-    border-right: 1px solid #E5E5E5 !important;
-    min-width: 260px !important;
-    transform: none !important;
-    left: 0 !important;
-    visibility: visible !important;
-}
-section[data-testid="stSidebar"] > div {
-    background: #FFFFFF !important;
-    padding: 24px 16px 80px 16px !important;
-}
-[data-testid="stSidebarCollapseButton"],
-[data-testid="collapsedControl"] { display: none !important; }
-
-#MainMenu, footer, header { visibility: hidden; }
-.stDeployButton { display: none; }
-
-h1 { font-size: 28px !important; font-weight: 700 !important; color: #1A1A1A !important; letter-spacing: -0.5px !important; }
-h2 { font-size: 20px !important; font-weight: 600 !important; color: #1A1A1A !important; }
-h3 { font-size: 16px !important; font-weight: 600 !important; color: #1A1A1A !important; }
-p, li { color: #4A4A4A !important; font-size: 14px !important; line-height: 1.6 !important; }
-
-.sedge-card {
-    background: #FFFFFF;
-    border-radius: 16px;
-    padding: 24px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-    border: 1px solid #F0EDEA;
-    margin-bottom: 16px;
-}
-
-.badge-established { background:#FEF3C7; color:#92400E; padding:4px 12px; border-radius:20px; font-size:13px; font-weight:600; }
-.badge-ready       { background:#D1FAE5; color:#065F46; padding:4px 12px; border-radius:20px; font-size:13px; font-weight:600; }
-.badge-early       { background:#FEE2E2; color:#991B1B; padding:4px 12px; border-radius:20px; font-size:13px; font-weight:600; }
-
-.category-pill { background:#EBF5FB; color:#1B4F72; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:500; }
-
-/* Sidebar nav radio */
-section[data-testid="stSidebar"] .stRadio > div { gap: 4px !important; }
-section[data-testid="stSidebar"] .stRadio label {
-    color: #4A4A4A !important;
-    font-size: 14px !important;
-    padding: 6px 8px !important;
-    border-radius: 8px !important;
-    cursor: pointer !important;
-}
-section[data-testid="stSidebar"] .stRadio input[type="radio"] {
-    accent-color: #1B4F72 !important;
-}
-
-/* All buttons navy */
-.stButton > button,
-div[data-testid="stButton"] button {
-    background: #1B4F72 !important;
-    color: #FFFFFF !important;
-    -webkit-text-fill-color: #FFFFFF !important;
-    border: none !important;
-    border-radius: 10px !important;
-    font-weight: 600 !important;
-    font-size: 14px !important;
-    padding: 12px 16px !important;
-    width: 100% !important;
-    cursor: pointer !important;
-}
-.stButton > button:hover,
-div[data-testid="stButton"] button:hover {
-    background: #154360 !important;
-}
-.stButton > button *,
-div[data-testid="stButton"] button * {
-    color: #FFFFFF !important;
-    -webkit-text-fill-color: #FFFFFF !important;
-}
-
-section[data-testid="stSidebar"] .stButton > button {
-    background: #1B4F72 !important;
-    color: white !important;
-    -webkit-text-fill-color: white !important;
-    border-radius: 10px !important;
-    font-weight: 600 !important;
-    width: 100% !important;
-}
-
-/* Input */
-.stTextInput input {
-    color: #111111 !important;
-    -webkit-text-fill-color: #111111 !important;
-    background-color: #FFFFFF !important;
-    border-radius: 10px !important;
-    border: 1.5px solid #E5E7EB !important;
-    padding: 10px 14px !important;
-    font-size: 14px !important;
-}
-.stTextInput input:focus {
-    border-color: #1B4F72 !important;
-    box-shadow: 0 0 0 3px rgba(27,79,114,0.08) !important;
-}
-
-.material-icons, .material-symbols-rounded, .material-symbols-outlined,
-[class*="material-icon"] { font-size: 0 !important; line-height: 0 !important; }
-span.ejhh0er0,
-[data-testid="stExpanderToggleIcon"] { font-size: 0 !important; width: 0 !important; overflow: hidden !important; }
-</style>
-""",
-    unsafe_allow_html=True,
-)
+inject_global_css()
 
 # ── Sidebar nav ───────────────────────────────────────────────────────────────
 
 NAV_OPTIONS = [
-    "🏠  Dashboard",
-    "🔍  Brand Scout",
-    "📬  Retailer Pitcher",
-    "📋  Admin & Ops",
-    "📊  Portfolio Mgr",
+    "Dashboard",
+    "Brand Scout",
+    "Retailer Pitcher",
+    "Admin & Ops",
+    "Portfolio Mgr",
 ]
 
-# _nav_idx is a plain state key (not a widget key), so it can be written freely.
+# Keep legacy nav keys so handoff_brand / forced_page still work
+_NAV_LEGACY_MAP = {
+    "🏠  Dashboard":       "Dashboard",
+    "🔍  Brand Scout":     "Brand Scout",
+    "📬  Retailer Pitcher": "Retailer Pitcher",
+    "📋  Admin & Ops":     "Admin & Ops",
+    "📊  Portfolio Mgr":   "Portfolio Mgr",
+}
+_NAV_PAGE_MAP = {v: v for v in NAV_OPTIONS}
+
 if "_nav_idx" not in st.session_state:
     st.session_state["_nav_idx"] = 0
 
-# Handle forced navigation before sidebar renders so the radio shows the right selection.
 _forced = st.session_state.pop("forced_page", None)
-if _forced and _forced in NAV_OPTIONS:
-    st.session_state["_nav_idx"] = NAV_OPTIONS.index(_forced)
+if _forced:
+    _resolved = _NAV_LEGACY_MAP.get(_forced, _forced)
+    if _resolved in NAV_OPTIONS:
+        st.session_state["_nav_idx"] = NAV_OPTIONS.index(_resolved)
 
 with st.sidebar:
     st.markdown(
-        '<p style="font-size:20px; font-weight:700; color:#111111; '
-        'letter-spacing:-0.3px; margin-bottom:4px;">🌾 Sedge</p>'
-        '<p style="font-size:11px; color:#9CA3AF; margin-bottom:24px;">'
-        "AI tools for independent food brokers</p>",
+        '<div style="padding:40px 20px 0;">'
+        '<div style="font-family:\'Instrument Serif\',Georgia,serif;font-size:28px;'
+        'font-weight:400;color:#1A1A18;letter-spacing:-0.02em;margin-bottom:2px;">Sedge</div>'
+        '<div style="font-family:\'Instrument Serif\',Georgia,serif;font-size:14px;'
+        'font-style:italic;color:#8B8A83;margin-bottom:40px;">for independent food brokers</div>'
+        '</div>',
         unsafe_allow_html=True,
     )
     st.markdown(
-        '<p style="font-size:11px; font-weight:700; color:#9CA3AF; '
-        'text-transform:uppercase; letter-spacing:0.1em; margin-bottom:8px;">Navigation</p>',
+        '<div style="padding:0 20px;"><p style="font-size:11px;font-weight:600;color:#8B8A83;'
+        'text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px;">Workspace</p></div>',
         unsafe_allow_html=True,
     )
-    # Use index= (not key=) so we can freely write _nav_idx from outside.
     _nav_selected = st.radio(
         "nav",
         options=NAV_OPTIONS,
         index=st.session_state["_nav_idx"],
         label_visibility="collapsed",
+        key="_nav_radio",
     )
-    # Sync user's direct radio click back into _nav_idx.
     st.session_state["_nav_idx"] = NAV_OPTIONS.index(_nav_selected)
 
-    st.markdown("<div style='margin-top:24px;'></div>", unsafe_allow_html=True)
     st.markdown(
-        '<p style="font-size:11px; font-weight:700; color:#9CA3AF; text-transform:uppercase; '
-        'letter-spacing:0.1em; margin-bottom:8px;">Settings</p>',
+        '<div style="padding:0 20px;margin-top:32px;">'
+        '<p style="font-size:11px;font-weight:600;color:#8B8A83;text-transform:uppercase;'
+        'letter-spacing:0.12em;margin-bottom:8px;">Settings</p></div>',
         unsafe_allow_html=True,
     )
     demo_on = st.toggle(
@@ -216,7 +101,7 @@ with st.sidebar:
     )
     st.session_state["demo_mode"] = demo_on
     if demo_on:
-        st.caption("🎬 Cached results active")
+        st.caption("Cached results active")
 
 # ── Dashboard ─────────────────────────────────────────────────────────────────
 
@@ -235,22 +120,32 @@ _RETAILER_LABEL = {"whole_foods": "Whole Foods", "sprouts": "Sprouts", "erewhon"
 
 
 def _stage_row_html(stage: str, event) -> str:
-    """Return an HTML string for one pipeline progress row."""
+    """Return editorial HTML for one pipeline progress row (no emoji, Lucide SVGs)."""
+    from ui.icons import ICON_CIRCLE, ICON_SPINNER, ICON_CHECK_CIRCLE, ICON_X_CIRCLE
     label = _STAGE_LABELS.get(stage, stage)
     if event is None:
-        icon, color, msg = "⏸", "#9CA3AF", "waiting…"
+        icon_html = f'<span style="color:#EAEAE4;">{ICON_CIRCLE}</span>'
+        msg = "waiting"
+        msg_color = "#8B8A83"
     elif event["status"] == "running":
-        icon, color, msg = "⏳", "#1B4F72", event.get("message", "running…")
+        icon_html = f'<span style="color:#0F3530;" class="sedge-spin">{ICON_SPINNER}</span>'
+        msg = event.get("message", "running…")
+        msg_color = "#0F3530"
     elif event["status"] == "done":
-        icon, color, msg = "✅", "#065F46", event.get("message", "done")
+        icon_html = f'<span style="color:#2D5F3F;">{ICON_CHECK_CIRCLE}</span>'
+        msg = event.get("message", "done")
+        msg_color = "#8B8A83"
     else:
-        icon, color, msg = "❌", "#991B1B", event.get("error") or event.get("message", "error")
+        icon_html = f'<span style="color:#8B2F2F;">{ICON_X_CIRCLE}</span>'
+        msg = event.get("error") or event.get("message", "error")
+        msg_color = "#8B2F2F"
     return (
-        f'<div style="display:flex;align-items:center;gap:12px;padding:10px 0;'
-        f'border-bottom:1px solid #F3F4F6;">'
-        f'<span style="font-size:18px;width:24px;text-align:center;">{icon}</span>'
-        f'<span style="font-size:13px;font-weight:600;color:#111111;width:260px;flex-shrink:0;">{label}</span>'
-        f'<span style="font-size:12px;color:{color};">{msg}</span>'
+        f'<div class="sedge-pipeline-row">'
+        f'<div class="sedge-pipeline-icon">{icon_html}</div>'
+        f'<div style="flex:1;">'
+        f'<div class="sedge-pipeline-label">{label}</div>'
+        f'<div class="sedge-pipeline-msg" style="color:{msg_color};">{msg}</div>'
+        f'</div>'
         f'</div>'
     )
 
@@ -464,39 +359,22 @@ def render_dashboard() -> None:
     import json as _json
     import time as _time
 
-    st.markdown(
-        """
-<div style="padding: 8px 0 4px 0;">
-    <span style="font-size:26px; font-weight:700; color:#111111;">Dashboard</span>
-    <span style="font-size:14px; color:#9CA3AF; margin-left:8px;">by Sedge</span>
-</div>
-<p style="color:#9CA3AF; font-size:13px; margin-top:2px; margin-bottom:0;">AI tools for independent food brokers</p>
-<hr style="border:none; border-top:1px solid #EBEBEB; margin-top:16px; margin-bottom:32px;">
-""",
-        unsafe_allow_html=True,
-    )
-
     stats = _fetch_stats()
 
-    # ── Hero stat row ─────────────────────────────────────────────────────────
-    c1, c2, c3, c4 = st.columns(4)
-    for col, label, value, color in [
-        (c1, "Brands Evaluated", stats["brands_evaluated"], "#1B4F72"),
-        (c2, "Pitches Drafted",  stats["pitches_drafted"],  "#065F46"),
-        (c3, "WFM Forms Filled", stats["forms_filled"],     "#92400E"),
-        (c4, "Bundles Sent",     stats["bundles_sent"],     "#6B21A8"),
-    ]:
-        with col:
-            col.markdown(
-                f'<div class="sedge-card" style="text-align:center;padding:20px 16px;">'
-                f'<div style="font-size:36px;font-weight:700;color:{color};line-height:1;">'
-                f'{value}</div>'
-                f'<div style="font-size:12px;color:#9CA3AF;margin-top:6px;font-weight:500;">'
-                f'{label}</div></div>',
-                unsafe_allow_html=True,
-            )
-
-    st.markdown("<div style='margin-top:8px;'></div>", unsafe_allow_html=True)
+    # ── Editorial hero ────────────────────────────────────────────────────────
+    st.markdown(
+        f'<div style="margin-bottom:48px;">'
+        f'<h1 class="sedge-h1">Sedge</h1>'
+        f'<p class="sedge-subtitle">The operating system for independent food brokers.</p>'
+        f'<p class="sedge-caption" style="margin-top:-32px;">'
+        f'<span class="sedge-number">{stats["brands_evaluated"]}</span> brands · '
+        f'<span class="sedge-number">{stats["pitches_drafted"]}</span> pitches · '
+        f'<span class="sedge-number">{stats["forms_filled"]}</span> forms · '
+        f'<span class="sedge-number">{stats["bundles_sent"]}</span> bundles sent'
+        f'</p>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
 
     # ── Pipeline session state ────────────────────────────────────────────────
     if "pipe_results"  not in st.session_state:
@@ -508,18 +386,16 @@ def render_dashboard() -> None:
     if "pipe_brand"    not in st.session_state:
         st.session_state["pipe_brand"]    = ""
 
-    # ── Input card ────────────────────────────────────────────────────────────
+    # ── Pipeline input ────────────────────────────────────────────────────────
     st.markdown(
-        '<div class="sedge-card" style="padding:20px 24px;margin-bottom:12px;">'
-        '<p style="font-size:13px;font-weight:700;color:#111111;margin:0 0 10px 0;">'
-        '🚀 Full pipeline — Brand Scout + Retailer Pitches + WFM Form</p>',
+        '<p class="sedge-section-title">Full pipeline — Brand Scout · 3 Pitches · WFM Form</p>',
         unsafe_allow_html=True,
     )
     _c1, _c2, _c3 = st.columns([3, 3, 1])
     with _c1:
         pipe_brand = st.text_input(
             "Brand name",
-            placeholder="Chomps, Fishwife, Graza…",
+            placeholder="Try: Chomps, Fishwife, Graza",
             key="pipe_brand_input",
             label_visibility="collapsed",
         )
@@ -531,8 +407,11 @@ def render_dashboard() -> None:
             label_visibility="collapsed",
         )
     with _c3:
-        pipe_go = st.button("▶ Run", key="pipe_go", use_container_width=True, type="primary")
-    st.markdown("</div>", unsafe_allow_html=True)
+        pipe_go = st.button("Run", key="pipe_go", use_container_width=True, type="primary")
+    st.markdown(
+        '<p class="sedge-caption" style="margin-top:8px;">Takes about 90 seconds — or under 15s in demo mode.</p>',
+        unsafe_allow_html=True,
+    )
 
     # ── Progress rows ─────────────────────────────────────────────────────────
     pipeline_card = st.empty()
@@ -619,38 +498,37 @@ def render_dashboard() -> None:
 
     st.markdown("<div style='margin-top:32px;'></div>", unsafe_allow_html=True)
 
-    # ── Agent cards ───────────────────────────────────────────────────────────
+    st.markdown("<div style='margin-top:64px;'></div>", unsafe_allow_html=True)
+    st.markdown('<p class="sedge-section-title">Workspace</p>', unsafe_allow_html=True)
+
+    # ── Agent cards — hairline bordered, no shadow ────────────────────────────
     AGENTS = [
         {
-            "icon": "🔍",
             "title": "Brand Scout",
-            "desc": "Research any CPG brand across 10+ sources in under 60 seconds. Get a scored brief and personalized outreach draft.",
+            "desc": "Research any CPG brand across 10+ sources in under 60 seconds. Scored brief and outreach draft.",
             "stat": f"{stats['brands_evaluated']} brands evaluated",
-            "nav": "🔍  Brand Scout",
-            "btn": "Open Brand Scout",
+            "nav": "Brand Scout",
+            "btn": "Open",
         },
         {
-            "icon": "📬",
             "title": "Retailer Pitcher",
             "desc": "Draft a buyer-specific outreach email and 1-page sell sheet for any brand in your book.",
             "stat": f"{stats['pitches_drafted']} pitches drafted",
-            "nav": "📬  Retailer Pitcher",
-            "btn": "Open Retailer Pitcher",
+            "nav": "Retailer Pitcher",
+            "btn": "Open",
         },
         {
-            "icon": "📋",
             "title": "Admin & Ops",
             "desc": "Auto-fill the Whole Foods New Item Setup Form from Brand Scout data. Flag gaps before your buyer meeting.",
             "stat": f"{stats['forms_filled']} forms filled",
-            "nav": "📋  Admin & Ops",
-            "btn": "Open Admin & Ops",
+            "nav": "Admin & Ops",
+            "btn": "Open",
         },
         {
-            "icon": "📊",
             "title": "Portfolio Manager",
-            "desc": "Track your full brand book, set reminder cadences, and surface re-evaluation alerts across your pipeline.",
+            "desc": "Track your full brand book, set reminder cadences, and surface re-evaluation alerts.",
             "stat": "Coming soon",
-            "nav": "📊  Portfolio Mgr",
+            "nav": "Portfolio Mgr",
             "btn": "Coming soon",
             "disabled": True,
         },
@@ -660,11 +538,10 @@ def render_dashboard() -> None:
     for col, agent in zip(cols, AGENTS):
         with col:
             col.markdown(
-                f'<div class="sedge-card" style="padding:20px;min-height:200px;">'
-                f'<div style="font-size:28px;margin-bottom:8px;">{agent["icon"]}</div>'
-                f'<div style="font-size:15px;font-weight:700;color:#111111;margin-bottom:6px;">{agent["title"]}</div>'
-                f'<p style="font-size:12px;color:#6B6B6B;line-height:1.5;margin-bottom:12px;">{agent["desc"]}</p>'
-                f'<div style="font-size:11px;font-weight:600;color:#9CA3AF;">{agent["stat"]}</div>'
+                f'<div class="sedge-card sedge-card-hover" style="padding:20px;min-height:180px;">'
+                f'<div style="font-size:13px;font-weight:600;color:#1A1A18;margin-bottom:8px;">{agent["title"]}</div>'
+                f'<p class="sedge-caption" style="margin-bottom:16px;">{agent["desc"]}</p>'
+                f'<p class="sedge-caption sedge-number" style="margin:0;">{agent["stat"]}</p>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
@@ -674,37 +551,32 @@ def render_dashboard() -> None:
                     st.rerun()
             else:
                 col.markdown(
-                    '<div style="background:#F3F4F6;border-radius:10px;padding:12px;text-align:center;'
-                    'font-size:13px;font-weight:600;color:#9CA3AF;">Coming soon</div>',
+                    '<div style="background:#F2F2EE;border-radius:6px;padding:10px;text-align:center;'
+                    'font-size:13px;font-weight:500;color:#8B8A83;">Coming soon</div>',
                     unsafe_allow_html=True,
                 )
 
-    st.markdown("<div style='margin-top:24px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-top:48px;'></div>", unsafe_allow_html=True)
 
-    # ── Recent activity ───────────────────────────────────────────────────────
+    # ── Recent activity — hairline list, no card wrapper ─────────────────────
     st.markdown(
-        '<p style="font-size:13px;font-weight:700;color:#111111;margin-bottom:12px;">Recent Activity</p>',
+        '<p class="sedge-section-title">Recent Activity</p>',
         unsafe_allow_html=True,
     )
     activity = stats["recent_activity"]
     if activity:
         rows_html = "".join(
-            f'<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #F3F4F6;">'
-            f'<span style="font-size:16px;">{a["icon"]}</span>'
-            f'<span style="font-size:13px;color:#4A4A4A;flex:1;">{a["label"]}</span>'
-            f'<span style="font-size:11px;color:#9CA3AF;white-space:nowrap;">{a["ts"]}</span>'
+            f'<div class="sedge-activity-row">'
+            f'<span style="font-size:14px;color:#8B8A83;width:20px;flex-shrink:0;">{a["icon"]}</span>'
+            f'<span style="font-size:13px;color:#57564F;flex:1;">{a["label"]}</span>'
+            f'<span class="sedge-number" style="font-size:12px;color:#8B8A83;white-space:nowrap;">{a["ts"]}</span>'
             f'</div>'
             for a in activity
         )
-        st.markdown(
-            f'<div class="sedge-card" style="padding:16px 20px;">{rows_html}</div>',
-            unsafe_allow_html=True,
-        )
+        st.markdown(rows_html, unsafe_allow_html=True)
     else:
         st.markdown(
-            '<div class="sedge-card" style="text-align:center;padding:32px;">'
-            '<p style="color:#9CA3AF;margin:0;">No activity yet — run the full pipeline above to get started.</p>'
-            '</div>',
+            '<p class="sedge-caption" style="padding:16px 0;">No activity yet — run the full pipeline above to get started.</p>',
             unsafe_allow_html=True,
         )
 
@@ -713,19 +585,14 @@ def render_dashboard() -> None:
 
 def render_coming_soon(title: str) -> None:
     st.markdown(
-        f'<div style="padding:8px 0 4px 0;">'
-        f'<span style="font-size:26px;font-weight:700;color:#111111;">{title}</span>'
+        f'<div style="margin-bottom:48px;">'
+        f'<h1 class="sedge-h1">{title}</h1>'
         f'</div>'
-        f'<hr style="border:none;border-top:1px solid #EBEBEB;margin-top:16px;margin-bottom:32px;">',
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        '<div class="sedge-card" style="text-align:center;padding:60px 40px;">'
-        '<div style="font-size:48px;margin-bottom:16px;">🚧</div>'
-        f'<h2>{title}</h2>'
-        '<p style="color:#9CA3AF;max-width:400px;margin:0 auto;">This agent is coming soon. '
-        "Check back after Phase 1 ships.</p>"
-        '</div>',
+        f'<div class="sedge-card" style="text-align:center;padding:64px 40px;">'
+        f'<p style="font-size:32px;margin-bottom:16px;">—</p>'
+        f'<p class="sedge-body" style="max-width:360px;margin:0 auto;">'
+        f'This agent is coming soon. Check back after Phase 1 ships.</p>'
+        f'</div>',
         unsafe_allow_html=True,
     )
 
@@ -737,29 +604,29 @@ def _error_card(exc: Exception) -> None:
     tb = traceback.format_exc()
     print(tb, file=sys.stderr)
     st.error(f"Something went wrong: **{type(exc).__name__}: {exc}**")
-    with st.expander("🐛 Debug details", expanded=True):
+    with st.expander("Debug details", expanded=True):
         st.code(tb, language="python")
 
 
 page = NAV_OPTIONS[st.session_state["_nav_idx"]]
 
 try:
-    if page == "🏠  Dashboard":
+    if page == "Dashboard":
         render_dashboard()
 
-    elif page == "🔍  Brand Scout":
+    elif page == "Brand Scout":
         from ui.brand_scout_page import render_brand_scout_page
         render_brand_scout_page()
 
-    elif page == "📬  Retailer Pitcher":
+    elif page == "Retailer Pitcher":
         from ui.retailer_pitcher_page import render_retailer_pitcher_page
         render_retailer_pitcher_page()
 
-    elif page == "📋  Admin & Ops":
+    elif page == "Admin & Ops":
         from ui.admin_ops_page import render_admin_ops_page
         render_admin_ops_page()
 
-    elif page == "📊  Portfolio Mgr":
+    elif page == "Portfolio Mgr":
         render_coming_soon("Portfolio Manager")
 
 except Exception as _page_exc:
