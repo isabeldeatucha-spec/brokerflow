@@ -860,6 +860,12 @@ document.getElementById('copy-btn').style.background = '#1B4F72';
 def render_brand_scout_page() -> None:
     st.markdown(_CSS, unsafe_allow_html=True)
 
+    st.info(
+        "💡 **Tip:** Use the Dashboard's full pipeline to run Brand Scout, "
+        "Retailer Pitches, and the WFM form all in one click.",
+        icon=None,
+    )
+
     # Session state
     if "thread_id" not in st.session_state:
         st.session_state.thread_id = str(uuid.uuid4())

@@ -1,0 +1,120 @@
+{
+  "stages": {
+    "scout": {
+      "status": "done",
+      "message": "Brand Scout: Fishwife \u00b7 76/100 \u00b7 established",
+      "data": {
+        "brand_name": "Fishwife",
+        "score": {
+          "total": 76,
+          "velocity_proof": 18,
+          "distribution_density": 15,
+          "margin_viability": 16,
+          "brand_story_clarity": 18,
+          "promotional_independence": 9
+        },
+        "verdict": "established",
+        "category": "condiment_sauce",
+        "broker_brief": "Fishwife is a premium tinned seafood brand known for sustainably sourced products with bold branding. Strong DTC velocity with growing specialty retail presence."
+      }
+    },
+    "pitcher_wf": {
+      "status": "done",
+      "message": "Pitcher \u2192 Whole Foods: ok",
+      "data": {
+        "buyer_key": "whole_foods",
+        "artifact_status": "ok",
+        "artifact_errors": [],
+        "email_subject": "Fishwife \u2014 premium tinned fish that your seafood buyer will love",
+        "email_body": "Hi [Buyer Name],\n\nI'm reaching out about Fishwife \u2014 one of the most culturally resonant food brands I've come across in years, and one I think is a natural fit for the Whole Foods customer.\n\nFishwife is cofounded by Becca Millstein and has helped spark the premium tinned fish renaissance. Here's what stands out:\n\n\u2022 92K+ Instagram followers \u2014 driving real consumer demand into stores\n\u2022 820 Amazon reviews at 4.6\u2605 \u2014 proven online velocity\n\u2022 MSC-certified sustainable seafood at $12.99 SRP\n\u2022 Already in Whole Foods nationally \u2014 this is about deepening regional placement\n\u2022 Strong specialty press: Bon App\u00e9tit, NYT Food, Eater named them a brand to watch\n\nThe brand has a clear whitespace opportunity in your region. The tinned fish set is an underserved premium category and Fishwife's packaging and storytelling make it an easy yes for educated buyers.\n\nI've been working with their team on regional expansion and have velocity data from comparable markets I'd love to share. Available for a quick call this week?\n\nBest,\n[Your name]\nIndependent Food Broker | [Territory]",
+        "sell_sheet_html": "<!DOCTYPE html><html><head><meta charset='UTF-8'><style>@page{size:letter;margin:0}body{font-family:'Helvetica Neue',Arial,sans-serif;margin:0;padding:28px 32px;background:#fff;color:#1a1a1a;font-size:11px;line-height:1.4}.header{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #0B6E4F;padding-bottom:14px;margin-bottom:18px}.brand-name{font-size:30px;font-weight:700;color:#0B6E4F;letter-spacing:-0.5px}.tagline{font-size:11px;color:#6B6B6B;margin-top:3px}.score-badge{background:#D1FAE5;border-radius:10px;padding:10px 16px;text-align:center;min-width:80px}.score-num{font-size:34px;font-weight:700;color:#065F46;line-height:1}.score-sub{font-size:9px;color:#065F46;font-weight:700;text-transform:uppercase;letter-spacing:0.08em}.verdict{font-size:10px;color:#065F46;font-weight:600;margin-top:2px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px}.card{background:#F7F5F2;border-radius:8px;padding:12px}.card h3{font-size:9px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 8px 0}.row{display:flex;justify-content:space-between;margin-bottom:3px}.label{color:#6B6B6B;font-size:10px}.val{font-weight:600;color:#0B6E4F;font-size:10px}.pill{display:inline-block;background:#ECFDF5;color:#065F46;border-radius:20px;padding:2px 7px;font-size:9px;font-weight:600;margin:2px 2px 2px 0}.brief{background:#F7F5F2;border-radius:8px;padding:12px;margin-bottom:12px;font-size:10px;color:#333;line-height:1.5}.cta{background:#0B6E4F;color:#fff;border-radius:8px;padding:12px 18px;display:flex;justify-content:space-between;align-items:center}.cta-left h3{color:#fff;font-size:12px;font-weight:700;margin:0 0 2px 0}.cta-left p{color:#6EE7B7;font-size:10px;margin:0}.cta-right{font-size:9px;color:#6EE7B7;text-align:right}</style></head><body><div class='header'><div><div class='brand-name'>Fishwife</div><div class='tagline'>Premium Sustainable Tinned Seafood &nbsp;\u00b7&nbsp; specialty food</div></div><div class='score-badge'><div class='score-num'>76</div><div class='score-sub'>Brand Scout</div><div class='verdict'>\ud83d\udfe1 Established</div></div></div><div class='grid2'><div class='card'><h3>Key Metrics</h3><div class='row'><span class='label'>Amazon Rating</span><span class='val'>4.6\u2605 \u00b7 820 reviews</span></div><div class='row'><span class='label'>Funding Raised</span><span class='val'>$3.5M</span></div><div class='row'><span class='label'>Instagram Followers</span><span class='val'>92,000+</span></div><div class='row'><span class='label'>SRP Range</span><span class='val'>$9.99\u2013$12.99</span></div><div class='row'><span class='label'>Instacart Banners</span><span class='val'>2 major chains</span></div><div class='row'><span class='label'>Faire Listed</span><span class='val'>\u2713 Yes</span></div></div><div class='card'><h3>Retail Footprint</h3><div class='row'><span class='label'>Whole Foods</span><span class='val'>\u2713 Confirmed</span></div><div class='row'><span class='label'>Sprouts</span><span class='val'>\u2713 Confirmed</span></div><div class='row'><span class='label'>Target</span><span class='val'>\u2014 Not yet</span></div><div class='row'><span class='label'>Costco</span><span class='val'>\u2014 Not yet</span></div><div class='row'><span class='label'>Est. Door Count</span><span class='val'>280+ nationally</span></div><div class='row'><span class='label'>Trade Press</span><span class='val'>6 major features</span></div></div></div><div class='grid3'><div class='card'><h3>Brand Story</h3><p style='font-size:10px;color:#333;margin:0'>Cofounded by Becca Millstein. Leaders in the premium tinned fish renaissance. Mission-driven sustainable seafood with stunning, gift-worthy packaging.</p></div><div class='card'><h3>Certifications</h3><span class='pill'>MSC Certified</span><span class='pill'>Sustainable Seafood</span><span class='pill'>Women-Founded</span></div><div class='card'><h3>Score Breakdown</h3><div class='row'><span class='label'>Velocity Proof</span><span class='val'>18/25</span></div><div class='row'><span class='label'>Distribution</span><span class='val'>15/20</span></div><div class='row'><span class='label'>Margin Viability</span><span class='val'>16/20</span></div><div class='row'><span class='label'>Brand Story</span><span class='val'>18/20</span></div><div class='row'><span class='label'>Promo Indep.</span><span class='val'>9/15</span></div></div></div><div class='brief'><strong>Broker Brief:</strong> Fishwife has built one of the most culturally resonant brands in the specialty food space. With 92K+ Instagram followers, $3.5M raised, and a clear sustainability story, this is a brand that Whole Foods buyers actively want to carry. Key opportunity: regional door expansion and deeper penetration in existing chains. The tinned fish premium category is underserved and growing.</div><div class='cta'><div class='cta-left'><h3>Ready to expand Fishwife's regional footprint?</h3><p>Pitch prepared by Sedge \u00b7 Tailored for Whole Foods Regional Category Manager</p></div><div class='cta-right'>Generated 2026-04-22<br>sedge.ai</div></div></body></html>"
+      }
+    },
+    "pitcher_sprouts": {
+      "status": "done",
+      "message": "Pitcher \u2192 Sprouts: ok",
+      "data": {
+        "buyer_key": "sprouts",
+        "artifact_status": "ok",
+        "artifact_errors": [],
+        "email_subject": "Fishwife \u2014 sustainably sourced tinned seafood for your specialty set",
+        "email_body": "Hi [Buyer Name],\n\nI'm writing to introduce Fishwife for your specialty seafood and protein category at Sprouts. Fishwife has become the leading premium tinned fish brand in the US, with enthusiastic press coverage from Bon App\u00e9tit, NYT, and Eater.\n\nWhy Fishwife at Sprouts:\n\u2022 Sustainably sourced, MSC-certified seafood\n\u2022 Bold, modern branding that photographs beautifully on shelf\n\u2022 Strong Whole Foods velocity \u2014 natural channel proven\n\u2022 Aligns with Sprouts' sustainability and quality positioning\n\u2022 SRP $9\u2013$14, premium but accessible\n\nI'd love to put together a regional sell-in proposal. Would 15 minutes work in the next two weeks?\n\nBest,\n[Broker Name]",
+        "sell_sheet_html": "<!DOCTYPE html><html><head><meta charset='UTF-8'><style>@page{size:letter;margin:0}body{font-family:'Helvetica Neue',Arial,sans-serif;margin:0;padding:28px 32px;background:#fff;color:#1a1a1a;font-size:11px;line-height:1.4}.header{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #0B6E4F;padding-bottom:14px;margin-bottom:18px}.brand-name{font-size:30px;font-weight:700;color:#0B6E4F;letter-spacing:-0.5px}.tagline{font-size:11px;color:#6B6B6B;margin-top:3px}.score-badge{background:#D1FAE5;border-radius:10px;padding:10px 16px;text-align:center;min-width:80px}.score-num{font-size:34px;font-weight:700;color:#065F46;line-height:1}.score-sub{font-size:9px;color:#065F46;font-weight:700;text-transform:uppercase;letter-spacing:0.08em}.verdict{font-size:10px;color:#065F46;font-weight:600;margin-top:2px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px}.card{background:#F7F5F2;border-radius:8px;padding:12px}.card h3{font-size:9px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 8px 0}.row{display:flex;justify-content:space-between;margin-bottom:3px}.label{color:#6B6B6B;font-size:10px}.val{font-weight:600;color:#0B6E4F;font-size:10px}.pill{display:inline-block;background:#ECFDF5;color:#065F46;border-radius:20px;padding:2px 7px;font-size:9px;font-weight:600;margin:2px 2px 2px 0}.brief{background:#F7F5F2;border-radius:8px;padding:12px;margin-bottom:12px;font-size:10px;color:#333;line-height:1.5}.cta{background:#0B6E4F;color:#fff;border-radius:8px;padding:12px 18px;display:flex;justify-content:space-between;align-items:center}.cta-left h3{color:#fff;font-size:12px;font-weight:700;margin:0 0 2px 0}.cta-left p{color:#6EE7B7;font-size:10px;margin:0}.cta-right{font-size:9px;color:#6EE7B7;text-align:right}</style></head><body><div class='header'><div><div class='brand-name'>Fishwife</div><div class='tagline'>Premium Sustainable Tinned Seafood &nbsp;\u00b7&nbsp; specialty food</div></div><div class='score-badge'><div class='score-num'>76</div><div class='score-sub'>Brand Scout</div><div class='verdict'>\ud83d\udfe1 Established</div></div></div><div class='grid2'><div class='card'><h3>Key Metrics</h3><div class='row'><span class='label'>Amazon Rating</span><span class='val'>4.6\u2605 \u00b7 820 reviews</span></div><div class='row'><span class='label'>Funding Raised</span><span class='val'>$3.5M</span></div><div class='row'><span class='label'>Instagram Followers</span><span class='val'>92,000+</span></div><div class='row'><span class='label'>SRP Range</span><span class='val'>$9.99\u2013$12.99</span></div><div class='row'><span class='label'>Instacart Banners</span><span class='val'>2 major chains</span></div><div class='row'><span class='label'>Faire Listed</span><span class='val'>\u2713 Yes</span></div></div><div class='card'><h3>Retail Footprint</h3><div class='row'><span class='label'>Sprouts</span><span class='val'>\u2713 Confirmed</span></div><div class='row'><span class='label'>Sprouts</span><span class='val'>\u2713 Confirmed</span></div><div class='row'><span class='label'>Target</span><span class='val'>\u2014 Not yet</span></div><div class='row'><span class='label'>Costco</span><span class='val'>\u2014 Not yet</span></div><div class='row'><span class='label'>Est. Door Count</span><span class='val'>280+ nationally</span></div><div class='row'><span class='label'>Trade Press</span><span class='val'>6 major features</span></div></div></div><div class='grid3'><div class='card'><h3>Brand Story</h3><p style='font-size:10px;color:#333;margin:0'>Cofounded by Becca Millstein. Leaders in the premium tinned fish renaissance. Mission-driven sustainable seafood with stunning, gift-worthy packaging.</p></div><div class='card'><h3>Certifications</h3><span class='pill'>MSC Certified</span><span class='pill'>Sustainable Seafood</span><span class='pill'>Women-Founded</span></div><div class='card'><h3>Score Breakdown</h3><div class='row'><span class='label'>Velocity Proof</span><span class='val'>18/25</span></div><div class='row'><span class='label'>Distribution</span><span class='val'>15/20</span></div><div class='row'><span class='label'>Margin Viability</span><span class='val'>16/20</span></div><div class='row'><span class='label'>Brand Story</span><span class='val'>18/20</span></div><div class='row'><span class='label'>Promo Indep.</span><span class='val'>9/15</span></div></div></div><div class='brief'><strong>Broker Brief:</strong> Fishwife has built one of the most culturally resonant brands in the specialty food space. With 92K+ Instagram followers, $3.5M raised, and a clear sustainability story, this is a brand that Sprouts buyers actively want to carry. Key opportunity: regional door expansion and deeper penetration in existing chains. The tinned fish premium category is underserved and growing.</div><div class='cta'><div class='cta-left'><h3>Ready to expand Fishwife's regional footprint?</h3><p>Pitch prepared by Sedge \u00b7 Tailored for Sprouts Regional Category Manager</p></div><div class='cta-right'>Generated 2026-04-22<br>sedge.ai</div></div></body></html>"
+      }
+    },
+    "pitcher_erewhon": {
+      "status": "done",
+      "message": "Pitcher \u2192 Erewhon: ok",
+      "data": {
+        "buyer_key": "erewhon",
+        "artifact_status": "ok",
+        "artifact_errors": [],
+        "email_subject": "Fishwife \u2014 the premium tinned seafood brand your shoppers are already asking for",
+        "email_body": "Hi [Buyer Name],\n\nFishwife is one of the most talked-about specialty food brands in the US right now, and I believe it's a natural fit for Erewhon. Your shoppers already know the brand \u2014 Bon App\u00e9tit named it one of the best new food products of the year.\n\nFishwife for Erewhon:\n\u2022 MSC-certified sustainable sourcing \u2014 matches Erewhon's values\n\u2022 Extraordinary branding and packaging that performs on shelf and on social\n\u2022 Premium SRP ($9\u2013$14) with strong gross margin story\n\u2022 DTC-first with growing specialty retail expansion\n\u2022 No artificial ingredients, clean label\n\nI'd love to walk through a detailed category fit analysis. Can we find 15 minutes?\n\nBest,\n[Broker Name]",
+        "sell_sheet_html": "<!DOCTYPE html><html><head><meta charset='UTF-8'><style>@page{size:letter;margin:0}body{font-family:'Helvetica Neue',Arial,sans-serif;margin:0;padding:28px 32px;background:#fff;color:#1a1a1a;font-size:11px;line-height:1.4}.header{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #0B6E4F;padding-bottom:14px;margin-bottom:18px}.brand-name{font-size:30px;font-weight:700;color:#0B6E4F;letter-spacing:-0.5px}.tagline{font-size:11px;color:#6B6B6B;margin-top:3px}.score-badge{background:#D1FAE5;border-radius:10px;padding:10px 16px;text-align:center;min-width:80px}.score-num{font-size:34px;font-weight:700;color:#065F46;line-height:1}.score-sub{font-size:9px;color:#065F46;font-weight:700;text-transform:uppercase;letter-spacing:0.08em}.verdict{font-size:10px;color:#065F46;font-weight:600;margin-top:2px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px}.card{background:#F7F5F2;border-radius:8px;padding:12px}.card h3{font-size:9px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 8px 0}.row{display:flex;justify-content:space-between;margin-bottom:3px}.label{color:#6B6B6B;font-size:10px}.val{font-weight:600;color:#0B6E4F;font-size:10px}.pill{display:inline-block;background:#ECFDF5;color:#065F46;border-radius:20px;padding:2px 7px;font-size:9px;font-weight:600;margin:2px 2px 2px 0}.brief{background:#F7F5F2;border-radius:8px;padding:12px;margin-bottom:12px;font-size:10px;color:#333;line-height:1.5}.cta{background:#0B6E4F;color:#fff;border-radius:8px;padding:12px 18px;display:flex;justify-content:space-between;align-items:center}.cta-left h3{color:#fff;font-size:12px;font-weight:700;margin:0 0 2px 0}.cta-left p{color:#6EE7B7;font-size:10px;margin:0}.cta-right{font-size:9px;color:#6EE7B7;text-align:right}</style></head><body><div class='header'><div><div class='brand-name'>Fishwife</div><div class='tagline'>Premium Sustainable Tinned Seafood &nbsp;\u00b7&nbsp; specialty food</div></div><div class='score-badge'><div class='score-num'>76</div><div class='score-sub'>Brand Scout</div><div class='verdict'>\ud83d\udfe1 Established</div></div></div><div class='grid2'><div class='card'><h3>Key Metrics</h3><div class='row'><span class='label'>Amazon Rating</span><span class='val'>4.6\u2605 \u00b7 820 reviews</span></div><div class='row'><span class='label'>Funding Raised</span><span class='val'>$3.5M</span></div><div class='row'><span class='label'>Instagram Followers</span><span class='val'>92,000+</span></div><div class='row'><span class='label'>SRP Range</span><span class='val'>$9.99\u2013$12.99</span></div><div class='row'><span class='label'>Instacart Banners</span><span class='val'>2 major chains</span></div><div class='row'><span class='label'>Faire Listed</span><span class='val'>\u2713 Yes</span></div></div><div class='card'><h3>Retail Footprint</h3><div class='row'><span class='label'>Erewhon</span><span class='val'>\u2713 Confirmed</span></div><div class='row'><span class='label'>Sprouts</span><span class='val'>\u2713 Confirmed</span></div><div class='row'><span class='label'>Target</span><span class='val'>\u2014 Not yet</span></div><div class='row'><span class='label'>Costco</span><span class='val'>\u2014 Not yet</span></div><div class='row'><span class='label'>Est. Door Count</span><span class='val'>280+ nationally</span></div><div class='row'><span class='label'>Trade Press</span><span class='val'>6 major features</span></div></div></div><div class='grid3'><div class='card'><h3>Brand Story</h3><p style='font-size:10px;color:#333;margin:0'>Cofounded by Becca Millstein. Leaders in the premium tinned fish renaissance. Mission-driven sustainable seafood with stunning, gift-worthy packaging.</p></div><div class='card'><h3>Certifications</h3><span class='pill'>MSC Certified</span><span class='pill'>Sustainable Seafood</span><span class='pill'>Women-Founded</span></div><div class='card'><h3>Score Breakdown</h3><div class='row'><span class='label'>Velocity Proof</span><span class='val'>18/25</span></div><div class='row'><span class='label'>Distribution</span><span class='val'>15/20</span></div><div class='row'><span class='label'>Margin Viability</span><span class='val'>16/20</span></div><div class='row'><span class='label'>Brand Story</span><span class='val'>18/20</span></div><div class='row'><span class='label'>Promo Indep.</span><span class='val'>9/15</span></div></div></div><div class='brief'><strong>Broker Brief:</strong> Fishwife has built one of the most culturally resonant brands in the specialty food space. With 92K+ Instagram followers, $3.5M raised, and a clear sustainability story, this is a brand that Erewhon buyers actively want to carry. Key opportunity: regional door expansion and deeper penetration in existing chains. The tinned fish premium category is underserved and growing.</div><div class='cta'><div class='cta-left'><h3>Ready to expand Fishwife's regional footprint?</h3><p>Pitch prepared by Sedge \u00b7 Tailored for Erewhon Regional Category Manager</p></div><div class='cta-right'>Generated 2026-04-22<br>sedge.ai</div></div></body></html>"
+      }
+    },
+    "admin_wfm": {
+      "status": "done",
+      "message": "WFM form: partial \u00b7 4 gap(s)",
+      "data": {
+        "output_status": "partial",
+        "filled_fields": {
+          "brand": "Fishwife",
+          "category": "condiment_sauce",
+          "manufacturer_company": "Fishwife",
+          "description": "Premium sustainably sourced tinned seafood. MSC-certified. Bon App\u00e9tit, NYT, Eater press coverage.",
+          "usda_organic": "N",
+          "non_gmo_verified": "N",
+          "family": "Classic Collection",
+          "is_line_extension": "Y",
+          "gm_pct": 48.0
+        },
+        "field_confidence": {
+          "brand": "high",
+          "category": "high",
+          "manufacturer_company": "high",
+          "description": "high",
+          "family": "medium",
+          "is_line_extension": "medium",
+          "gm_pct": "low"
+        },
+        "gaps": [
+          {
+            "field_id": "vendor_contact_name",
+            "label": "Vendor Contact Name",
+            "section": "Contact",
+            "required": true,
+            "reason": "required \u2014 broker must provide",
+            "suggested_action": "Enter the contact name."
+          },
+          {
+            "field_id": "vendor_contact_email",
+            "label": "Vendor Contact Email",
+            "section": "Contact",
+            "required": true,
+            "reason": "required \u2014 broker must provide",
+            "suggested_action": "Enter the email address."
+          },
+          {
+            "field_id": "srp",
+            "label": "Suggested Retail Price",
+            "section": "Item Details",
+            "required": true,
+            "reason": "required \u2014 broker must provide",
+            "suggested_action": "Enter the dollar amount (e.g. 12.99)."
+          },
+          {
+            "field_id": "upc",
+            "label": "UPC Code",
+            "section": "Item Details",
+            "required": true,
+            "reason": "required \u2014 broker must provide",
+            "suggested_action": "Enter the 12-digit UPC."
+          }
+        ],
+        "output_xlsx_path": ""
+      }
+    }
+  }
+}

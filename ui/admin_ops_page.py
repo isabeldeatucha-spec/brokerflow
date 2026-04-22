@@ -635,6 +635,12 @@ def _run_graph(brand_name: str, retailer: str) -> dict:
 def render_admin_ops_page() -> None:
     st.markdown(_CSS, unsafe_allow_html=True)
 
+    st.info(
+        "💡 **Tip:** Use the Dashboard's full pipeline to run Brand Scout, "
+        "all three Retailer Pitches, and this WFM form automatically in one click.",
+        icon=None,
+    )
+
     # ── Session state ─────────────────────────────────────────────────────────
     if "ao_phase" not in st.session_state:
         st.session_state.ao_phase = "idle"

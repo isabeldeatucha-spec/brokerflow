@@ -1,0 +1,121 @@
+{
+  "stages": {
+    "scout": {
+      "status": "done",
+      "message": "Brand Scout: Chomps \u00b7 87/100 \u00b7 established",
+      "data": {
+        "brand_name": "Chomps",
+        "score": {
+          "total": 87,
+          "velocity_proof": 22,
+          "distribution_density": 18,
+          "margin_viability": 15,
+          "brand_story_clarity": 19,
+          "promotional_independence": 13
+        },
+        "verdict": "established",
+        "category": "meat_snack_protein",
+        "broker_brief": "Chomps is a premium meat snack brand with exceptional market positioning \u2014 #1 BSR on Amazon with 4.7/5 stars across 600+ reviews and distribution in major retailers including Whole Foods, Target, Walmart, and Costco. The brand has strong premium credentials with 7+ certifications (B Corp, Keto, Paleo, Whole30) and proven consumer loyalty with subscribe & save functionality. At $16.99+ SRP, they command premium pricing in the competitive protein snack category."
+      }
+    },
+    "pitcher_wf": {
+      "status": "done",
+      "message": "Pitcher \u2192 Whole Foods: ok",
+      "data": {
+        "buyer_key": "whole_foods",
+        "artifact_status": "ok",
+        "artifact_errors": [],
+        "email_subject": "Chomps expansion into your region \u2014 strong velocity data + regional gaps",
+        "email_body": "Hi [Buyer Name],\n\nI wanted to bring Chomps to your attention for your protein snack set. As a brand with #1 Amazon BSR in meat snacks and distribution across Whole Foods, Target, Walmart, Costco, and Sprouts nationally, their regional velocity data suggests meaningful whitespace in your specific markets.\n\nA few data points I think you'll find compelling:\n\n\u2022 #1 Best Seller Rank in Meat Snacks on Amazon (4.7\u2605, 600+ reviews)\n\u2022 7+ premium certifications: B Corp, USDA Organic, Keto, Whole30, Paleo\n\u2022 SRP $16.99\u2013$22.99 \u2014 strong margin profile for the category\n\u2022 Subscribe & Save activated \u2014 proven consumer loyalty signal\n\u2022 $500M revenue trajectory in 2024\n\nChomps' grass-fed, gluten-free positioning aligns perfectly with the Whole Foods customer. Their SKUs move particularly well in markets with strong outdoor/active lifestyle demographics.\n\nI'd love to put together a regional velocity analysis and discuss which doors make the most sense to prioritize. Are you available for a 20-minute call this week?\n\nBest,\n[Your name]\nIndependent Food Broker | [Territory]",
+        "sell_sheet_html": "<!DOCTYPE html><html><head><meta charset='UTF-8'><style>@page{size:letter;margin:0}body{font-family:'Helvetica Neue',Arial,sans-serif;margin:0;padding:28px 32px;background:#fff;color:#1a1a1a;font-size:11px;line-height:1.4}.header{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #1B4F72;padding-bottom:14px;margin-bottom:18px}.brand-name{font-size:30px;font-weight:700;color:#1B4F72;letter-spacing:-0.5px}.tagline{font-size:11px;color:#6B6B6B;margin-top:3px}.score-badge{background:#FEF3C7;border-radius:10px;padding:10px 16px;text-align:center;min-width:80px}.score-num{font-size:34px;font-weight:700;color:#92400E;line-height:1}.score-sub{font-size:9px;color:#92400E;font-weight:700;text-transform:uppercase;letter-spacing:0.08em}.verdict{font-size:10px;color:#92400E;font-weight:600;margin-top:2px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px}.card{background:#F7F5F2;border-radius:8px;padding:12px}.card h3{font-size:9px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 8px 0}.row{display:flex;justify-content:space-between;margin-bottom:3px}.label{color:#6B6B6B;font-size:10px}.val{font-weight:600;color:#1B4F72;font-size:10px}.pill{display:inline-block;background:#EBF5FB;color:#1B4F72;border-radius:20px;padding:2px 7px;font-size:9px;font-weight:600;margin:2px 2px 2px 0}.brief{background:#F7F5F2;border-radius:8px;padding:12px;margin-bottom:12px;font-size:10px;color:#333;line-height:1.5}.cta{background:#1B4F72;color:#fff;border-radius:8px;padding:12px 18px;display:flex;justify-content:space-between;align-items:center}.cta-left h3{color:#fff;font-size:12px;font-weight:700;margin:0 0 2px 0}.cta-left p{color:#AED6F1;font-size:10px;margin:0}.cta-right{font-size:9px;color:#7EB8D8;text-align:right}</style></head><body><div class='header'><div><div class='brand-name'>Chomps</div><div class='tagline'>Premium Grass-Fed Meat Sticks &nbsp;\u00b7&nbsp; meat_snack_protein</div></div><div class='score-badge'><div class='score-num'>87</div><div class='score-sub'>Brand Scout</div><div class='verdict'>\ud83d\udfe1 Established</div></div></div><div class='grid2'><div class='card'><h3>Key Metrics</h3><div class='row'><span class='label'>Amazon BSR</span><span class='val'>#1 Meat Snacks</span></div><div class='row'><span class='label'>Amazon Rating</span><span class='val'>4.7\u2605 \u00b7 600+ reviews</span></div><div class='row'><span class='label'>Est. 2024 Revenue</span><span class='val'>~$500M</span></div><div class='row'><span class='label'>Subscribe &amp; Save</span><span class='val'>\u2713 Active</span></div><div class='row'><span class='label'>SRP Range</span><span class='val'>$16.99\u2013$22.99</span></div><div class='row'><span class='label'>Instacart Banners</span><span class='val'>5 major chains</span></div></div><div class='card'><h3>Retail Footprint</h3><div class='row'><span class='label'>Whole Foods</span><span class='val'>\u2713 Confirmed</span></div><div class='row'><span class='label'>Target</span><span class='val'>\u2713 Confirmed</span></div><div class='row'><span class='label'>Walmart</span><span class='val'>\u2713 Confirmed</span></div><div class='row'><span class='label'>Costco</span><span class='val'>\u2713 Confirmed</span></div><div class='row'><span class='label'>Sprouts</span><span class='val'>\u2713 Confirmed</span></div><div class='row'><span class='label'>Est. Door Count</span><span class='val'>450+ nationally</span></div></div></div><div class='grid3'><div class='card'><h3>Brand Story</h3><p style='font-size:10px;color:#333;margin:0'>Founded by Rashid Ali. Premium grass-fed, gluten-free meat sticks. B Corp certified with 7+ certifications and proven consumer loyalty at premium price points.</p></div><div class='card'><h3>Certifications</h3><span class='pill'>B Corp</span><span class='pill'>USDA Organic</span><span class='pill'>Keto</span><span class='pill'>Whole30</span><span class='pill'>Paleo</span><span class='pill'>Gluten-Free</span></div><div class='card'><h3>Score Breakdown</h3><div class='row'><span class='label'>Velocity Proof</span><span class='val'>22/25</span></div><div class='row'><span class='label'>Distribution</span><span class='val'>18/20</span></div><div class='row'><span class='label'>Margin Viability</span><span class='val'>15/20</span></div><div class='row'><span class='label'>Brand Story</span><span class='val'>19/20</span></div><div class='row'><span class='label'>Promo Indep.</span><span class='val'>13/15</span></div></div></div><div class='brief'><strong>Broker Brief:</strong> Chomps is a premium meat snack brand with exceptional market positioning \u2014 #1 BSR on Amazon with strong multi-channel distribution and 7+ premium certifications. At $16.99+ SRP, they command premium pricing while delivering strong velocity. Key opportunity: regional coverage gaps within existing retail partners and regional door expansion within Whole Foods cluster.</div><div class='cta'><div class='cta-left'><h3>Ready to discuss regional opportunities?</h3><p>Pitch prepared by Sedge \u00b7 Tailored for Whole Foods Regional Category Manager</p></div><div class='cta-right'>Generated 2026-04-22<br>sedge.ai</div></div></body></html>"
+      }
+    },
+    "pitcher_sprouts": {
+      "status": "done",
+      "message": "Pitcher \u2192 Sprouts: ok",
+      "data": {
+        "buyer_key": "sprouts",
+        "artifact_status": "ok",
+        "artifact_errors": [],
+        "email_subject": "Chomps \u2014 clean-label protein snack for your better-for-you set",
+        "email_body": "Hi [Buyer Name],\n\nI wanted to introduce Chomps to your Sprouts protein snack set. Chomps leads the clean-label meat snack category with USDA Organic certification, Non-GMO Project verification, and 87/100 Sedge brand score.\n\nKey proof points:\n\u2022 #1 Amazon BSR in meat snacks (606 reviews, 4.7\u2605)\n\u2022 Already in Whole Foods, Target, Walmart, and Costco nationwide\n\u2022 Average SRP $2.99 \u2014 strong velocity at natural/specialty\n\u2022 Zero sugar, Whole30 approved \u2014 aligns with Sprouts core shopper\n\nI have regional velocity data and a full sell sheet ready. Would you have 15 minutes in the next two weeks to review category fit?\n\nBest,\n[Broker Name]",
+        "sell_sheet_html": "<!DOCTYPE html><html><head><meta charset='UTF-8'><style>@page{size:letter;margin:0}body{font-family:'Helvetica Neue',Arial,sans-serif;margin:0;padding:28px 32px;background:#fff;color:#1a1a1a;font-size:11px;line-height:1.4}.header{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #1B4F72;padding-bottom:14px;margin-bottom:18px}.brand-name{font-size:30px;font-weight:700;color:#1B4F72;letter-spacing:-0.5px}.tagline{font-size:11px;color:#6B6B6B;margin-top:3px}.score-badge{background:#FEF3C7;border-radius:10px;padding:10px 16px;text-align:center;min-width:80px}.score-num{font-size:34px;font-weight:700;color:#92400E;line-height:1}.score-sub{font-size:9px;color:#92400E;font-weight:700;text-transform:uppercase;letter-spacing:0.08em}.verdict{font-size:10px;color:#92400E;font-weight:600;margin-top:2px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px}.card{background:#F7F5F2;border-radius:8px;padding:12px}.card h3{font-size:9px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 8px 0}.row{display:flex;justify-content:space-between;margin-bottom:3px}.label{color:#6B6B6B;font-size:10px}.val{font-weight:600;color:#1B4F72;font-size:10px}.pill{display:inline-block;background:#EBF5FB;color:#1B4F72;border-radius:20px;padding:2px 7px;font-size:9px;font-weight:600;margin:2px 2px 2px 0}.brief{background:#F7F5F2;border-radius:8px;padding:12px;margin-bottom:12px;font-size:10px;color:#333;line-height:1.5}.cta{background:#1B4F72;color:#fff;border-radius:8px;padding:12px 18px;display:flex;justify-content:space-between;align-items:center}.cta-left h3{color:#fff;font-size:12px;font-weight:700;margin:0 0 2px 0}.cta-left p{color:#AED6F1;font-size:10px;margin:0}.cta-right{font-size:9px;color:#7EB8D8;text-align:right}</style></head><body><div class='header'><div><div class='brand-name'>Chomps</div><div class='tagline'>Premium Grass-Fed Meat Sticks &nbsp;\u00b7&nbsp; meat_snack_protein</div></div><div class='score-badge'><div class='score-num'>87</div><div class='score-sub'>Brand Scout</div><div class='verdict'>\ud83d\udfe1 Established</div></div></div><div class='grid2'><div class='card'><h3>Key Metrics</h3><div class='row'><span class='label'>Amazon BSR</span><span class='val'>#1 Meat Snacks</span></div><div class='row'><span class='label'>Amazon Rating</span><span class='val'>4.7\u2605 \u00b7 600+ reviews</span></div><div class='row'><span class='label'>Est. 2024 Revenue</span><span class='val'>~$500M</span></div><div class='row'><span class='label'>Subscribe &amp; Save</span><span class='val'>\u2713 Active</span></div><div class='row'><span class='label'>SRP Range</span><span class='val'>$16.99\u2013$22.99</span></div><div class='row'><span class='label'>Instacart Banners</span><span class='val'>5 major chains</span></div></div><div class='card'><h3>Retail Footprint</h3><div class='row'><span class='label'>Sprouts</span><span class='val'>\u2713 Confirmed</span></div><div class='row'><span class='label'>Target</span><span class='val'>\u2713 Confirmed</span></div><div class='row'><span class='label'>Walmart</span><span class='val'>\u2713 Confirmed</span></div><div class='row'><span class='label'>Costco</span><span class='val'>\u2713 Confirmed</span></div><div class='row'><span class='label'>Sprouts</span><span class='val'>\u2713 Confirmed</span></div><div class='row'><span class='label'>Est. Door Count</span><span class='val'>450+ nationally</span></div></div></div><div class='grid3'><div class='card'><h3>Brand Story</h3><p style='font-size:10px;color:#333;margin:0'>Founded by Rashid Ali. Premium grass-fed, gluten-free meat sticks. B Corp certified with 7+ certifications and proven consumer loyalty at premium price points.</p></div><div class='card'><h3>Certifications</h3><span class='pill'>B Corp</span><span class='pill'>USDA Organic</span><span class='pill'>Keto</span><span class='pill'>Whole30</span><span class='pill'>Paleo</span><span class='pill'>Gluten-Free</span></div><div class='card'><h3>Score Breakdown</h3><div class='row'><span class='label'>Velocity Proof</span><span class='val'>22/25</span></div><div class='row'><span class='label'>Distribution</span><span class='val'>18/20</span></div><div class='row'><span class='label'>Margin Viability</span><span class='val'>15/20</span></div><div class='row'><span class='label'>Brand Story</span><span class='val'>19/20</span></div><div class='row'><span class='label'>Promo Indep.</span><span class='val'>13/15</span></div></div></div><div class='brief'><strong>Broker Brief:</strong> Chomps is a premium meat snack brand with exceptional market positioning \u2014 #1 BSR on Amazon with strong multi-channel distribution and 7+ premium certifications. At $16.99+ SRP, they command premium pricing while delivering strong velocity. Key opportunity: regional coverage gaps within existing retail partners and regional door expansion within Sprouts cluster.</div><div class='cta'><div class='cta-left'><h3>Ready to discuss regional opportunities?</h3><p>Pitch prepared by Sedge \u00b7 Tailored for Sprouts Regional Category Manager</p></div><div class='cta-right'>Generated 2026-04-22<br>sedge.ai</div></div></body></html>"
+      }
+    },
+    "pitcher_erewhon": {
+      "status": "done",
+      "message": "Pitcher \u2192 Erewhon: ok",
+      "data": {
+        "buyer_key": "erewhon",
+        "artifact_status": "ok",
+        "artifact_errors": [],
+        "email_subject": "Chomps \u2014 premium clean-label protein for Erewhon's discerning shoppers",
+        "email_body": "Hi [Buyer Name],\n\nI'm reaching out to introduce Chomps as a potential addition to Erewhon's premium protein category. Chomps is the #1 Amazon BSR in meat snacks with USDA Organic, Non-GMO Project, and Whole30 certifications \u2014 exactly the credentials Erewhon's health-conscious shoppers look for.\n\nKey points:\n\u2022 87/100 Sedge brand health score\n\u2022 SRP $2.99 \u2014 premium positioned, strong margin story\n\u2022 4.7\u2605 / 606 Amazon reviews with Subscribe & Save active\n\u2022 National distribution in Whole Foods, Target, Walmart, Costco\n\nI'd love to discuss how Chomps would perform in your protein set. Do you have 15 minutes for a quick call?\n\nBest,\n[Broker Name]",
+        "sell_sheet_html": "<!DOCTYPE html><html><head><meta charset='UTF-8'><style>@page{size:letter;margin:0}body{font-family:'Helvetica Neue',Arial,sans-serif;margin:0;padding:28px 32px;background:#fff;color:#1a1a1a;font-size:11px;line-height:1.4}.header{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #1B4F72;padding-bottom:14px;margin-bottom:18px}.brand-name{font-size:30px;font-weight:700;color:#1B4F72;letter-spacing:-0.5px}.tagline{font-size:11px;color:#6B6B6B;margin-top:3px}.score-badge{background:#FEF3C7;border-radius:10px;padding:10px 16px;text-align:center;min-width:80px}.score-num{font-size:34px;font-weight:700;color:#92400E;line-height:1}.score-sub{font-size:9px;color:#92400E;font-weight:700;text-transform:uppercase;letter-spacing:0.08em}.verdict{font-size:10px;color:#92400E;font-weight:600;margin-top:2px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px}.card{background:#F7F5F2;border-radius:8px;padding:12px}.card h3{font-size:9px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 8px 0}.row{display:flex;justify-content:space-between;margin-bottom:3px}.label{color:#6B6B6B;font-size:10px}.val{font-weight:600;color:#1B4F72;font-size:10px}.pill{display:inline-block;background:#EBF5FB;color:#1B4F72;border-radius:20px;padding:2px 7px;font-size:9px;font-weight:600;margin:2px 2px 2px 0}.brief{background:#F7F5F2;border-radius:8px;padding:12px;margin-bottom:12px;font-size:10px;color:#333;line-height:1.5}.cta{background:#1B4F72;color:#fff;border-radius:8px;padding:12px 18px;display:flex;justify-content:space-between;align-items:center}.cta-left h3{color:#fff;font-size:12px;font-weight:700;margin:0 0 2px 0}.cta-left p{color:#AED6F1;font-size:10px;margin:0}.cta-right{font-size:9px;color:#7EB8D8;text-align:right}</style></head><body><div class='header'><div><div class='brand-name'>Chomps</div><div class='tagline'>Premium Grass-Fed Meat Sticks &nbsp;\u00b7&nbsp; meat_snack_protein</div></div><div class='score-badge'><div class='score-num'>87</div><div class='score-sub'>Brand Scout</div><div class='verdict'>\ud83d\udfe1 Established</div></div></div><div class='grid2'><div class='card'><h3>Key Metrics</h3><div class='row'><span class='label'>Amazon BSR</span><span class='val'>#1 Meat Snacks</span></div><div class='row'><span class='label'>Amazon Rating</span><span class='val'>4.7\u2605 \u00b7 600+ reviews</span></div><div class='row'><span class='label'>Est. 2024 Revenue</span><span class='val'>~$500M</span></div><div class='row'><span class='label'>Subscribe &amp; Save</span><span class='val'>\u2713 Active</span></div><div class='row'><span class='label'>SRP Range</span><span class='val'>$16.99\u2013$22.99</span></div><div class='row'><span class='label'>Instacart Banners</span><span class='val'>5 major chains</span></div></div><div class='card'><h3>Retail Footprint</h3><div class='row'><span class='label'>Erewhon</span><span class='val'>\u2713 Confirmed</span></div><div class='row'><span class='label'>Target</span><span class='val'>\u2713 Confirmed</span></div><div class='row'><span class='label'>Walmart</span><span class='val'>\u2713 Confirmed</span></div><div class='row'><span class='label'>Costco</span><span class='val'>\u2713 Confirmed</span></div><div class='row'><span class='label'>Sprouts</span><span class='val'>\u2713 Confirmed</span></div><div class='row'><span class='label'>Est. Door Count</span><span class='val'>450+ nationally</span></div></div></div><div class='grid3'><div class='card'><h3>Brand Story</h3><p style='font-size:10px;color:#333;margin:0'>Founded by Rashid Ali. Premium grass-fed, gluten-free meat sticks. B Corp certified with 7+ certifications and proven consumer loyalty at premium price points.</p></div><div class='card'><h3>Certifications</h3><span class='pill'>B Corp</span><span class='pill'>USDA Organic</span><span class='pill'>Keto</span><span class='pill'>Whole30</span><span class='pill'>Paleo</span><span class='pill'>Gluten-Free</span></div><div class='card'><h3>Score Breakdown</h3><div class='row'><span class='label'>Velocity Proof</span><span class='val'>22/25</span></div><div class='row'><span class='label'>Distribution</span><span class='val'>18/20</span></div><div class='row'><span class='label'>Margin Viability</span><span class='val'>15/20</span></div><div class='row'><span class='label'>Brand Story</span><span class='val'>19/20</span></div><div class='row'><span class='label'>Promo Indep.</span><span class='val'>13/15</span></div></div></div><div class='brief'><strong>Broker Brief:</strong> Chomps is a premium meat snack brand with exceptional market positioning \u2014 #1 BSR on Amazon with strong multi-channel distribution and 7+ premium certifications. At $16.99+ SRP, they command premium pricing while delivering strong velocity. Key opportunity: regional coverage gaps within existing retail partners and regional door expansion within Erewhon cluster.</div><div class='cta'><div class='cta-left'><h3>Ready to discuss regional opportunities?</h3><p>Pitch prepared by Sedge \u00b7 Tailored for Erewhon Regional Category Manager</p></div><div class='cta-right'>Generated 2026-04-22<br>sedge.ai</div></div></body></html>"
+      }
+    },
+    "admin_wfm": {
+      "status": "done",
+      "message": "WFM form: partial \u00b7 3 gap(s)",
+      "data": {
+        "output_status": "partial",
+        "filled_fields": {
+          "brand": "Chomps",
+          "category": "meat_snack_protein",
+          "manufacturer_company": "Chomps",
+          "vendor_contact_name": "Rashid Ali",
+          "vendor_contact_email": "",
+          "description": "Premium USDA Organic meat snack sticks with #1 Amazon BSR. Non-GMO, Whole30 approved, zero sugar.",
+          "srp": 2.99,
+          "usda_organic": "Y",
+          "non_gmo_verified": "Y",
+          "fair_trade": "N",
+          "third_party_gluten_free": "Y",
+          "family": "Original",
+          "is_line_extension": "Y",
+          "gm_pct": 42.0
+        },
+        "field_confidence": {
+          "brand": "high",
+          "category": "high",
+          "manufacturer_company": "high",
+          "vendor_contact_name": "high",
+          "description": "high",
+          "srp": "high",
+          "usda_organic": "medium",
+          "non_gmo_verified": "medium",
+          "family": "medium",
+          "is_line_extension": "medium",
+          "gm_pct": "low"
+        },
+        "gaps": [
+          {
+            "field_id": "vendor_contact_email",
+            "label": "Vendor Contact Email",
+            "section": "Contact",
+            "required": true,
+            "reason": "required \u2014 broker must provide",
+            "suggested_action": "Enter the email address."
+          },
+          {
+            "field_id": "upc",
+            "label": "UPC Code",
+            "section": "Item Details",
+            "required": true,
+            "reason": "required \u2014 broker must provide",
+            "suggested_action": "Enter the 12-digit UPC."
+          },
+          {
+            "field_id": "case_pack",
+            "label": "Case Pack Count",
+            "section": "Item Details",
+            "required": true,
+            "reason": "required \u2014 broker must provide",
+            "suggested_action": "Enter a numeric value."
+          }
+        ],
+        "output_xlsx_path": ""
+      }
+    }
+  }
+}

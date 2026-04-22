@@ -220,47 +220,96 @@ with st.sidebar:
 
 # ── Dashboard ─────────────────────────────────────────────────────────────────
 
-def _fetch_stats() -> dict:
-    """Pull live counts from Supabase. Each table is queried independently so a
-    missing table (e.g. new_item_forms before first run) doesn't kill the rest."""
-    defaults = {
-        "brands_evaluated": 0,
-        "pitches_drafted": 0,
-        "forms_filled": 0,
-        "recent_activity": [],
-    }
-    evaluations: list[dict] = []
-    pitches: list[dict] = []
-    forms: list[dict] = []
+_PIPELINE_DEMO_BRANDS = {"chomps", "fishwife", "graza"}
+_PIPELINE_DEMO_DIR = Path(__file__).parent / "demo_cache" / "orchestrator"
 
+_STAGE_ORDER  = ["scout", "pitcher_wf", "pitcher_sprouts", "pitcher_erewhon", "admin_wfm"]
+_STAGE_LABELS = {
+    "scout":           "Brand Scout",
+    "pitcher_wf":      "Retailer Pitcher → Whole Foods",
+    "pitcher_sprouts": "Retailer Pitcher → Sprouts",
+    "pitcher_erewhon": "Retailer Pitcher → Erewhon",
+    "admin_wfm":       "Admin & Ops → WFM New Item Form",
+}
+_RETAILER_LABEL = {"whole_foods": "Whole Foods", "sprouts": "Sprouts", "erewhon": "Erewhon"}
+
+
+def _stage_row_html(stage: str, event) -> str:
+    """Return an HTML string for one pipeline progress row."""
+    label = _STAGE_LABELS.get(stage, stage)
+    if event is None:
+        icon, color, msg = "⏸", "#9CA3AF", "waiting…"
+    elif event["status"] == "running":
+        icon, color, msg = "⏳", "#1B4F72", event.get("message", "running…")
+    elif event["status"] == "done":
+        icon, color, msg = "✅", "#065F46", event.get("message", "done")
+    else:
+        icon, color, msg = "❌", "#991B1B", event.get("error") or event.get("message", "error")
+    return (
+        f'<div style="display:flex;align-items:center;gap:12px;padding:10px 0;'
+        f'border-bottom:1px solid #F3F4F6;">'
+        f'<span style="font-size:18px;width:24px;text-align:center;">{icon}</span>'
+        f'<span style="font-size:13px;font-weight:600;color:#111111;width:260px;flex-shrink:0;">{label}</span>'
+        f'<span style="font-size:12px;color:{color};">{msg}</span>'
+        f'</div>'
+    )
+
+
+def _fetch_stats() -> dict:
+    """Pull live counts from Supabase."""
+    defaults: dict = {
+        "brands_evaluated": 0,
+        "pitches_drafted":  0,
+        "forms_filled":     0,
+        "bundles_sent":     0,
+        "recent_activity":  [],
+    }
     try:
         client = _get_client()
     except Exception as exc:
         print(f"[Dashboard] Supabase client failed: {exc}")
         return defaults
 
+    evaluations: list[dict] = []
+    pitches:     list[dict] = []
+    forms:       list[dict] = []
+    bundles:     list[dict] = []
+
     try:
-        ev_res = client.table("brand_evaluations").select("brand_name, score, verdict, evaluated_at").order("evaluated_at", desc=True).limit(50).execute()
-        evaluations = ev_res.data or []
+        r = client.table("brand_evaluations").select("brand_name, score, verdict, evaluated_at").order("evaluated_at", desc=True).limit(50).execute()
+        evaluations = r.data or []
         defaults["brands_evaluated"] = len(evaluations)
     except Exception as exc:
-        print(f"[Dashboard] brand_evaluations query failed: {exc}")
+        print(f"[Dashboard] brand_evaluations: {exc}")
 
     try:
-        pitch_res = client.table("retailer_pitches").select("brand_name, buyer, created_at").order("created_at", desc=True).limit(50).execute()
-        pitches = pitch_res.data or []
+        r = client.table("retailer_pitches").select("brand_name, buyer, created_at").order("created_at", desc=True).limit(50).execute()
+        pitches = r.data or []
         defaults["pitches_drafted"] = len(pitches)
     except Exception as exc:
-        print(f"[Dashboard] retailer_pitches query failed: {exc}")
+        print(f"[Dashboard] retailer_pitches: {exc}")
 
     try:
-        form_res = client.table("new_item_forms").select("brand_name, retailer, generated_at").order("generated_at", desc=True).limit(50).execute()
-        forms = form_res.data or []
+        r = client.table("new_item_forms").select("brand_name, retailer, generated_at").order("generated_at", desc=True).limit(50).execute()
+        forms = r.data or []
         defaults["forms_filled"] = len(forms)
     except Exception as exc:
-        print(f"[Dashboard] new_item_forms query failed: {exc}")
+        print(f"[Dashboard] new_item_forms: {exc}")
+
+    try:
+        r = client.table("sent_bundles").select("brand_name, retailer, bundle_type, sent_at").order("sent_at", desc=True).limit(20).execute()
+        bundles = r.data or []
+        defaults["bundles_sent"] = len(bundles)
+    except Exception:
+        pass  # table may not exist yet — silently skip
 
     activity: list[dict] = []
+    for row in bundles[:5]:
+        activity.append({
+            "label": f"Bundle sent — {row['brand_name']} → {row.get('retailer','—')} ({row.get('bundle_type','—')})",
+            "ts": (row.get("sent_at") or "")[:10],
+            "icon": "📤",
+        })
     for row in evaluations[:5]:
         activity.append({
             "label": f"Brand Scout evaluated {row['brand_name']} — {row['score']}/100",
@@ -284,7 +333,137 @@ def _fetch_stats() -> dict:
     return defaults
 
 
+def _render_approval_screen(results: dict) -> None:
+    """Render the 3-bundle approval screen after pipeline completes."""
+    import json as _json
+
+    st.markdown(
+        '<div style="margin-top:24px;">'
+        '<p style="font-size:15px;font-weight:700;color:#111111;margin-bottom:4px;">Review bundles before sending</p>'
+        '<p style="font-size:12px;color:#9CA3AF;margin-bottom:16px;">Check the bundles you want to mark as sent, then click the button below.</p>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+    BUNDLE_DEFS = [
+        {"stage": "pitcher_wf",      "buyer_key": "whole_foods", "label": "Whole Foods",
+         "color": "#1B4F72", "bg": "#EBF5FB", "has_form": True},
+        {"stage": "pitcher_sprouts", "buyer_key": "sprouts",     "label": "Sprouts",
+         "color": "#065F46", "bg": "#D1FAE5", "has_form": False},
+        {"stage": "pitcher_erewhon", "buyer_key": "erewhon",     "label": "Erewhon",
+         "color": "#92400E", "bg": "#FEF3C7", "has_form": False},
+    ]
+
+    scout_data   = (results.get("scout")    or {}).get("data", {})
+    admin_data   = (results.get("admin_wfm") or {}).get("data", {})
+    brand_name   = scout_data.get("brand_name", "Brand")
+    score        = (scout_data.get("score") or {}).get("total", "—")
+
+    cols = st.columns(3)
+    approval_checks: dict[str, bool] = {}
+
+    for col, bd in zip(cols, BUNDLE_DEFS):
+        stage_evt  = results.get(bd["stage"]) or {}
+        stage_data = stage_evt.get("data", {})
+        status     = stage_evt.get("status", "error")
+        subj       = stage_data.get("email_subject", "—")
+        body       = stage_data.get("email_body", "")
+        html       = stage_data.get("sell_sheet_html", "")
+        ok         = status == "done"
+
+        with col:
+            col.markdown(
+                f'<div style="background:{bd["bg"]};border-radius:12px;padding:16px;'
+                f'margin-bottom:8px;border:1px solid {bd["color"]}22;">'
+                f'<div style="font-size:13px;font-weight:700;color:{bd["color"]};margin-bottom:4px;">{bd["label"]}</div>'
+                f'<div style="font-size:11px;color:#6B6B6B;margin-bottom:8px;">{brand_name} · {score}/100</div>'
+                f'<div style="font-size:11px;color:#4A4A4A;font-style:italic;margin-bottom:8px;">{subj[:60]}{"…" if len(subj)>60 else ""}</div>'
+                f'<div style="font-size:11px;color:{"#065F46" if ok else "#991B1B"};font-weight:600;">'
+                f'{"✅ Ready" if ok else "⚠ Error — check logs"}</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+            checked = col.checkbox(
+                f"Include {bd['label']} bundle",
+                value=ok,
+                disabled=not ok,
+                key=f"approve_{bd['stage']}",
+            )
+            approval_checks[bd["stage"]] = checked and ok
+
+            if ok and body:
+                with col.expander("Preview pitch ▸", expanded=False):
+                    if subj:
+                        st.markdown(f"**Subject:** {subj}")
+                    st.text_area("Email body", value=body, height=200, key=f"preview_body_{bd['stage']}", label_visibility="collapsed")
+                    if html:
+                        st.components.v1.html(html, height=400, scrolling=True)
+
+            if bd["has_form"] and ok:
+                filled = admin_data.get("filled_fields", {})
+                gaps   = admin_data.get("gaps", [])
+                with col.expander("Preview WFM form ▸", expanded=False):
+                    if filled:
+                        st.markdown("**Auto-filled fields:**")
+                        for fid, val in list(filled.items())[:8]:
+                            st.markdown(f"- **{fid}**: {val}")
+                    if gaps:
+                        st.markdown(f"**{len(gaps)} gap(s) to fill manually:**")
+                        for g in gaps[:3]:
+                            st.markdown(f"- _{g['label']}_: {g['suggested_action']}")
+            elif not bd["has_form"]:
+                col.markdown(
+                    '<div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;'
+                    'padding:8px 12px;font-size:11px;color:#92400E;margin-top:8px;">'
+                    '⚙ New item form → <em>coming soon</em></div>',
+                    unsafe_allow_html=True,
+                )
+
+    st.markdown("<div style='margin-top:16px;'></div>", unsafe_allow_html=True)
+    any_checked = any(approval_checks.values())
+
+    send_col, reset_col = st.columns([3, 1])
+    with send_col:
+        send_clicked = st.button(
+            "📤 Send all approved bundles",
+            key="dash_send_bundles",
+            disabled=not any_checked,
+            use_container_width=True,
+            type="primary",
+        )
+    with reset_col:
+        if st.button("↺ Start over", key="dash_reset_pipeline", use_container_width=True):
+            for k in ["pipe_results", "pipe_complete", "pipe_brand", "pipe_sent"]:
+                st.session_state.pop(k, None)
+            st.rerun()
+
+    if send_clicked:
+        from memory import store_sent_bundle
+        for bd in BUNDLE_DEFS:
+            if not approval_checks.get(bd["stage"]):
+                continue
+            stage_data = (results.get(bd["stage"]) or {}).get("data", {})
+            # WF bundle also includes form data
+            form_path = admin_data.get("output_xlsx_path", "") if bd["has_form"] else ""
+            store_sent_bundle(
+                brand_name=brand_name,
+                bundle_type="pitch+form" if bd["has_form"] else "pitch",
+                retailer=bd["label"],
+                email_subject=stage_data.get("email_subject", ""),
+                email_body=stage_data.get("email_body", ""),
+                sell_sheet_html=stage_data.get("sell_sheet_html", ""),
+                form_xlsx_path=form_path,
+                status="sent",
+            )
+        st.session_state["pipe_sent"] = True
+        st.rerun()
+
+
 def render_dashboard() -> None:
+    import json as _json
+    import time as _time
+
     st.markdown(
         """
 <div style="padding: 8px 0 4px 0;">
@@ -305,7 +484,7 @@ def render_dashboard() -> None:
         (c1, "Brands Evaluated", stats["brands_evaluated"], "#1B4F72"),
         (c2, "Pitches Drafted",  stats["pitches_drafted"],  "#065F46"),
         (c3, "WFM Forms Filled", stats["forms_filled"],     "#92400E"),
-        (c4, "Agents Active",    3,                          "#6B21A8"),
+        (c4, "Bundles Sent",     stats["bundles_sent"],     "#6B21A8"),
     ]:
         with col:
             col.markdown(
@@ -319,38 +498,126 @@ def render_dashboard() -> None:
 
     st.markdown("<div style='margin-top:8px;'></div>", unsafe_allow_html=True)
 
-    # ── Demo query bar ────────────────────────────────────────────────────────
+    # ── Pipeline session state ────────────────────────────────────────────────
+    if "pipe_results"  not in st.session_state:
+        st.session_state["pipe_results"]  = {}
+    if "pipe_complete" not in st.session_state:
+        st.session_state["pipe_complete"] = False
+    if "pipe_sent"     not in st.session_state:
+        st.session_state["pipe_sent"]     = False
+    if "pipe_brand"    not in st.session_state:
+        st.session_state["pipe_brand"]    = ""
+
+    # ── Input card ────────────────────────────────────────────────────────────
     st.markdown(
-        '<div class="sedge-card" style="padding:20px 24px;margin-bottom:8px;">'
+        '<div class="sedge-card" style="padding:20px 24px;margin-bottom:12px;">'
         '<p style="font-size:13px;font-weight:700;color:#111111;margin:0 0 10px 0;">'
-        '🚀 Try it live</p>',
+        '🚀 Full pipeline — Brand Scout + Retailer Pitches + WFM Form</p>',
         unsafe_allow_html=True,
     )
-    _qcol, _bcol = st.columns([6, 1])
-    with _qcol:
-        _demo_brand = st.text_input(
-            "",
-            placeholder="Enter any CPG brand name…  (try: Fishwife, Graza, Chomps)",
-            key="dash_query_input",
+    _c1, _c2, _c3 = st.columns([3, 3, 1])
+    with _c1:
+        pipe_brand = st.text_input(
+            "Brand name",
+            placeholder="Chomps, Fishwife, Graza…",
+            key="pipe_brand_input",
             label_visibility="collapsed",
         )
-    with _bcol:
-        _demo_go = st.button("▶", key="dash_query_go", use_container_width=True)
+    with _c2:
+        pipe_url = st.text_input(
+            "Website URL (optional)",
+            placeholder="https://chomps.com",
+            key="pipe_url_input",
+            label_visibility="collapsed",
+        )
+    with _c3:
+        pipe_go = st.button("▶ Run", key="pipe_go", use_container_width=True, type="primary")
     st.markdown("</div>", unsafe_allow_html=True)
 
-    if _demo_go:
-        _brand = _demo_brand.strip()
-        if _brand:
-            st.session_state["handoff_brand"] = _brand.title()
-            st.session_state["_brand_name"] = _brand
-            st.session_state["_website_url"] = ""
-            st.session_state["_auto_run"] = True
-            st.session_state["forced_page"] = "🔍  Brand Scout"
-            # Reset brand scout phase so it doesn't show stale results
-            st.session_state["phase"] = "idle"
-            st.rerun()
-        else:
+    # ── Progress rows ─────────────────────────────────────────────────────────
+    pipeline_card = st.empty()
+    stage_slots   = {s: st.empty() for s in _STAGE_ORDER}
+
+    def _refresh_rows(results: dict) -> None:
+        for s in _STAGE_ORDER:
+            with stage_slots[s].container():
+                st.markdown(
+                    _stage_row_html(s, results.get(s)),
+                    unsafe_allow_html=True,
+                )
+
+    _refresh_rows(st.session_state["pipe_results"])
+
+    # ── Run pipeline (button click) ───────────────────────────────────────────
+    if pipe_go:
+        brand = pipe_brand.strip()
+        if not brand:
             st.warning("Enter a brand name first.")
+        else:
+            st.session_state["pipe_results"]  = {}
+            st.session_state["pipe_complete"] = False
+            st.session_state["pipe_sent"]     = False
+            st.session_state["pipe_brand"]    = brand
+
+            _refresh_rows({})
+
+            demo_mode = st.session_state.get("demo_mode", False)
+            demo_file = _PIPELINE_DEMO_DIR / f"{brand.lower()}_pipeline.json"
+
+            if demo_mode and brand.lower() in _PIPELINE_DEMO_BRANDS and demo_file.exists():
+                # ── Demo mode: serve from cache with fake delays ──────────────
+                cached = _json.loads(demo_file.read_text())
+                delay_per_stage = [2.5, 2.0, 1.5, 1.5, 2.0]
+                for stage, delay in zip(_STAGE_ORDER, delay_per_stage):
+                    # Show running
+                    running_evt = {"status": "running", "message": f"{_STAGE_LABELS[stage]}…"}
+                    st.session_state["pipe_results"][stage] = running_evt
+                    with stage_slots[stage].container():
+                        st.markdown(_stage_row_html(stage, running_evt), unsafe_allow_html=True)
+                    _time.sleep(delay)
+                    # Show done
+                    stage_data = cached.get("stages", {}).get(stage, {})
+                    done_evt   = {"status": stage_data.get("status", "done"),
+                                  "message": stage_data.get("message", "done"),
+                                  "data": stage_data.get("data", {})}
+                    st.session_state["pipe_results"][stage] = done_evt
+                    with stage_slots[stage].container():
+                        st.markdown(_stage_row_html(stage, done_evt), unsafe_allow_html=True)
+            else:
+                # ── Live mode: iterate generator ─────────────────────────────
+                from agents.orchestrator.pipeline import run_full_pipeline
+                for event in run_full_pipeline(brand, pipe_url or ""):
+                    if event.stage == "complete":
+                        break
+                    evt_dict = {
+                        "status":  event.status,
+                        "message": event.message,
+                        "data":    event.data,
+                        "error":   event.error,
+                    }
+                    st.session_state["pipe_results"][event.stage] = evt_dict
+                    if event.stage in stage_slots:
+                        with stage_slots[event.stage].container():
+                            st.markdown(_stage_row_html(event.stage, evt_dict), unsafe_allow_html=True)
+
+            st.session_state["pipe_complete"] = True
+            st.rerun()
+
+    # ── Sent confirmation ─────────────────────────────────────────────────────
+    if st.session_state.get("pipe_sent"):
+        brand_label = st.session_state.get("pipe_brand", "brand")
+        st.success(f"✅ Bundles for **{brand_label}** saved to your activity feed!")
+        if st.button("↺ Run another", key="dash_run_another", use_container_width=False):
+            for k in ["pipe_results", "pipe_complete", "pipe_brand", "pipe_sent"]:
+                st.session_state.pop(k, None)
+            st.rerun()
+        st.markdown("<div style='margin-top:16px;'></div>", unsafe_allow_html=True)
+
+    # ── Approval screen ───────────────────────────────────────────────────────
+    elif st.session_state.get("pipe_complete") and not st.session_state.get("pipe_sent"):
+        _render_approval_screen(st.session_state["pipe_results"])
+
+    st.markdown("<div style='margin-top:32px;'></div>", unsafe_allow_html=True)
 
     # ── Agent cards ───────────────────────────────────────────────────────────
     AGENTS = [
@@ -436,7 +703,7 @@ def render_dashboard() -> None:
     else:
         st.markdown(
             '<div class="sedge-card" style="text-align:center;padding:32px;">'
-            '<p style="color:#9CA3AF;margin:0;">No activity yet — run Brand Scout to get started.</p>'
+            '<p style="color:#9CA3AF;margin:0;">No activity yet — run the full pipeline above to get started.</p>'
             '</div>',
             unsafe_allow_html=True,
         )

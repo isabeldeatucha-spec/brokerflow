@@ -42,6 +42,12 @@ def render_retailer_pitcher_page() -> None:
         unsafe_allow_html=True,
     )
 
+    st.info(
+        "💡 **Tip:** Use the Dashboard's full pipeline to pitch all three retailers "
+        "(Whole Foods, Sprouts, Erewhon) and fill the WFM form in one click.",
+        icon=None,
+    )
+
     if st.session_state.get("demo_mode"):
         st.markdown(
             '<div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;'

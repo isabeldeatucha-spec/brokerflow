@@ -148,6 +148,51 @@ def store_new_item_form(
         print(f"[Memory] store_new_item_form failed: {e}")
 
 
+def store_sent_bundle(
+    brand_name: str,
+    bundle_type: str,
+    retailer: str,
+    email_subject: str = "",
+    email_body: str = "",
+    sell_sheet_html: str = "",
+    form_xlsx_path: str = "",
+    status: str = "sent",
+) -> None:
+    """
+    Record a sent pitch/form bundle in the sent_bundles table.
+
+    Requires this table in Supabase (run once):
+        CREATE TABLE sent_bundles (
+          id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          brand_name    text NOT NULL,
+          bundle_type   text NOT NULL,
+          retailer      text NOT NULL,
+          email_subject text,
+          email_body    text,
+          sell_sheet_html text,
+          form_xlsx_path  text,
+          status        text NOT NULL,
+          sent_at       timestamptz NOT NULL DEFAULT now()
+        );
+    """
+    try:
+        client = _get_client()
+        client.table("sent_bundles").insert({
+            "brand_name":      brand_name.strip().title(),
+            "bundle_type":     bundle_type,
+            "retailer":        retailer,
+            "email_subject":   email_subject,
+            "email_body":      email_body,
+            "sell_sheet_html": sell_sheet_html,
+            "form_xlsx_path":  form_xlsx_path,
+            "status":          status,
+            "sent_at":         datetime.now().isoformat(),
+        }).execute()
+        print(f"[Memory] Stored sent_bundle for {brand_name} / {retailer}")
+    except Exception as e:
+        print(f"[Memory] store_sent_bundle failed: {e}")
+
+
 def retrieve_similar_brands(category: str, score_range: tuple) -> str:
     try:
         client = _get_client()
