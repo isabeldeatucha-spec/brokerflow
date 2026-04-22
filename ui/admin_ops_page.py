@@ -20,7 +20,6 @@ if _REPO_ROOT not in sys.path:
     sys.path.insert(0, _REPO_ROOT)
 
 from memory import get_config, retrieve_all_evaluations
-from agents.admin_ops.graph import graph
 from agents.admin_ops.skills.wfm_form_schema import WFM_FORM_FIELDS, FIELD_SECTIONS
 
 
@@ -587,6 +586,7 @@ function copySlackSummary() {{
 
 def _run_graph(brand_name: str, retailer: str) -> dict:
     """Stream the graph with live progress cards. Returns final state values."""
+    from agents.admin_ops.graph import graph
     config = get_config(st.session_state.ao_thread_id)
 
     initial: dict = {
