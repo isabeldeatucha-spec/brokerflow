@@ -10,6 +10,8 @@ Six nodes demonstrating the full agent lifecycle:
 """
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from langgraph.graph import StateGraph, END
 
 from agents.brand_onboarding.state import OnboardingState
@@ -193,6 +195,8 @@ def node_persist_and_log(state: OnboardingState) -> dict:
     """Memory: canonical record + append-only event log."""
     merged = dict(state["merged_record"])
     merged["completeness_pct"] = state["completeness_pct"]
+    merged["is_sandbox"] = False  # real onboardings are never sandbox; prevents collision with sandbox seed data
+    merged["last_verified_at"] = datetime.now(timezone.utc).isoformat()
 
     persist_result = tool_persist_brand_record(merged)
     tool_log = [f"persist_brand:{'ok' if persist_result['ok'] else 'fail'}"]

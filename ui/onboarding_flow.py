@@ -13,6 +13,8 @@ from pathlib import Path
 
 import streamlit as st
 
+SANDBOX_BRAND_NAMES = {"Chomps", "Fishwife", "Graza", "Olipop", "Magic Spoon"}
+
 _NODE_LABELS = {
     "load_prior_knowledge": ("Load prior knowledge", "Checking Brand Scout for existing signals"),
     "extract_from_uploads": ("Extract from uploads", "Parsing files and running LLM extraction"),
@@ -39,6 +41,14 @@ def _render_step_1() -> None:
         'font-weight:400; margin:0 0 20px 0;">Onboard a brand</h2>',
         unsafe_allow_html=True,
     )
+
+    if st.session_state.get("sandbox_mode"):
+        st.warning(
+            "⚠️ Sandbox data is loaded. If you onboard a brand with the same "
+            "name as a sandbox brand (Chomps, Fishwife, Graza, Olipop, Magic Spoon), "
+            "the sandbox record will be replaced with your real data. "
+            "To avoid this, clear sandbox first or pick a different brand name."
+        )
 
     with st.form("onboarding_input_form"):
         brand_name = st.text_input(
@@ -265,6 +275,17 @@ def _render_step_3() -> None:
                 unsafe_allow_html=True,
             )
 
+    is_colliding = (
+        (handoff.brand_name if handoff else brand_name) in SANDBOX_BRAND_NAMES
+        and st.session_state.get("sandbox_mode")
+    )
+    if is_colliding:
+        st.error(
+            f"Cannot confirm: '{handoff.brand_name if handoff else brand_name}' conflicts with an "
+            "active sandbox brand. Clear sandbox (toggle off in Operate tab) and re-run onboarding, "
+            "or rename this brand."
+        )
+
     st.markdown("<div style='margin-top:24px;'></div>", unsafe_allow_html=True)
     col_back, col_done = st.columns([1, 2])
     with col_back:
@@ -275,7 +296,13 @@ def _render_step_3() -> None:
                 st.session_state.pop(k, None)
             st.rerun()
     with col_done:
-        if st.button("Done ✓", type="primary", key="ob_done_btn", use_container_width=True):
+        if st.button(
+            "Confirm & go live",
+            type="primary",
+            key="ob_done_btn",
+            use_container_width=True,
+            disabled=is_colliding,
+        ):
             for k in ["ob_step", "ob_brand_name", "ob_website_url", "ob_overrides_raw",
                       "ob_file_paths", "ob_overrides", "ob_handoff", "ob_final_state",
                       "onboarding_active"]:
