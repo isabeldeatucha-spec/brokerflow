@@ -302,3 +302,94 @@ def run_full_pipeline(
             "admin_result":  admin_result,
         },
     )
+
+
+# ── Triage pipeline ───────────────────────────────────────────────────────────
+
+def run_triage_pipeline(brand_names: list[str]) -> Iterator[PipelineEvent]:
+    """
+    Fast triage of up to 5 brands. Yields one PipelineEvent per brand as
+    triage completes, then one terminal PipelineEvent("triage_complete", "done")
+    with the full list of QuickTriageResult dicts as data.
+    No Pitcher/Admin runs here — this pipeline is pre-selection only.
+    """
+    from agents.brand_scout.quick import quick_triage
+
+    clean = [n.strip() for n in brand_names if n and n.strip()][:5]
+    if not clean:
+        yield PipelineEvent("triage_complete", "failed",
+                            "No brand names provided.",
+                            data={"results": []})
+        return
+
+    yield PipelineEvent("triage_start", "started",
+                        f"Triaging {len(clean)} brands…")
+
+    all_results = []
+    for name in clean:
+        yield PipelineEvent(f"triage_{name}", "started",
+                            f"Triaging {name}…")
+        r = quick_triage(name)
+        all_results.append(r)
+        yield PipelineEvent(
+            f"triage_{name}",
+            "done" if not r.error else "failed",
+            f"{name}: {r.score_estimate}/100 · {r.verdict}"
+            + (" (cached)" if r.cached else ""),
+            data={"result": asdict(r)},
+        )
+
+    yield PipelineEvent("triage_complete", "done",
+                        f"Triaged {len(all_results)} brands.",
+                        data={"results": [asdict(r) for r in all_results]})
+
+
+# ── Selective pitch pipeline ──────────────────────────────────────────────────
+
+def run_selective_pitch_pipeline(brand_names: list[str]) -> Iterator[PipelineEvent]:
+    """
+    Run the full pipeline (Scout → Pitcher × 3 → Admin) for EACH selected brand
+    in sequence. Reuses run_full_pipeline per brand. Yields all events from every
+    brand's pipeline, prefixed with the brand name so the UI can group them.
+    """
+    if not brand_names:
+        yield PipelineEvent("complete", "done", "No brands selected.", data={})
+        return
+
+    all_bundles = []
+    for name in brand_names:
+        yield PipelineEvent("brand_start", "started",
+                            f"Running full pipeline for {name}…",
+                            data={"brand_name": name})
+        try:
+            last_event = None
+            for event in run_full_pipeline(name, ""):
+                event_data = dict(event.data or {})
+                event_data["brand_name"] = name
+                yield PipelineEvent(event.stage, event.status, event.message,
+                                    data=event_data, error=event.error)
+                last_event = event
+
+            if last_event and last_event.data:
+                pitches_raw = last_event.data.get("pitches", {})
+                # Normalize pitcher_results dict to list for approval page
+                if isinstance(pitches_raw, dict):
+                    pitches_list = [{"buyer_key": k, **v}
+                                    for k, v in pitches_raw.items()]
+                else:
+                    pitches_list = list(pitches_raw)
+                all_bundles.append({
+                    "brand_name":    name,
+                    "scout_handoff": last_event.data.get("scout_handoff"),
+                    "routing":       last_event.data.get("routing"),
+                    "pitches":       pitches_list,
+                    "admin_result":  last_event.data.get("admin_result"),
+                })
+        except Exception as e:
+            yield PipelineEvent("brand_failed", "failed",
+                                f"{name}: {type(e).__name__} — {e}",
+                                data={"brand_name": name})
+
+    yield PipelineEvent("selective_complete", "done",
+                        f"All bundles ready for {len(all_bundles)} brands.",
+                        data={"bundles": all_bundles})

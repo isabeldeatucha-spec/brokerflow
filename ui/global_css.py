@@ -51,7 +51,7 @@ section[data-testid="stMain"] > div,
 .block-container {
     padding-top: 48px !important;
     padding-bottom: 96px !important;
-    max-width: 960px !important;
+    max-width: 980px !important;
     overflow-y: auto !important;
     max-height: none !important;
 }
@@ -59,71 +59,21 @@ section[data-testid="stMain"] > div,
 .element-container { overflow: visible !important; }
 section[data-testid="stMain"] { overflow-y: auto !important; }
 
-/* ── Sidebar ────────────────────────────────────────────────────────────── */
-section[data-testid="stSidebar"] {
-    background: #FFFFFF !important;
-    border-right: 1px solid #EAEAE4 !important;
-    min-width: 220px !important;
-    max-width: 240px !important;
-    transform: none !important;
-    left: 0 !important;
-    visibility: visible !important;
-}
-section[data-testid="stSidebar"] > div {
-    background: #FFFFFF !important;
-    padding: 0 !important;
+/* ── Sidebar — hidden entirely ──────────────────────────────────────────── */
+section[data-testid="stSidebar"],
+[data-testid="stSidebarCollapseButton"],
+[data-testid="collapsedControl"],
+[data-testid="stSidebarCollapsedControl"] {
+    display: none !important;
 }
 
-/* Sidebar radio — styled as editorial nav */
-section[data-testid="stSidebar"] [data-testid="stRadio"] > label {
-    display: none !important;
-}
-section[data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 1px !important;
-}
-section[data-testid="stSidebar"] [data-testid="stRadio"] [data-baseweb="radio"] {
-    width: 100% !important;
-}
-section[data-testid="stSidebar"] [data-testid="stRadio"] [data-baseweb="radio"] > div:first-child {
-    display: none !important;
-}
-section[data-testid="stSidebar"] [data-testid="stRadio"] label {
-    font-family: 'Inter', sans-serif !important;
-    font-size: 14px !important;
-    color: #57564F !important;
-    padding: 8px 12px !important;
+/* Sidebar button override (kept for legacy pages that still use sidebar) */
+section[data-testid="stSidebar"] .stButton > button {
+    background: #1A1A18 !important;
+    color: #FAFAF7 !important;
+    -webkit-text-fill-color: #FAFAF7 !important;
     border-radius: 6px !important;
-    width: 100% !important;
-    cursor: pointer !important;
-    font-weight: 400 !important;
-    transition: background 0.1s, color 0.1s !important;
-    letter-spacing: 0 !important;
-}
-section[data-testid="stSidebar"] [data-testid="stRadio"] label:hover {
-    background: #F2F2EE !important;
-    color: #1A1A18 !important;
-}
-section[data-testid="stSidebar"] [data-testid="stRadio"] input[type="radio"]:checked ~ div label,
-section[data-testid="stSidebar"] [data-testid="stRadio"] [aria-checked="true"] label {
-    background: #E8EDE9 !important;
-    color: #0F3530 !important;
     font-weight: 500 !important;
-}
-
-/* Sidebar toggle */
-section[data-testid="stSidebar"] .stToggle label {
-    font-size: 13px !important;
-    color: #57564F !important;
-}
-section[data-testid="stSidebar"] .stToggle {
-    padding: 8px 12px !important;
-}
-section[data-testid="stSidebar"] .stCaption p {
-    font-size: 12px !important;
-    color: #8B8A83 !important;
-    padding-left: 12px !important;
 }
 
 /* ── Typography ─────────────────────────────────────────────────────────── */
@@ -311,15 +261,6 @@ div[data-testid="stButton-reject_btn"] button,
 div[data-testid="stButton-reject_btn"] button  { background: #8B2F2F !important; background-color: #8B2F2F !important; }
 div[data-testid="stButton-approve_btn"] button p,
 div[data-testid="stButton-reject_btn"] button p { color: #FAFAF7 !important; -webkit-text-fill-color: #FAFAF7 !important; }
-
-/* Sidebar button override */
-section[data-testid="stSidebar"] .stButton > button {
-    background: #1A1A18 !important;
-    color: #FAFAF7 !important;
-    -webkit-text-fill-color: #FAFAF7 !important;
-    border-radius: 6px !important;
-    font-weight: 500 !important;
-}
 
 /* Download buttons */
 .stDownloadButton > button {
