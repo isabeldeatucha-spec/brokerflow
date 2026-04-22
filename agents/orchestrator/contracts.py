@@ -151,3 +151,61 @@ class RoutingDecision:
             pitcher_framing="standard",
             reason=f"Unknown verdict '{verdict}' — refusing to route.",
         )
+
+
+# ── Onboarding contracts ──────────────────────────────────────────────────────
+
+@dataclass
+class OnboardingInput:
+    """What the broker provides to start onboarding."""
+    brand_name: str
+    website_url: Optional[str] = None
+    uploaded_file_paths: list = field(default_factory=list)
+    manual_overrides: dict = field(default_factory=dict)
+    broker_id: str = "default"
+
+
+@dataclass
+class PriorKnowledge:
+    """What the Onboarding Agent found from upstream agents (Brand Scout)."""
+    source_agent: str  # "brand_scout" | "none"
+    found: bool
+    scout_score: Optional[int] = None
+    scout_verdict: Optional[str] = None
+    scout_category: Optional[str] = None
+    scout_signals: dict = field(default_factory=dict)
+    evaluated_at: Optional[str] = None
+
+
+@dataclass
+class OnboardingHandoff:
+    """What the Onboarding Agent emits to downstream agents."""
+    brand_id: str
+    brand_name: str
+    completeness_pct: float
+    missing_fields: list = field(default_factory=list)
+    conflicts: list = field(default_factory=list)  # [{field, scout_value, extracted_value, resolution}]
+    canonical_record: dict = field(default_factory=dict)
+    handoff_status: Literal["ok", "partial", "conflict_unresolved"] = "ok"
+    ready_for_matcher: bool = False
+    ready_for_admin: bool = False
+
+
+@dataclass
+class CoordinationMessage:
+    """Blackboard message between agents."""
+    from_agent: str
+    to_agent: str
+    brand_id: str
+    message_type: str  # "new_brand_onboarded" | "needs_reverification" | etc.
+    payload: dict = field(default_factory=dict)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+def validate_onboarding_handoff(handoff: OnboardingHandoff) -> tuple:
+    """Downstream agents call this before consuming an onboarding handoff."""
+    if handoff.handoff_status == "conflict_unresolved":
+        return False, f"Unresolved conflicts in {len(handoff.conflicts)} fields"
+    if handoff.completeness_pct < 40:
+        return False, f"Completeness too low: {handoff.completeness_pct}%"
+    return True, "ok"

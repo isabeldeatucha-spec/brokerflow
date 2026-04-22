@@ -1018,28 +1018,158 @@ def _error_card(exc: Exception) -> None:
         st.code(tb, language="python")
 
 
-# ── Phase router ──────────────────────────────────────────────────────────────
+# ── Tab: Discover (existing phase-based UX) ───────────────────────────────────
 
-phase = st.session_state.get("phase", "idle")
+def render_discover_tab() -> None:
+    phase = st.session_state.get("phase", "idle")
+    try:
+        if phase == "idle":
+            render_landing()
+        elif phase == "triaging":
+            render_triaging()
+        elif phase == "selecting":
+            render_selecting()
+        elif phase == "pitching":
+            render_pitching()
+        elif phase == "approval":
+            render_approval()
+        elif phase == "sent":
+            render_sent()
+        elif phase == "how_it_works":
+            render_how_it_works()
+        elif phase == "autonomous_running":
+            render_autonomous_running()
+        else:
+            render_landing()
+    except Exception as _page_exc:
+        _error_card(_page_exc)
 
-try:
-    if phase == "idle":
-        render_landing()
-    elif phase == "triaging":
-        render_triaging()
-    elif phase == "selecting":
-        render_selecting()
-    elif phase == "pitching":
-        render_pitching()
-    elif phase == "approval":
-        render_approval()
-    elif phase == "sent":
-        render_sent()
-    elif phase == "how_it_works":
-        render_how_it_works()
-    elif phase == "autonomous_running":
-        render_autonomous_running()
+
+# ── Tab: Operate ──────────────────────────────────────────────────────────────
+
+def render_operate_tab() -> None:
+    from agents.brand_onboarding.watchdog import get_pending_reverifications, scan_and_flag_stale_brands
+
+    try:
+        scan_and_flag_stale_brands()
+    except Exception:
+        pass
+
+    pending = get_pending_reverifications()
+    if pending:
+        st.warning(
+            f"**{len(pending)} brand{'s' if len(pending) != 1 else ''} need re-verification** "
+            f"— last verified >30 days ago.",
+            icon="⚠️",
+        )
+        with st.expander(f"View {len(pending)} stale brand{'s' if len(pending) != 1 else ''}"):
+            for msg in pending:
+                payload = msg.get("payload", {})
+                st.markdown(
+                    f"- **{payload.get('brand_name', '?')}** — "
+                    f"last verified {payload.get('days_stale', '?')} days ago"
+                )
+
+    sandbox_on = st.session_state.get("sandbox_mode", False)
+    col_title, col_sandbox = st.columns([3, 1])
+    with col_title:
+        st.markdown(
+            '<h2 style="font-family:\'Instrument Serif\', serif; font-size:32px; '
+            'font-weight:400; margin:0 0 4px 0;">Brand Roster</h2>',
+            unsafe_allow_html=True,
+        )
+    with col_sandbox:
+        sandbox_label = "Clear sandbox" if sandbox_on else "Load sandbox brands"
+        if st.button(sandbox_label, key="sandbox_toggle_btn", use_container_width=True):
+            if sandbox_on:
+                try:
+                    from sandbox.fixtures import clear_sandbox_brands
+                    clear_sandbox_brands()
+                    st.session_state["sandbox_mode"] = False
+                except Exception as e:
+                    st.error(f"Clear failed: {e}")
+            else:
+                try:
+                    from sandbox.fixtures import seed_sandbox_brands
+                    seed_sandbox_brands()
+                    st.session_state["sandbox_mode"] = True
+                except Exception as e:
+                    st.error(f"Seed failed: {e}")
+            st.rerun()
+
+    try:
+        from memory import _get_client
+        client = _get_client()
+        result = (
+            client.table("brands")
+            .select("id, brand_name, category, completeness_pct, status, last_verified_at, is_sandbox")
+            .order("created_at", desc=True)
+            .limit(50)
+            .execute()
+        )
+        brands_list = result.data or []
+    except Exception:
+        brands_list = []
+
+    if not brands_list:
+        st.markdown(
+            '<div class="sedge-card" style="text-align:center; padding:48px 24px;">'
+            '<p style="color:#8B8A83; margin:0;">No brands onboarded yet. '
+            'Add one below or load sandbox brands to explore.</p>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
     else:
-        render_landing()
-except Exception as _page_exc:
-    _error_card(_page_exc)
+        for brand in brands_list:
+            name = brand.get("brand_name", "?")
+            category = brand.get("category") or "—"
+            pct = brand.get("completeness_pct") or 0
+            status = brand.get("status") or "active"
+            is_sb = brand.get("is_sandbox", False)
+            sandbox_tag = (
+                '<span style="font-size:10px; background:#E8EDE9; color:#2D5F3F; '
+                'padding:2px 6px; border-radius:99px; margin-left:6px;">sandbox</span>'
+                if is_sb else ""
+            )
+            pct_color = "#2D5F3F" if pct >= 70 else ("#B8860B" if pct >= 40 else "#8B2F2F")
+            st.markdown(
+                f'<div class="sedge-card" style="display:flex; align-items:center; '
+                f'gap:16px; padding:12px 20px; margin-bottom:8px;">'
+                f'<div style="flex:1;">'
+                f'<span style="font-size:15px; font-weight:500; color:#1A1A18;">{name}</span>'
+                f'{sandbox_tag}'
+                f'<span style="font-size:12px; color:#8B8A83; margin-left:12px;">{category}</span>'
+                f'</div>'
+                f'<div style="font-size:13px; font-weight:500; color:{pct_color};">'
+                f'{pct:.0f}% complete'
+                f'</div>'
+                f'<div>'
+                f'<span class="sedge-pill" style="font-size:11px;">{status}</span>'
+                f'</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+    st.markdown("<div style='margin-top:24px;'></div>", unsafe_allow_html=True)
+
+    if st.button("+ Onboard new brand", type="primary", key="onboard_new_btn"):
+        st.session_state["onboarding_active"] = True
+        st.rerun()
+
+    if st.session_state.get("onboarding_active"):
+        from ui.onboarding_flow import render_onboarding_flow
+        render_onboarding_flow()
+
+
+# ── Top-level tabs ────────────────────────────────────────────────────────────
+
+tab_operate, tab_discover = st.tabs(["🏢 Operate", "🔎 Discover"])
+
+with tab_operate:
+    try:
+        render_operate_tab()
+    except Exception as _exc:
+        _error_card(_exc)
+
+with tab_discover:
+    render_discover_tab()

@@ -66,10 +66,34 @@ MODEL = "claude-haiku-4-5-20251001"
 # ── Nodes ────────────────────────────────────────────────────────────────────
 
 def load_scout_context(state: RetailerPitcherState) -> dict:
-    """Read the Brand Scout evaluation from shared memory. Detects handoff races."""
+    """Read brand context from shared memory. Tries brands table first, falls back to brand_evaluations."""
     brand_name = state["brand_name"]
     try:
         client = _get_client()
+
+        # Try canonical brands table first (populated by onboarding agent)
+        brands_res = (
+            client.table("brands")
+            .select("*")
+            .ilike("brand_name", brand_name)
+            .limit(1)
+            .execute()
+        )
+        if brands_res.data:
+            canonical = brands_res.data[0]
+            # Merge into scout_context shape: canonical fields take priority
+            merged_row = {
+                "brand_name": canonical.get("brand_name", brand_name),
+                "category": canonical.get("category", ""),
+                "extracted_fields": canonical,
+                "score": canonical.get("completeness_pct", 0),
+                "verdict": "broker_ready",
+                "broker_brief": canonical.get("brand_story", ""),
+                "founder_name": canonical.get("founder_name", ""),
+                "founder_email": canonical.get("founder_email", ""),
+            }
+            return {"handoff_status": "ok", "handoff_error": None, "scout_context": merged_row}
+
         res = (
             client.table("brand_evaluations")
             .select("*")

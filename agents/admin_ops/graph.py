@@ -103,33 +103,57 @@ def _cert_flag(certs: list[str] | None, *keywords: str) -> str | None:
 # ── Nodes ─────────────────────────────────────────────────────────────────────
 
 def load_brand_context(state: AdminOpsFormFillState) -> dict:
-    """Load Brand Scout evaluation and optional Pitcher context from Supabase."""
+    """Load brand context from Supabase. Tries brands table first, falls back to brand_evaluations."""
     brand_name = state["brand_name"]
     new_errors: list[str] = []
 
     try:
         client = _get_client()
 
-        # -- Brand Scout evaluation (required) ---------------------------------
-        res = (
-            client.table("brand_evaluations")
+        # Try canonical brands table first (populated by onboarding agent)
+        brands_res = (
+            client.table("brands")
             .select("*")
             .ilike("brand_name", brand_name)
-            .order("evaluated_at", desc=True)
             .limit(1)
             .execute()
         )
-        if not res.data:
-            return {
-                "handoff_status": "miss",
-                "handoff_error": f"No Brand Scout evaluation found for {brand_name!r}.",
-                "scout_context": {},
-                "pitcher_context": {},
-                "form_schema": WFM_FORM_FIELDS,
-                "artifact_errors": [f"load: no Brand Scout row for {brand_name!r}"],
+        if brands_res.data:
+            canonical = brands_res.data[0]
+            merged_row = {
+                "brand_name": canonical.get("brand_name", brand_name),
+                "category": canonical.get("category", ""),
+                "extracted_fields": canonical,
+                "score": canonical.get("completeness_pct", 0),
+                "verdict": "broker_ready",
+                "broker_brief": canonical.get("brand_story", ""),
+                "founder_name": canonical.get("founder_name", ""),
+                "founder_email": canonical.get("founder_email", ""),
+                "evaluated_at": canonical.get("last_verified_at", ""),
             }
+            res_data = [merged_row]
+        else:
+            # -- Brand Scout evaluation (required) ---------------------------------
+            res = (
+                client.table("brand_evaluations")
+                .select("*")
+                .ilike("brand_name", brand_name)
+                .order("evaluated_at", desc=True)
+                .limit(1)
+                .execute()
+            )
+            if not res.data:
+                return {
+                    "handoff_status": "miss",
+                    "handoff_error": f"No Brand Scout evaluation found for {brand_name!r}.",
+                    "scout_context": {},
+                    "pitcher_context": {},
+                    "form_schema": WFM_FORM_FIELDS,
+                    "artifact_errors": [f"load: no Brand Scout row for {brand_name!r}"],
+                }
+            res_data = res.data
 
-        row = res.data[0]
+        row = res_data[0]
         evaluated_at = row.get("evaluated_at", "")
         if evaluated_at:
             try:
