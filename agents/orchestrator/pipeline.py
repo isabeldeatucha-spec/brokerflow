@@ -339,52 +339,150 @@ def run_triage_pipeline(brand_names: list[str]) -> Iterator[PipelineEvent]:
             data={"result": asdict(r)},
         )
 
+    # Enrich each result with retailer recommendations (rule-based, fast path)
+    from agents.retailer_matcher.matcher import recommend_retailers
+    from dataclasses import asdict as _asdict
+    enriched = []
+    for r in all_results:
+        recs = recommend_retailers(
+            brand_name=r.brand_name,
+            category=r.category,
+            verdict=r.verdict,
+            score_total=r.score_estimate,
+            broker_brief=r.one_line_reasoning,
+            use_llm=False,
+        )
+        r_dict = _asdict(r)
+        r_dict["retailer_recommendations"] = [_asdict(rec) for rec in recs]
+        enriched.append(r_dict)
+
     yield PipelineEvent("triage_complete", "done",
-                        f"Triaged {len(all_results)} brands.",
-                        data={"results": [asdict(r) for r in all_results]})
+                        f"Triaged {len(enriched)} brands.",
+                        data={"results": enriched})
 
 
 # ── Selective pitch pipeline ──────────────────────────────────────────────────
 
-def run_selective_pitch_pipeline(brand_names: list[str]) -> Iterator[PipelineEvent]:
+def run_selective_pitch_pipeline(selected_brands: list[dict]) -> Iterator[PipelineEvent]:
     """
-    Run the full pipeline (Scout → Pitcher × 3 → Admin) for EACH selected brand
-    in sequence. Reuses run_full_pipeline per brand. Yields all events from every
-    brand's pipeline, prefixed with the brand name so the UI can group them.
+    Run Scout → filtered Pitcher → Admin for each selected brand.
+
+    Args:
+        selected_brands: list of enriched brand dicts with keys:
+            - brand_name (str)
+            - retailer_recommendations (list[dict], optional) — from run_triage_pipeline
+              Each dict has "retailer" and "tier" ("strong"|"possible"|"skip").
+              If absent, all 3 retailers are pitched.
+
+    Only pitches retailers whose tier is "strong" or "possible".
+    Only runs Admin & Ops for broker_ready / established brands.
     """
-    if not brand_names:
+    if not selected_brands:
         yield PipelineEvent("complete", "done", "No brands selected.", data={})
         return
 
+    _VERDICT_MAP = {"above_threshold": "broker_ready", "below_threshold": "too_early"}
+
     all_bundles = []
-    for name in brand_names:
+    for brand in selected_brands:
+        name       = brand.get("brand_name", "") if isinstance(brand, dict) else brand
+        triage_recs = brand.get("retailer_recommendations", []) if isinstance(brand, dict) else []
+
         yield PipelineEvent("brand_start", "started",
                             f"Running full pipeline for {name}…",
                             data={"brand_name": name})
         try:
-            last_event = None
-            for event in run_full_pipeline(name, ""):
-                event_data = dict(event.data or {})
-                event_data["brand_name"] = name
-                yield PipelineEvent(event.stage, event.status, event.message,
-                                    data=event_data, error=event.error)
-                last_event = event
+            # Step 1: Brand Scout (full)
+            yield PipelineEvent("scout", "running", f"Researching {name}…",
+                                data={"brand_name": name})
+            scout_result = _run_scout(name, "", False)
 
-            if last_event and last_event.data:
-                pitches_raw = last_event.data.get("pitches", {})
-                # Normalize pitcher_results dict to list for approval page
-                if isinstance(pitches_raw, dict):
-                    pitches_list = [{"buyer_key": k, **v}
-                                    for k, v in pitches_raw.items()]
-                else:
-                    pitches_list = list(pitches_raw)
+            score_obj  = scout_result.get("score", {})
+            raw_verdict = scout_result.get("verdict", "too_early")
+            verdict     = _VERDICT_MAP.get(raw_verdict, raw_verdict)
+            if verdict not in ("too_early", "broker_ready", "established"):
+                verdict = "too_early"
+
+            scout_handoff = ScoutHandoff(
+                brand_name=name,
+                category=scout_result.get("category", ""),
+                score_total=(score_obj.get("total", 0)
+                             if isinstance(score_obj, dict) else 0),
+                verdict=verdict,
+                broker_brief=(scout_result.get("signals_found", {})
+                              .get("score_detail", {}).get("broker_brief", "")),
+                key_gaps=(scout_result.get("signals_found", {})
+                          .get("score_detail", {}).get("key_gaps", [])),
+                score_breakdown=(scout_result.get("signals_found", {})
+                                 .get("score_detail", {})),
+                extracted_fields=scout_result.get("extracted_fields") or {},
+                founder_name=scout_result.get("founder_name", ""),
+                founder_email=scout_result.get("founder_email", ""),
+            )
+            routing = RoutingDecision.from_verdict(scout_handoff.verdict)
+
+            yield PipelineEvent("scout", "done",
+                                f"Scored {scout_handoff.score_total}/100 — {verdict}",
+                                data={"brand_name": name,
+                                      "scout_handoff": asdict(scout_handoff),
+                                      "routing": asdict(routing)})
+
+            if not routing.run_pitcher:
                 all_bundles.append({
                     "brand_name":    name,
-                    "scout_handoff": last_event.data.get("scout_handoff"),
-                    "routing":       last_event.data.get("routing"),
-                    "pitches":       pitches_list,
-                    "admin_result":  last_event.data.get("admin_result"),
+                    "scout_handoff": asdict(scout_handoff),
+                    "routing":       asdict(routing),
+                    "pitches":       [],
+                    "admin_result":  None,
                 })
+                continue
+
+            # Step 2: Determine which retailers to pitch
+            if triage_recs:
+                retailers_to_pitch = [
+                    r["retailer"] for r in triage_recs
+                    if r.get("tier") in ("strong", "possible")
+                ]
+            else:
+                retailers_to_pitch = ["whole_foods", "sprouts", "erewhon"]
+
+            # Step 3: Pitcher — only for recommended retailers
+            pitcher_results: dict[str, dict] = {}
+            for retailer in retailers_to_pitch:
+                label = retailer.replace("_", " ").title()
+                yield PipelineEvent(f"pitcher_{retailer}", "running",
+                                    f"Drafting pitch → {label}…",
+                                    data={"brand_name": name})
+                try:
+                    result = _run_pitcher_with_framing(name, retailer,
+                                                       routing.pitcher_framing)
+                    pitcher_results[retailer] = result
+                    yield PipelineEvent(f"pitcher_{retailer}", "done",
+                                        f"Pitcher → {label}: done",
+                                        data={"brand_name": name, **result})
+                except Exception as exc:
+                    yield PipelineEvent(f"pitcher_{retailer}", "failed",
+                                        f"Pitcher → {label} failed: {exc}",
+                                        data={"brand_name": name})
+
+            pitches_list = [{"buyer_key": k, **v}
+                            for k, v in pitcher_results.items()]
+
+            # Step 4: Admin WFM — silent by-product for qualifying verdicts
+            admin_result: dict | None = None
+            if routing.run_admin:
+                try:
+                    admin_result = _run_admin_ops(name)
+                except Exception:
+                    pass
+
+            all_bundles.append({
+                "brand_name":    name,
+                "scout_handoff": asdict(scout_handoff),
+                "routing":       asdict(routing),
+                "pitches":       pitches_list,
+                "admin_result":  admin_result,
+            })
         except Exception as e:
             yield PipelineEvent("brand_failed", "failed",
                                 f"{name}: {type(e).__name__} — {e}",

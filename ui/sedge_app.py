@@ -15,7 +15,6 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-# llm_shim must be imported before any anthropic import
 import agents.llm_shim  # noqa: F401, E402
 
 import streamlit as st
@@ -34,7 +33,7 @@ st.set_page_config(
 inject_global_css()
 
 
-# ── Stats helpers ─────────────────────────────────────────────────────────────
+# ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _table_exists(table_name: str) -> bool:
     try:
@@ -46,7 +45,6 @@ def _table_exists(table_name: str) -> bool:
 
 
 def _fetch_stats() -> dict:
-    """Count rows across blackboard tables for the stats sentence."""
     try:
         from memory import _get_client
         client = _get_client()
@@ -70,10 +68,7 @@ def _fetch_stats() -> dict:
         return {"brands": 0, "pitches": 0, "forms": 0, "bundles": 0}
 
 
-# ── Progress row helper ───────────────────────────────────────────────────────
-
 def _progress_row(label: str, icon_type: str, status_text: str) -> str:
-    """Render one progress row — spinner/check/x + label + status."""
     icons = {
         "spinner": (
             '<div class="sedge-spin" style="width:16px; height:16px; '
@@ -95,8 +90,6 @@ def _progress_row(label: str, icon_type: str, status_text: str) -> str:
     )
 
 
-# ── Agent card helper ─────────────────────────────────────────────────────────
-
 def _render_agent_card(name: str, description: str, stat: str) -> None:
     st.markdown(
         f'<div class="sedge-card" style="height:100%;">'
@@ -115,9 +108,16 @@ def _render_agent_card(name: str, description: str, stat: str) -> None:
 def render_landing() -> None:
     stats = _fetch_stats()
 
+    # Top-right "How it works" link
+    _, _, col_r = st.columns([1, 3, 1])
+    with col_r:
+        if st.button("How it works →", key="how_works_link"):
+            st.session_state.phase = "how_it_works"
+            st.rerun()
+
     # Header
     st.markdown(
-        '<div style="text-align:center; padding: 64px 0 32px;">'
+        '<div style="text-align:center; padding: 48px 0 24px;">'
         '<h1 class="sedge-h1" style="text-align:center;">Sedge</h1>'
         '<p class="sedge-subtitle" style="text-align:center;">'
         'The operating system for independent food brokers.'
@@ -128,7 +128,7 @@ def render_landing() -> None:
 
     # Live stats sentence
     st.markdown(
-        f'<p style="text-align:center; color:#8B8A83; font-size:13px; margin-bottom:48px;">'
+        f'<p style="text-align:center; color:#8B8A83; font-size:13px; margin-bottom:32px;">'
         f'<span class="sedge-number">{stats["brands"]}</span> brands · '
         f'<span class="sedge-number">{stats["pitches"]}</span> pitches · '
         f'<span class="sedge-number">{stats["forms"]}</span> forms · '
@@ -136,6 +136,22 @@ def render_landing() -> None:
         f'</p>',
         unsafe_allow_html=True,
     )
+
+    # Mode toggle
+    col_l, col_c, col_r = st.columns([1, 2, 1])
+    with col_c:
+        mode_choice = st.radio(
+            "",
+            ["Manual — you pick at every step",
+             "Autonomous — Sedge decides, you approve at the end"],
+            index=0 if st.session_state.get("mode", "manual") == "manual" else 1,
+            horizontal=True,
+            label_visibility="collapsed",
+            key="mode_radio",
+        )
+        st.session_state.mode = "autonomous" if "Autonomous" in mode_choice else "manual"
+
+    st.markdown("<div style='margin-top: 24px;'></div>", unsafe_allow_html=True)
 
     # Brand input grid
     st.markdown(
@@ -175,8 +191,11 @@ def render_landing() -> None:
             type="primary",
             key="run_triage_btn",
         ):
-            st.session_state.phase = "triaging"
             st.session_state.triage_brands = filled_brands
+            if st.session_state.mode == "autonomous":
+                st.session_state.phase = "autonomous_running"
+            else:
+                st.session_state.phase = "triaging"
             st.rerun()
 
     st.markdown(
@@ -188,7 +207,7 @@ def render_landing() -> None:
 
     # Divider
     st.markdown(
-        "<hr style='border:none; border-top:1px solid #EAEAE4; margin:64px 0;'>",
+        "<hr style='border:none; border-top:1px solid #EAEAE4; margin:56px 0 40px;'>",
         unsafe_allow_html=True,
     )
 
@@ -220,7 +239,75 @@ def render_landing() -> None:
             f"{stats['forms']} forms filled",
         )
 
-    # Demo mode footer toggle
+    # Coming next section
+    st.markdown("<div style='margin: 48px 0 32px;'></div>", unsafe_allow_html=True)
+    st.markdown('<p class="sedge-section-title">COMING NEXT</p>', unsafe_allow_html=True)
+    st.markdown("""
+<div style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+  <div class="sedge-card" style="opacity: 0.65;">
+    <p style="font-size:11px; color:#8B8A83; text-transform:uppercase;
+              letter-spacing:0.08em; margin:0 0 8px 0;">Admin &amp; Ops · Q2</p>
+    <h4 style="font-family:'Instrument Serif', serif; font-size:18px;
+               font-weight:400; margin:0 0 8px 0;">PO Processing</h4>
+    <p style="font-size:13px; color:#57564F; margin:0;">
+      Parse purchase orders from buyer emails. Log line items to Supabase.
+      Flag discrepancies against the new item form.
+    </p>
+  </div>
+  <div class="sedge-card" style="opacity: 0.65;">
+    <p style="font-size:11px; color:#8B8A83; text-transform:uppercase;
+              letter-spacing:0.08em; margin:0 0 8px 0;">Admin &amp; Ops · Q2</p>
+    <h4 style="font-family:'Instrument Serif', serif; font-size:18px;
+               font-weight:400; margin:0 0 8px 0;">Deduction Tracking</h4>
+    <p style="font-size:13px; color:#57564F; margin:0;">
+      Monitor chargebacks and short payments. Auto-document disputes.
+      Surface patterns by retailer and by SKU.
+    </p>
+  </div>
+  <div class="sedge-card" style="opacity: 0.65;">
+    <p style="font-size:11px; color:#8B8A83; text-transform:uppercase;
+              letter-spacing:0.08em; margin:0 0 8px 0;">Portfolio Mgr · Q3</p>
+    <h4 style="font-family:'Instrument Serif', serif; font-size:18px;
+               font-weight:400; margin:0 0 8px 0;">SLA Tracking</h4>
+    <p style="font-size:13px; color:#57564F; margin:0;">
+      Track every brand's distribution, reorder velocity, and open actions.
+      Flag underperformers. Weekly digest to the broker.
+    </p>
+  </div>
+  <div class="sedge-card" style="opacity: 0.65;">
+    <p style="font-size:11px; color:#8B8A83; text-transform:uppercase;
+              letter-spacing:0.08em; margin:0 0 8px 0;">Admin &amp; Ops · Q3</p>
+    <h4 style="font-family:'Instrument Serif', serif; font-size:18px;
+               font-weight:400; margin:0 0 8px 0;">Commission Reconciliation</h4>
+    <p style="font-size:13px; color:#57564F; margin:0;">
+      Match commissions paid against POs shipped. Catch underpayments.
+      Generate dispute packages automatically.
+    </p>
+  </div>
+  <div class="sedge-card" style="opacity: 0.65;">
+    <p style="font-size:11px; color:#8B8A83; text-transform:uppercase;
+              letter-spacing:0.08em; margin:0 0 8px 0;">Retailer Pitcher · Q3</p>
+    <h4 style="font-family:'Instrument Serif', serif; font-size:18px;
+               font-weight:400; margin:0 0 8px 0;">More Retailers</h4>
+    <p style="font-size:13px; color:#57564F; margin:0;">
+      KeHE, UNFI, Kroger, Costco. Each adds its own pitch tone, sell-sheet
+      template, and new-item form.
+    </p>
+  </div>
+  <div class="sedge-card" style="opacity: 0.65;">
+    <p style="font-size:11px; color:#8B8A83; text-transform:uppercase;
+              letter-spacing:0.08em; margin:0 0 8px 0;">Platform · Q4</p>
+    <h4 style="font-family:'Instrument Serif', serif; font-size:18px;
+               font-weight:400; margin:0 0 8px 0;">Multi-Broker</h4>
+    <p style="font-size:13px; color:#57564F; margin:0;">
+      Every broker's data compounds. Cross-portfolio intelligence across
+      hundreds of brokers and thousands of brands — the data flywheel.
+    </p>
+  </div>
+</div>
+""", unsafe_allow_html=True)
+
+    # Demo mode footer
     demo_on = st.session_state.get("demo_mode", False)
     demo_label = "Demo mode: ON" if demo_on else "Demo mode: OFF"
     st.markdown(
@@ -230,11 +317,7 @@ def render_landing() -> None:
     )
     col_tl, col_tc, col_tr = st.columns([1, 2, 1])
     with col_tc:
-        if st.button(
-            "Toggle demo mode",
-            key="demo_toggle_btn",
-            use_container_width=True,
-        ):
+        if st.button("Toggle demo mode", key="demo_toggle_btn", use_container_width=True):
             st.session_state["demo_mode"] = not demo_on
             st.rerun()
 
@@ -318,11 +401,12 @@ def render_selecting() -> None:
         st.session_state.selected_brands = set()
 
     for r in sorted_results:
-        name     = r.get("brand_name", "")
-        score    = r.get("score_estimate", 0)
-        verdict  = r.get("verdict", "too_early")
+        name      = r.get("brand_name", "")
+        score     = r.get("score_estimate", 0)
+        verdict   = r.get("verdict", "too_early")
         reasoning = r.get("one_line_reasoning", "")
-        cached   = r.get("cached", False)
+        cached    = r.get("cached", False)
+        recs      = r.get("retailer_recommendations", [])
 
         verdict_pill_class = {
             "established": "sedge-pill-established",
@@ -348,11 +432,35 @@ def render_selecting() -> None:
                 '<span style="font-size:11px; color:#8B8A83; margin-left:6px;">cached</span>'
                 if cached else ""
             )
+            # Retailer recommendation pills
+            strong_recs   = [rec for rec in recs if rec.get("tier") == "strong"]
+            possible_recs = [rec for rec in recs if rec.get("tier") == "possible"]
+            pill_html = []
+            for rec in strong_recs:
+                pill_html.append(
+                    f'<span class="sedge-pill sedge-pill-ready" style="margin-right:4px;">'
+                    f'{rec["retailer"].replace("_", " ").title()} · {rec["fit_score"]}'
+                    f'</span>'
+                )
+            for rec in possible_recs:
+                pill_html.append(
+                    f'<span class="sedge-pill" style="margin-right:4px; opacity:0.6;">'
+                    f'{rec["retailer"].replace("_", " ").title()} · {rec["fit_score"]}'
+                    f'</span>'
+                )
+            rec_row = (
+                f'<div style="padding: 4px 0 8px 0; font-size:11px;">'
+                f'<span style="color:#8B8A83; margin-right:8px;">recommended:</span>'
+                f'{"".join(pill_html)}'
+                f'</div>'
+                if pill_html else ""
+            )
             st.markdown(
                 f'<div style="padding: 8px 0;">'
                 f'<p style="font-size:15px; font-weight:500; margin:0; color:#1A1A18;">'
                 f'{name}{cached_tag}</p>'
                 f'<p style="font-size:12px; color:#8B8A83; margin:2px 0 0 0;">{reasoning}</p>'
+                f'{rec_row}'
                 f'</div>',
                 unsafe_allow_html=True,
             )
@@ -396,16 +504,20 @@ def render_selecting() -> None:
             type="primary",
             key="pitch_btn",
         ):
+            # Pass full enriched dicts (with retailer_recommendations) to pitching
+            st.session_state.selected_enriched = [
+                r for r in st.session_state.triage_results
+                if r.get("brand_name") in st.session_state.selected_brands
+            ]
             st.session_state.phase = "pitching"
-            st.session_state.selected_list = list(st.session_state.selected_brands)
             st.rerun()
 
 
 # ── Phase: pitching ───────────────────────────────────────────────────────────
 
 def render_pitching() -> None:
-    selected = st.session_state.get("selected_list", [])
-    n = len(selected)
+    selected_enriched = st.session_state.get("selected_enriched", [])
+    n = len(selected_enriched)
 
     st.markdown(
         f'<div style="text-align:center; padding: 32px 0;">'
@@ -413,7 +525,7 @@ def render_pitching() -> None:
         f'Pitching {n} brand{"s" if n != 1 else ""}'
         f'</h1>'
         f'<p class="sedge-caption">'
-        f'Running Brand Scout → 3 retailer pitches → WFM form per brand. '
+        f'Running Brand Scout → recommended retailer pitches → WFM form per brand. '
         f'~60-90 seconds per brand.'
         f'</p>'
         f'</div>',
@@ -422,10 +534,11 @@ def render_pitching() -> None:
 
     from agents.orchestrator.pipeline import run_selective_pitch_pipeline
 
-    brand_progress = {b: st.empty() for b in selected}
+    brand_names = [b.get("brand_name", "") for b in selected_enriched]
+    brand_progress = {name: st.empty() for name in brand_names}
     all_bundles = []
 
-    for event in run_selective_pitch_pipeline(selected):
+    for event in run_selective_pitch_pipeline(selected_enriched):
         if event.stage == "selective_complete":
             all_bundles = event.data.get("bundles", [])
             break
@@ -436,10 +549,9 @@ def render_pitching() -> None:
                 unsafe_allow_html=True,
             )
 
-    # Mark done rows
-    for b in selected:
-        brand_progress[b].markdown(
-            _progress_row(b, "check", "done"),
+    for name in brand_names:
+        brand_progress[name].markdown(
+            _progress_row(name, "check", "done"),
             unsafe_allow_html=True,
         )
 
@@ -451,7 +563,6 @@ def render_pitching() -> None:
 # ── Phase: approval ───────────────────────────────────────────────────────────
 
 def _fetch_pitch_detail(brand_name: str, buyer_key: str) -> dict | None:
-    """Read email_subject, email_body, sell_sheet_html from retailer_pitches."""
     try:
         from memory import _get_client
         client = _get_client()
@@ -569,24 +680,50 @@ def render_approval() -> None:
                             key=f"body_{approval_key}",
                             label_visibility="collapsed",
                         )
+                        # CHANGE 1: render sell sheet
+                        if pitch_detail.get("sell_sheet_html"):
+                            st.markdown("**Sell sheet:**")
+                            st.components.v1.html(
+                                pitch_detail["sell_sheet_html"],
+                                height=800,
+                                scrolling=False,
+                            )
+                            st.download_button(
+                                "Download sell sheet",
+                                data=pitch_detail["sell_sheet_html"],
+                                file_name=f"{brand_name}_{buyer}_sellsheet.html",
+                                mime="text/html",
+                                key=f"download_sheet_{approval_key}",
+                            )
 
+        # Admin WFM — muted "Bonus" by-product card (CHANGE 4)
         if admin:
-            admin_key = f"{brand_name}__wfm_form"
-            col_check, col_content = st.columns([0.5, 9])
-            with col_check:
-                st.session_state.approvals[admin_key] = st.checkbox(
-                    "",
-                    value=st.session_state.approvals.get(admin_key, True),
-                    key=f"approve_{admin_key}",
-                    label_visibility="collapsed",
-                )
-            with col_content:
-                filled = admin.get("filled_field_count", 0)
-                gaps   = admin.get("gap_count", 0)
-                with st.expander(
-                    f"{brand_name} → WFM New Item Form ({filled} filled, {gaps} gaps)"
-                ):
-                    st.caption(f"Output: {admin.get('output_xlsx_path', '')}")
+            filled = len(admin.get("filled_fields") or {})
+            gaps   = len(admin.get("gaps") or [])
+            xlsx_path = admin.get("output_xlsx_path", "")
+            st.markdown(
+                f'<div style="background:#F9F8F5; border:1px solid #F2F2EE;'
+                f'border-radius:10px; padding:16px 20px; margin-top:12px;'
+                f'display:flex; align-items:center; gap:16px;">'
+                f'<div style="flex:1;">'
+                f'<p style="font-size:13px; font-weight:500; margin:0; color:#1A1A18;">'
+                f'Bonus: WFM new item form ready</p>'
+                f'<p style="font-size:12px; color:#8B8A83; margin:2px 0 0 0;">'
+                f'{filled} fields autofilled · {gaps} gaps for you to review'
+                f'</p>'
+                f'</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+            if xlsx_path and Path(xlsx_path).exists():
+                with open(xlsx_path, "rb") as f:
+                    st.download_button(
+                        f"Download WFM form for {brand_name}",
+                        data=f.read(),
+                        file_name=f"WFM_NewItem_{brand_name}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        key=f"download_wfm_{brand_name}",
+                    )
 
         st.markdown(
             "<hr style='border:none; border-top:1px solid #F2F2EE; margin:24px 0;'>",
@@ -596,11 +733,8 @@ def render_approval() -> None:
     approved_count = sum(1 for v in st.session_state.approvals.values() if v)
     col_l, col_c, col_r = st.columns([1, 2, 1])
     with col_c:
-        send_label = (
-            f"Send {approved_count} approved item{'s' if approved_count != 1 else ''} →"
-        )
         if st.button(
-            send_label,
+            f"Send {approved_count} approved item{'s' if approved_count != 1 else ''} →",
             disabled=approved_count == 0,
             use_container_width=True,
             type="primary",
@@ -634,10 +768,243 @@ def render_sent() -> None:
         ):
             for k in [
                 "phase", "brand_inputs", "triage_brands", "triage_results",
-                "selected_brands", "selected_list", "final_bundles", "approvals",
+                "selected_brands", "selected_enriched", "final_bundles", "approvals",
             ]:
                 st.session_state.pop(k, None)
             st.rerun()
+
+
+# ── Phase: how_it_works ───────────────────────────────────────────────────────
+
+def render_how_it_works() -> None:
+    col_l, _ = st.columns([1, 5])
+    with col_l:
+        if st.button("← Back to Sedge", key="back_howitworks"):
+            st.session_state.phase = "idle"
+            st.rerun()
+
+    st.markdown("""
+    <div style="padding: 32px 0 48px;">
+      <h1 class="sedge-h1" style="font-size: 64px;">How Sedge works</h1>
+      <p class="sedge-subtitle">Built from 150+ broker interviews.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown('<p class="sedge-section-title">THE THREE AGENTS</p>',
+                unsafe_allow_html=True)
+    st.markdown("""
+Sedge coordinates three specialized LLM agents through a shared blackboard:
+
+1. **Brand Scout** — researches any CPG brand across 10+ sources
+   (Amazon, Instacart, Firecrawl, retailer sites, social, trade press)
+   and scores it 0-100 on a 5-criterion rubric.
+
+2. **Retailer Matcher** — recommends which retailers (Whole Foods, Sprouts,
+   Erewhon) are the best fit for a given brand, based on category affinity,
+   verdict, and domain rules.
+
+3. **Retailer Pitcher** — drafts buyer-specific outreach emails and
+   printable 1-page sell sheets for the recommended retailers.
+
+4. **Admin & Ops** *(by-product)* — autofills the Whole Foods New Item
+   Setup Form (57 fields) from Brand Scout data whenever a brand
+   qualifies, flagging gaps for broker review.
+""")
+
+    st.markdown(
+        "<hr style='border:none; border-top:1px solid #EAEAE4; margin:48px 0;'>",
+        unsafe_allow_html=True,
+    )
+
+    st.markdown('<p class="sedge-section-title">THE SCORING RUBRIC</p>',
+                unsafe_allow_html=True)
+    st.markdown("""
+Every brand gets scored on **5 criteria totaling 100 points.**
+The rubric comes from 150+ interviews with independent brokers, CPG
+founders, distributors, and retail buyers.
+""")
+
+    rubric = [
+        ("Velocity Proof", 25,
+         "The most important signal. Has this brand proven real consumers "
+         "buy it repeatedly without heavy promotional support?",
+         "Amazon reviews & rating · Subscribe & Save · Instacart banners · "
+         "SPINS/NIQ mentions · trade press sell-through"),
+        ("Distribution Density", 20,
+         "Is the brand in the right number of doors — enough to prove "
+         "viability, not so many that a broker adds no value? Sweet spot: "
+         "20–300 doors with regional traction.",
+         "Store locators · Whole Foods/Target/Walmart/Sprouts/Costco listings · "
+         "Faire door count · Instacart banner count"),
+        ("Margin Viability", 20,
+         "Can this brand survive the full retail cost stack — distributor "
+         "markup 12–28%, broker commission 5%, free fill, slotting fees? "
+         "Brands need minimum 50% gross margin.",
+         "SRP vs category benchmarks · Faire wholesale pricing · "
+         "funding signals (can they absorb slotting?)"),
+        ("Brand Story Clarity", 20,
+         "Can a broker rep explain this brand to a retail buyer in 30 "
+         "seconds? Clear hero product, specific consumer, defined "
+         "differentiation vs. incumbents.",
+         "Website · Instagram/TikTok following · trade press (NOSH, "
+         "FoodNavigator) · Expo West presence · certifications"),
+        ("Promotional Independence", 15,
+         "Can this brand generate consumer demand without relying entirely "
+         "on the broker to fund promos? Healthy brands survive on regular pricing.",
+         "DTC channel & subscription model · organic social following · "
+         "TPR frequency · Amazon Subscribe & Save · promotional history"),
+    ]
+    for name, pts, desc, sources in rubric:
+        st.markdown(f"""
+        <div class="sedge-card" style="margin-bottom: 16px;">
+          <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px;">
+            <h3 style="font-family:'Instrument Serif', serif; font-size:20px;
+                       font-weight:400; margin:0;">{name}</h3>
+            <span class="sedge-number" style="color:#1A1A18; font-size:14px;
+                         background:#E8EDE9; padding:4px 12px; border-radius:99px;">
+              {pts} pts
+            </span>
+          </div>
+          <p style="font-size:14px; line-height:1.6; color:#1A1A18; margin:0 0 12px 0;">{desc}</p>
+          <p style="font-size:12px; color:#8B8A83; margin:0;"><strong>Sources:</strong> {sources}</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("<div style='margin-top: 32px;'></div>", unsafe_allow_html=True)
+    st.markdown('<p class="sedge-section-title">VERDICT THRESHOLDS</p>',
+                unsafe_allow_html=True)
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.markdown("""
+        <div class="sedge-card">
+          <span class="sedge-pill sedge-pill-ready">Broker Ready · 45–69</span>
+          <p style="font-size:14px; margin:12px 0 0 0;">
+            Emerging brand in the sweet spot. Enough traction to be credible,
+            not yet locked into national distribution.
+          </p>
+        </div>
+        """, unsafe_allow_html=True)
+    with c2:
+        st.markdown("""
+        <div class="sedge-card">
+          <span class="sedge-pill sedge-pill-established">Established · 70+</span>
+          <p style="font-size:14px; margin:12px 0 0 0;">
+            Proven brand, likely already working with brokers.
+            Pitch angle: why you're better than their current broker.
+          </p>
+        </div>
+        """, unsafe_allow_html=True)
+    with c3:
+        st.markdown("""
+        <div class="sedge-card">
+          <span class="sedge-pill sedge-pill-early">Too Early · under 45</span>
+          <p style="font-size:14px; margin:12px 0 0 0;">
+            Not enough traction yet. Missing velocity proof, distribution,
+            or story clarity. Check back in 6 months.
+          </p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown(
+        "<hr style='border:none; border-top:1px solid #EAEAE4; margin:48px 0;'>",
+        unsafe_allow_html=True,
+    )
+
+    st.markdown('<p class="sedge-section-title">ON MISSING DATA</p>',
+                unsafe_allow_html=True)
+    st.markdown("""
+Missing data scores at **50% of max** for each criterion — absence of
+information is treated as neutral, not negative. Only active negative
+signals (confirmed over-distribution, below-viable pricing, promotional
+dependency) reduce scores below the neutral floor.
+
+This matters because early brands often lack trackable signals, not
+because they lack promise.
+""")
+    st.markdown("<div style='margin: 48px 0;'></div>", unsafe_allow_html=True)
+
+
+# ── Phase: autonomous_running ─────────────────────────────────────────────────
+
+def render_autonomous_running() -> None:
+    brands = st.session_state.get("triage_brands", [])
+
+    st.markdown(
+        f'<div style="text-align:center; padding: 48px 0;">'
+        f'<h1 class="sedge-h1" style="text-align:center; font-size:48px;">'
+        f'Sedge is running'
+        f'</h1>'
+        f'<p class="sedge-subtitle" style="text-align:center;">'
+        f'Triage → select → pitch → form. You\'ll review at the end.'
+        f'</p>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+    # Step 1: Triage
+    step1_slot = st.empty()
+    step1_slot.markdown(
+        _progress_row("Triage", "spinner", f"Scoring {len(brands)} brands…"),
+        unsafe_allow_html=True,
+    )
+
+    from agents.orchestrator.pipeline import run_triage_pipeline
+    triage_results = None
+    for event in run_triage_pipeline(brands):
+        if event.stage == "triage_complete":
+            triage_results = event.data.get("results", [])
+            break
+
+    qualifying = [r for r in (triage_results or [])
+                  if r.get("score_estimate", 0) >= 45]
+    step1_slot.markdown(
+        _progress_row(
+            "Triage", "check",
+            f"{len(triage_results or [])} brands scored · "
+            f"{len(qualifying)} qualifying (≥ 45)",
+        ),
+        unsafe_allow_html=True,
+    )
+
+    if not qualifying:
+        st.markdown(
+            '<div class="sedge-card" style="margin-top:32px; text-align:center;">'
+            '<p>No brands scored high enough for outreach.</p>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+        if st.button("← Start over", key="auto_restart"):
+            st.session_state.phase = "idle"
+            st.rerun()
+        return
+
+    # Step 2: Auto-pitch qualifying brands
+    step2_slot = st.empty()
+    step2_slot.markdown(
+        _progress_row("Pitching", "spinner",
+                      f"Drafting pitches for {len(qualifying)} brands…"),
+        unsafe_allow_html=True,
+    )
+
+    from agents.orchestrator.pipeline import run_selective_pitch_pipeline
+    all_bundles = []
+    for event in run_selective_pitch_pipeline(qualifying):
+        if event.stage == "selective_complete":
+            all_bundles = event.data.get("bundles", [])
+            break
+
+    pitch_count = sum(len(b.get("pitches", [])) for b in all_bundles)
+    form_count  = sum(1 for b in all_bundles if b.get("admin_result"))
+    step2_slot.markdown(
+        _progress_row("Pitching", "check",
+                      f"{pitch_count} pitches drafted · {form_count} forms filled"),
+        unsafe_allow_html=True,
+    )
+
+    st.session_state.final_bundles = all_bundles
+    st.session_state.phase = "approval"
+    time.sleep(1)
+    st.rerun()
 
 
 # ── Error handler ─────────────────────────────────────────────────────────────
@@ -668,6 +1035,10 @@ try:
         render_approval()
     elif phase == "sent":
         render_sent()
+    elif phase == "how_it_works":
+        render_how_it_works()
+    elif phase == "autonomous_running":
+        render_autonomous_running()
     else:
         render_landing()
 except Exception as _page_exc:
