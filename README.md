@@ -1,59 +1,191 @@
 # Sedge
 
-**AI-powered workflow tool for independent CPG food brokers.**
-
-Sedge automates the research, pitching, and paperwork that brokers do by hand — so they can spend more time selling and less time on spreadsheets.
+An AI-powered operating system for independent CPG food brokers. Sedge replaces the manual research, pitching, and paperwork that brokers do by hand with a multi-agent workspace that runs continuously across their entire book of business.
 
 ---
 
 ## What it does
 
-### Brand Scout
-Evaluates whether a CPG brand is worth pursuing. You enter a brand name, and Sedge researches it across Amazon, Instacart, social media, and trade press — then scores it across five criteria:
+### Your book of business
+A persistent workspace for every brand a broker represents. Two agents — Retailer Pitcher and Admin & Ops — run continuously across the book and surface items that need human review. Brokers see what each agent has done, approve or edit drafts, and onboard new brands.
 
-- **Velocity Proof** — Amazon reviews, ratings, Subscribe & Save, SPINS mentions
-- **Distribution Density** — estimated door count, retail chain presence, Faire listing
-- **Margin Viability** — SRP vs. category benchmarks, funding raised
-- **Brand Story Clarity** — hero product, founder story, social following, certifications
-- **Promotional Independence** — DTC channel, TPR frequency, Subscribe & Save
+### Brand Scout (new brand qualification)
+Evaluates whether a CPG brand is worth pursuing. Enter a brand name; Sedge researches it across Amazon, Instacart, Faire, social media, and trade press, then scores it on five criteria:
 
-Scores 70+ are Established, 45–69 are Broker Ready, below 45 are Too Early. For qualifying brands, Sedge drafts a personalized outreach email to the founder.
+| Criterion | Weight | What it measures |
+|---|---|---|
+| Velocity Proof | 25 pts | Amazon ratings/reviews, Subscribe & Save, SPINS mentions |
+| Distribution Density | 20 pts | Door count, retail chain presence, Faire listing |
+| Margin Viability | 20 pts | SRP vs. category benchmarks, funding raised |
+| Brand Story Clarity | 20 pts | Hero SKU, certifications, social following, press |
+| Promotional Independence | 15 pts | DTC channel, TPR frequency, Subscribe & Save |
+
+Verdict thresholds: **Established** (70+), **Broker Ready** (45–69), **Too Early** (<45).
 
 ### Retailer Pitcher
-Generates retailer-ready pitch packages for Whole Foods, Sprouts, and Erewhon. Each package includes a buyer-persona-tailored outreach email and a 1-page sell sheet — ready to send.
+Drafts buyer-persona-tailored outreach emails and one-page sell sheets for Whole Foods, Sprouts, and Erewhon. Each pitch is adapted to what the specific buyer cares about, what kills a pitch with them, and which proof points resonate.
 
 ### Admin & Ops
-Autofills Whole Foods new item setup forms from Brand Scout data. Sedge matches extracted brand fields to WFM form fields, flags required gaps, and exports a filled Excel file.
+Autofills the Whole Foods New Item Setup Form (~70 fields across 10 sections) from everything Sedge knows about the brand. Two-pass fill: deterministic rule-based first, LLM inference for ambiguous fields. Exports a ready-to-submit Excel file and flags required gaps.
 
-### Dashboard
-One-click orchestrator that runs all three agents in sequence for any brand — Brand Scout → three retailer pitches → WFM form — with an approval screen before anything is sent.
-
----
-
-## Tech stack
-
-| Layer | Tool |
-|---|---|
-| UI | Streamlit |
-| Agent framework | LangGraph |
-| LLM | Claude (Anthropic) |
-| Memory / database | Supabase (Postgres) |
-| Hosting | Railway |
+### Brand Onboarding
+Three-step onboarding flow (brand info form → agent processing → review) that adds a brand to the book, extracts a canonical record from uploaded materials (PDF, DOCX, XLSX), and hands off to Retailer Pitcher and Admin & Ops automatically.
 
 ---
 
-## Running locally
+## Architecture
+
+```
+ui/sedge_app.py              ← Streamlit app, workspace router
+ui/per_agent_page.py         ← Retailer Pitcher + Admin & Ops agent pages
+ui/onboarding_flow.py        ← Brand onboarding 3-step UI
+
+agents/
+  brand_scout/               ← Research + scoring (LangGraph, 10-tool ReAct loop)
+  retailer_pitcher/          ← Email + sell sheet generation per buyer persona
+  admin_ops/                 ← WFM form autofill + gap flagging
+  brand_onboarding/          ← Canonical record extraction from uploaded docs
+  retailer_matcher/          ← Buyer heuristic (score + category → buyer_key)
+  orchestrator/              ← Pipeline wiring all agents together
+  llm_shim.py                ← Routes anthropic.Anthropic() calls to Gemini or Claude
+
+memory.py                    ← Supabase client + persistence helpers
+state.py                     ← Shared TypedDict state types
+
+supabase/
+  schema.sql                 ← Full schema reference
+  migrations/                ← Applied migration files
+```
+
+### Agent coordination
+
+Agents communicate through a shared Supabase blackboard (`coordination_messages` table). Each agent writes structured messages when it completes work or needs human review. The book-of-business page reads these messages to show status across all brands without any agent-to-agent API calls.
+
+```
+Brand Onboarding ──writes──▶ coordination_messages ◀──reads── Retailer Pitcher
+                                                    ◀──reads── Admin & Ops
+```
+
+State within a single agent run is managed by LangGraph's `MemorySaver` checkpointer (in-process, per thread).
+
+### Database schema
+
+| Table | Written by | Read by |
+|---|---|---|
+| `brands` | Brand Onboarding | All agents |
+| `brand_evaluations` | Brand Scout | Retailer Pitcher, Admin & Ops |
+| `brand_events` | Brand Onboarding | — |
+| `coordination_messages` | All agents | Book of business UI |
+| `retailer_pitches` | Retailer Pitcher | Book of business UI |
+| `new_item_forms` | Admin & Ops | Book of business UI |
+
+### LLM routing
+
+The `llm_shim` module patches `anthropic.Anthropic` at import time. By default (`SEDGE_LLM_PROVIDER=claude`) all calls go to the real Anthropic SDK. Set `SEDGE_LLM_PROVIDER=gemini` to route all Claude model calls through Gemini 2.5 Flash instead (haiku → Flash Lite, sonnet → Flash), which reduces cost ~50× at some quality tradeoff.
+
+---
+
+## Setup
+
+### Prerequisites
+
+- Python 3.10+
+- A [Supabase](https://supabase.com) project
+- An [Anthropic API key](https://console.anthropic.com) **or** a [Google AI Studio / Gemini API key](https://aistudio.google.com)
+- A [Firecrawl API key](https://www.firecrawl.dev) (for Brand Scout web scraping)
+
+### 1. Clone and install
 
 ```bash
+git clone https://github.com/isabeldeatucha-spec/sedge.git
+cd sedge
 pip install -r requirements.txt
+```
+
+### 2. Environment variables
+
+Create a `.env` file in the repo root:
+
+```env
+# LLM — pick one provider
+ANTHROPIC_API_KEY=sk-ant-...          # required if SEDGE_LLM_PROVIDER=claude (default)
+GEMINI_API_KEY=AIza...                # required if SEDGE_LLM_PROVIDER=gemini
+SEDGE_LLM_PROVIDER=claude             # "claude" (default) or "gemini"
+
+# Supabase
+SUPABASE_URL=https://xxxx.supabase.co
+SUPABASE_KEY=eyJ...                   # anon or service-role key
+
+# Web scraping (Brand Scout)
+FIRECRAWL_API_KEY=fc-...
+```
+
+### 3. Database setup
+
+Run the following SQL files against your Supabase project in order (Supabase SQL editor or CLI):
+
+```
+supabase/schema.sql                              ← base tables
+supabase/migrations/2026_04_22_brand_onboarding.sql   ← brands, brand_events, coordination_messages
+supabase/migrations/2026_04_22_sku_fields.sql    ← adds product catalog columns
+```
+
+The `sent_bundles` table is auto-created on first use via `memory.store_sent_bundle()`.
+
+### 4. Run
+
+```bash
 streamlit run ui/sedge_app.py
 ```
 
-Requires a `.env` file with:
+The app opens at `http://localhost:8501`.
+
+### 5. Try the sandbox
+
+On the "Your book of business" page, expand "Dev utilities" at the bottom and click **Load sandbox brands** to seed five pre-built CPG brands (Chomps, Fishwife, Graza, Olipop, Magic Spoon) with realistic agent activity, so you can explore the UI without running the agents first.
+
+---
+
+## Deployment
+
+Sedge is configured for [Railway](https://railway.app) via `railway.json`. The start command is:
 
 ```
-ANTHROPIC_API_KEY=...
-SUPABASE_URL=...
-SUPABASE_SERVICE_ROLE_KEY=...
-TAVILY_API_KEY=...
+python3 -m streamlit run ui/sedge_app.py --server.port $PORT --server.address 0.0.0.0 --server.headless true
 ```
+
+Set the same environment variables in your Railway project settings.
+
+---
+
+## Limitations
+
+**Brand Scout accuracy** — Scores are estimates from public signals (Amazon, Instacart, Faire, trade press). They are not sourced from SPINS, Nielsen, or any paid data provider. Door counts and velocity figures are inferred, not authoritative.
+
+**Retailer Pitcher buyers** — Three buyer personas supported (Whole Foods, Sprouts, Erewhon). KeHE, UNFI, Kroger, and Costco are on the roadmap but not yet wired.
+
+**Admin & Ops forms** — Only the Whole Foods New Item Setup Form is implemented. The form template is the 2018 version; field layouts change periodically.
+
+**No email sending** — Sedge drafts and exports pitches and forms but does not send email. "Send to buyer" buttons are UI placeholders.
+
+**No PO or deduction ingestion** — PO processing, deduction tracking, demo spend reconciliation, and commission reconciliation are on the roadmap (Q2–Q3) but not yet implemented.
+
+**LangGraph checkpointer** — Agent state uses `MemorySaver` (in-process). If the Streamlit process restarts mid-run, in-flight graph state is lost. This does not affect persisted Supabase data.
+
+**Firecrawl dependency** — Brand Scout's web scraping relies on Firecrawl. Without a valid API key, Brand Scout falls back to reduced signal coverage and scores will be less reliable.
+
+---
+
+## Roadmap
+
+| Quarter | Feature |
+|---|---|
+| Q2 2026 | PO processing (EDI + email ingest) |
+| Q2 2026 | Deduction tracking and dispute drafting |
+| Q3 2026 | Multi-buyer batch pitches |
+| Q3 2026 | Demo spend reconciliation |
+| Q3 2026 | Commission reconciliation |
+| Q3 2026 | SLA tracking and weekly digest |
+| Q3 2026 | More retailers (KeHE, UNFI, Kroger, Costco) |
+| Q4 2026 | Buyer relationship tracking |
+| Q4 2026 | Multi-broker platform |
