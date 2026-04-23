@@ -4,7 +4,6 @@ Brand Scout — entry point.
 Modes:
     python -m sedge.main                          CLI evaluation (interactive)
     python -m sedge.main --brand "Chomps"         evaluate a specific brand
-    python -m sedge.main --telegram               start the Telegram bot
 """
 import argparse
 import sys
@@ -139,8 +138,4 @@ def run_cli() -> None:
 
 
 if __name__ == "__main__":
-    if "--telegram" in sys.argv:
-        from sedge.telegram_bot import run_bot
-        run_bot()
-    else:
-        run_cli()
+    run_cli()

@@ -1018,9 +1018,16 @@ def render_landing_cards() -> None:
         LABEL_EXISTING_BUSINESS, LABEL_EXISTING_BUSINESS_SUB,
         LABEL_BRAND_SCOUT, LABEL_BRAND_SCOUT_SUB,
     )
+
+    _, col_docs = st.columns([5, 1])
+    with col_docs:
+        if st.button("Docs →", key="open_docs"):
+            st.query_params["page"] = "docs"
+            st.rerun()
+
     st.markdown(
         """
-        <div style="text-align:center; padding: 4rem 1rem 2.5rem 1rem;">
+        <div style="text-align:center; padding: 2rem 1rem 2.5rem 1rem;">
             <div style="font-family:'Instrument Serif', Georgia, serif;
                         font-size:64px; line-height:1.1; color:#1a1a1a;">Sedge</div>
             <div style="font-family:'Instrument Serif', Georgia, serif;
@@ -2175,6 +2182,226 @@ def render_existing_business_workspace() -> None:
     render_brand_roster()
 
 
+# ── Documentation page ────────────────────────────────────────────────────────
+
+def render_docs() -> None:
+    col_l, _ = st.columns([1, 5])
+    with col_l:
+        if st.button("← Sedge", key="back_from_docs"):
+            st.query_params.clear()
+            st.rerun()
+
+    st.markdown("""
+    <div style="padding: 32px 0 48px;">
+      <div style="font-family:'Instrument Serif', Georgia, serif; font-size:56px;
+                  line-height:1.1; color:#1a1a1a;">Sedge</div>
+      <div style="font-family:'Instrument Serif', Georgia, serif; font-style:italic;
+                  font-size:22px; color:#6b6b6b; margin-top:0.5rem; margin-bottom:1.5rem;">
+        the operating system for CPG brokers
+      </div>
+      <p style="font-size:16px; color:#444; max-width:640px; line-height:1.7;">
+        Sedge replaces the manual research, pitching, and paperwork that independent
+        food &amp; beverage brokers do by hand with a multi-agent workspace that runs
+        continuously across their entire book of business.
+      </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown(
+        "<hr style='border:none; border-top:1px solid #EAEAE4; margin:0 0 48px;'>",
+        unsafe_allow_html=True,
+    )
+
+    # ── What it does ──────────────────────────────────────────────────────────
+    st.markdown('<p class="sedge-section-title">WHAT IT DOES</p>', unsafe_allow_html=True)
+
+    agents_info = [
+        (
+            "Brand Scout",
+            "New brand qualification",
+            "Enter any CPG brand name. Sedge researches it across Amazon, Instacart, "
+            "Faire, social media, and trade press, then scores it on five criteria "
+            "(0–100) and returns a broker-ready brief.",
+        ),
+        (
+            "Retailer Pitcher",
+            "Buyer-tailored outreach",
+            "Drafts outreach emails and one-page sell sheets customized to each "
+            "buyer's persona — what they care about, what kills a pitch with them, "
+            "and which proof points resonate. Supports Whole Foods, Sprouts, and Erewhon.",
+        ),
+        (
+            "Admin & Ops",
+            "Form autofill",
+            "Autofills the Whole Foods New Item Setup Form (~70 fields across 10 "
+            "sections) from everything Sedge knows about the brand. Two-pass fill: "
+            "deterministic rules first, LLM inference for ambiguous fields. Exports "
+            "a ready-to-submit Excel file and flags required gaps.",
+        ),
+        (
+            "Brand Onboarding",
+            "Canonical record extraction",
+            "Three-step flow (brand info → agent processing → review) that adds a "
+            "brand to the book, extracts a structured record from uploaded materials "
+            "(PDF, DOCX, XLSX), and hands off to Retailer Pitcher and Admin & Ops.",
+        ),
+    ]
+
+    for name, tagline, desc in agents_info:
+        st.markdown(f"""
+        <div class="sedge-card" style="margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px;">
+            <h3 style="font-family:'Instrument Serif', serif; font-size:20px;
+                       font-weight:400; margin:0;">{name}</h3>
+            <span style="font-size:12px; color:#8B8A83; font-style:italic;">{tagline}</span>
+          </div>
+          <p style="font-size:14px; line-height:1.6; color:#1A1A18; margin:0;">{desc}</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown(
+        "<hr style='border:none; border-top:1px solid #EAEAE4; margin:48px 0;'>",
+        unsafe_allow_html=True,
+    )
+
+    # ── Scoring rubric ────────────────────────────────────────────────────────
+    st.markdown('<p class="sedge-section-title">BRAND SCOUT SCORING RUBRIC</p>', unsafe_allow_html=True)
+    st.markdown(
+        "<p style='font-size:14px; color:#444; margin-bottom:24px;'>"
+        "Five criteria, 100 points. Built from what brokers told us they actually look for "
+        "before signing a brand.</p>",
+        unsafe_allow_html=True,
+    )
+
+    rubric = [
+        ("Velocity Proof", 25,
+         "Does the brand turn on shelf without being on promo?",
+         "Amazon reviews & rating · Subscribe & Save · Instacart banners · SPINS/NIQ mentions · trade press"),
+        ("Distribution Density", 20,
+         "Enough stores to prove it works — not so many you can't add value.",
+         "Store locators · Whole Foods/Target/Walmart/Sprouts/Costco · Faire door count"),
+        ("Margin Viability", 20,
+         "Can it survive the full stack: distributor markup, commission, slotting, deductions?",
+         "SRP vs. category benchmarks · Faire wholesale pricing · funding signals"),
+        ("Brand Story Clarity", 20,
+         "Can a rep explain it to a buyer in 30 seconds?",
+         "Website · Instagram/TikTok · trade press (NOSH, FoodNavigator) · certifications"),
+        ("Promotional Independence", 15,
+         "Will the brand pull through without leaning on you for promo funding?",
+         "DTC channel · organic social following · TPR frequency · Subscribe & Save"),
+    ]
+    for name, pts, desc, sources in rubric:
+        st.markdown(f"""
+        <div class="sedge-card" style="margin-bottom:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px;">
+            <strong style="font-size:14px;">{name}</strong>
+            <span style="font-size:12px; background:#E8EDE9; padding:2px 10px;
+                         border-radius:99px; color:#1A1A18;">{pts} pts</span>
+          </div>
+          <p style="font-size:13px; color:#1A1A18; margin:0 0 6px;">{desc}</p>
+          <p style="font-size:12px; color:#8B8A83; margin:0;"><strong>Sources:</strong> {sources}</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("<div style='margin:16px 0 8px;'></div>", unsafe_allow_html=True)
+    c1, c2, c3 = st.columns(3)
+    for col, pill_class, label, note in [
+        (c1, "sedge-pill-early",       "Too Early · < 45",    "Not there yet on turns, doors, or story."),
+        (c2, "sedge-pill-ready",       "Broker Ready · 45–69","Sweet spot — traction without national lock-in."),
+        (c3, "sedge-pill-established", "Established · 70+",   "Proven, but probably already has a broker."),
+    ]:
+        with col:
+            st.markdown(f"""
+            <div class="sedge-card">
+              <span class="sedge-pill {pill_class}">{label}</span>
+              <p style="font-size:13px; margin:10px 0 0;">{note}</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+    st.markdown(
+        "<hr style='border:none; border-top:1px solid #EAEAE4; margin:48px 0;'>",
+        unsafe_allow_html=True,
+    )
+
+    # ── Architecture ──────────────────────────────────────────────────────────
+    st.markdown('<p class="sedge-section-title">ARCHITECTURE</p>', unsafe_allow_html=True)
+    st.markdown("""
+**Agent coordination** — Agents communicate through a shared Supabase blackboard
+(`coordination_messages` table). Each agent writes structured messages when it
+completes work or needs human review. The book-of-business page reads these messages
+to show status across all brands without any agent-to-agent API calls.
+
+**LLM routing** — A shim module patches `anthropic.Anthropic` at import time.
+Set `SEDGE_LLM_PROVIDER=gemini` to route all Claude calls through Gemini 2.5 Flash
+(~50× cheaper at some quality tradeoff). Default is `claude`.
+
+**State persistence** — Within a single agent run, state is managed by LangGraph's
+`MemorySaver` checkpointer (in-process, per thread). Cross-agent data lives in
+Supabase and survives restarts.
+""")
+
+    st.code("""ui/sedge_app.py          ← Streamlit app, workspace router
+ui/per_agent_page.py    ← Retailer Pitcher + Admin & Ops pages
+ui/onboarding_flow.py   ← Brand onboarding 3-step UI
+
+agents/
+  brand_scout/          ← Research + scoring (LangGraph, 10-tool ReAct loop)
+  retailer_pitcher/     ← Email + sell sheet generation per buyer persona
+  admin_ops/            ← WFM form autofill + gap flagging
+  brand_onboarding/     ← Canonical record extraction from uploaded docs
+  retailer_matcher/     ← Buyer heuristic (score + category → buyer_key)
+  orchestrator/         ← Pipeline wiring all agents together
+  llm_shim.py           ← Routes anthropic calls to Gemini or Claude
+
+memory.py               ← Supabase client + persistence helpers
+state.py                ← Shared TypedDict state types""", language="text")
+
+    st.markdown(
+        "<hr style='border:none; border-top:1px solid #EAEAE4; margin:48px 0;'>",
+        unsafe_allow_html=True,
+    )
+
+    # ── Setup ─────────────────────────────────────────────────────────────────
+    st.markdown('<p class="sedge-section-title">LOCAL SETUP</p>', unsafe_allow_html=True)
+    st.code("""git clone https://github.com/isabeldeatucha-spec/sedge.git
+cd sedge
+pip install -r requirements.txt
+cp .env.example .env   # then fill in your keys
+streamlit run ui/sedge_app.py""", language="bash")
+
+    st.markdown("**Required environment variables:**")
+    st.code("""ANTHROPIC_API_KEY=sk-ant-...       # or set SEDGE_LLM_PROVIDER=gemini + GEMINI_API_KEY
+SUPABASE_URL=https://xxxx.supabase.co
+SUPABASE_KEY=eyJ...
+FIRECRAWL_API_KEY=fc-...            # for Brand Scout web scraping""", language="bash")
+
+    st.markdown(
+        "<hr style='border:none; border-top:1px solid #EAEAE4; margin:48px 0;'>",
+        unsafe_allow_html=True,
+    )
+
+    # ── Limitations ───────────────────────────────────────────────────────────
+    st.markdown('<p class="sedge-section-title">LIMITATIONS</p>', unsafe_allow_html=True)
+    limitations = [
+        ("Brand Scout accuracy", "Scores are estimates from public signals. Not sourced from SPINS, Nielsen, or any paid data provider. Door counts and velocity figures are inferred, not authoritative."),
+        ("Retailer coverage", "Three buyer personas supported: Whole Foods, Sprouts, Erewhon. KeHE, UNFI, Kroger, and Costco are on the roadmap."),
+        ("Admin & Ops forms", "Only the Whole Foods New Item Setup Form is implemented. The form template is the 2018 version; field layouts change periodically."),
+        ("No email sending", "Sedge drafts and exports pitches and forms but does not send email. 'Send to buyer' buttons are UI placeholders."),
+        ("No PO ingestion", "PO processing, deduction tracking, demo spend reconciliation, and commission reconciliation are on the roadmap but not yet implemented."),
+        ("Checkpointer", "Agent state uses MemorySaver (in-process). If the Streamlit process restarts mid-run, in-flight graph state is lost. Persisted Supabase data is unaffected."),
+    ]
+    for title, body in limitations:
+        st.markdown(f"""
+        <div style="margin-bottom:12px; padding:14px 16px; background:#FAFAF8;
+                    border-radius:8px; border:1px solid #EAEAE4;">
+          <strong style="font-size:14px;">{title}</strong>
+          <p style="font-size:13px; color:#555; margin:4px 0 0;">{body}</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("<div style='margin: 48px 0;'></div>", unsafe_allow_html=True)
+
+
 # ── Top-level workspace router ────────────────────────────────────────────────
 
 if "workspace" not in st.session_state:
@@ -2183,7 +2410,9 @@ if "workspace" not in st.session_state:
 workspace = st.session_state["workspace"]
 
 try:
-    if workspace is None:
+    if st.query_params.get("page") == "docs":
+        render_docs()
+    elif workspace is None:
         render_landing_cards()
     elif workspace == "existing_business":
         render_back_nav()
