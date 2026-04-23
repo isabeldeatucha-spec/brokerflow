@@ -2,6 +2,8 @@
 
 An AI-powered operating system for independent CPG food brokers. Sedge replaces the manual research, pitching, and paperwork that brokers do by hand with a multi-agent workspace that runs continuously across their entire book of business.
 
+**[Live app](https://retailer-pitcher-production.up.railway.app)** · **[Documentation](https://retailer-pitcher-production.up.railway.app/?page=docs)** · **[GitHub](https://github.com/isabeldeatucha-spec/sedge)**
+
 ---
 
 ## What it does
