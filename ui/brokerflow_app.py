@@ -1105,243 +1105,206 @@ def render_back_nav() -> None:
 
 # ── Brand Scout workspace: idle (scoped, no landing-page bleed-through) ───────
 
-def render_brand_scout_idle() -> None:
-    stats = _fetch_stats()
+_QUIET_LABEL = (
+    "font-family:'Inter', sans-serif; font-size:12px; font-weight:500;"
+    "color:#9CA3AF; letter-spacing:0.01em; margin:0 0 10px 0;"
+)
 
-    # "How it works →" anchor link — scrolls to rubric section below
-    _, _, col_r = st.columns([1, 3, 1])
-    with col_r:
+
+def render_brand_scout_idle() -> None:
+    # ── Above the fold — title is rendered by the workspace; here: helper copy,
+    # input rows, primary CTA, and one tiny disclosure. No stats, no mode toggle,
+    # no top-level "How it works" link. ───────────────────────────────────────
+    st.markdown(
+        '<p style="font-family:\'Inter\', sans-serif; font-size:14px;'
+        'color:#57564F; line-height:1.5; margin:0 0 14px 0;">'
+        "Enter up to 5 brands. We’ll tell you which ones are worth "
+        "a meeting in about 30 seconds.</p>",
+        unsafe_allow_html=True,
+    )
+
+    if "brand_inputs" not in st.session_state:
+        st.session_state.brand_inputs = ["", "", "", "", ""]
+    placeholders = ["Chomps", "Fishwife", "Graza", "Olipop", "Magic Spoon"]
+    for i in range(5):
+        st.session_state.brand_inputs[i] = st.text_input(
+            f"Brand {i + 1}",
+            value=st.session_state.brand_inputs[i],
+            placeholder=placeholders[i],
+            key=f"brand_input_{i}",
+            label_visibility="collapsed",
+        )
+
+    filled_brands = [b for b in st.session_state.brand_inputs if b.strip()]
+
+    st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
+    if st.button(
+        "Evaluate brands",
+        disabled=len(filled_brands) == 0,
+        use_container_width=True,
+        type="primary",
+        key="run_triage_btn",
+    ):
+        st.session_state.triage_brands = filled_brands
+        st.session_state.phase = (
+            "autonomous_running"
+            if st.session_state.get("mode", "manual") == "autonomous"
+            else "triaging"
+        )
+        st.rerun()
+
+    # Tiny secondary disclosures — kept low-prominence on purpose.
+    with st.expander("What we check"):
         st.markdown(
-            '<a href="#how-brand-scout-works" style="font-size:13px;color:#57564F;'
-            'text-decoration:none;">How it works →</a>',
+            "<p style='font-size:13px; line-height:1.6; color:#57564F; margin:0;'>"
+            "Brand Scout pulls distribution, velocity signals, social presence, "
+            "margin viability, and brand story across 10+ sources. It scores the "
+            "brand on five criteria and returns a verdict: worth a meeting, "
+            "watch for six months, or pass."
+            "</p>",
             unsafe_allow_html=True,
         )
 
-    # Brands-only stat (pitches/forms/bundles belong to other agents)
+    with st.expander("Options"):
+        mode_choice = st.radio(
+            "Review mode",
+            ["Step through — review each stage",
+             "Run it — review at the end"],
+            index=0 if st.session_state.get("mode", "manual") == "manual" else 1,
+            label_visibility="collapsed",
+            key="mode_radio",
+        )
+        st.session_state.mode = (
+            "autonomous" if "Run it" in mode_choice else "manual"
+        )
+
+    # ── Below the fold — supporting documentation, visually quieter. ──────────
     st.markdown(
-        f'<p style="text-align:center;color:#8B8A83;font-size:13px;margin-bottom:24px;">'
-        f'<span class="sedge-number">{stats["brands"]}</span> brands evaluated'
+        "<hr style='border:none; border-top:1px solid #F2F2EE;"
+        "margin:32px 0 18px;'>",
+        unsafe_allow_html=True,
+    )
+
+    # Scoring tiers — compact stacked rows, not big cards
+    st.markdown(
+        f'<p style="{_QUIET_LABEL}">Scoring tiers</p>',
+        unsafe_allow_html=True,
+    )
+    tier_rows = [
+        ("Broker Ready", "45–69", "badge-ready",
+         "Worth a meeting — enough traction to be credible, not yet locked into national distribution."),
+        ("Established",  "70+",   "badge-established",
+         "Check who reps them now — proven brand, likely already working with brokers."),
+        ("Too Early",    "< 45",  "badge-early",
+         "Check back in 6 months — missing velocity, distribution, or story."),
+    ]
+    rows_html = "".join(
+        f'<div style="display:flex; align-items:center; gap:12px;'
+        f'padding:10px 0; border-bottom:1px solid #F2F2EE;">'
+        f'<span class="{cls}" style="flex-shrink:0;">{lbl}</span>'
+        f'<span class="sedge-number" style="font-size:13px; color:#1A1A18;'
+        f'min-width:54px;">{rng}</span>'
+        f'<span style="font-size:13px; color:#57564F; line-height:1.5;">{desc}</span>'
+        f'</div>'
+        for lbl, rng, cls, desc in tier_rows
+    )
+    st.markdown(rows_html, unsafe_allow_html=True)
+
+    # How scoring works — short paragraph
+    st.markdown("<div style='margin-top:24px;'></div>", unsafe_allow_html=True)
+    st.markdown(
+        f'<p style="{_QUIET_LABEL}">How scoring works</p>'
+        f'<p style="font-size:13px; line-height:1.6; color:#57564F; margin:0;">'
+        f"Five criteria, 100 points. Built from what brokers actually look for "
+        f"before signing a brand. Missing data scores neutral, not negative — "
+        f"early brands often don’t have trackable signals yet."
         f'</p>',
         unsafe_allow_html=True,
     )
 
-    # Mode toggle
-    col_l, col_c, col_r2 = st.columns([1, 2, 1])
-    with col_c:
-        mode_choice = st.radio(
-            "",
-            ["Step through — review each stage",
-             "Run it — review at the end"],
-            index=0 if st.session_state.get("mode", "manual") == "manual" else 1,
-            horizontal=True,
-            label_visibility="collapsed",
-            key="mode_radio",
+    # Scoring rubric — disclosure with compact rows
+    st.markdown("<div style='margin-top:18px;'></div>", unsafe_allow_html=True)
+    with st.expander("Scoring rubric"):
+        rubric = [
+            ("Velocity Proof", 25,
+             "Does the brand turn on shelf without being on promo? Not enough turns and the distributor drops it.",
+             "Amazon reviews & rating · Subscribe & Save · Instacart banners · SPINS/NIQ · trade press"),
+            ("Distribution Density", 20,
+             "Enough stores to prove it works, not so many you can’t add value. Sweet spot: 20–300 stores.",
+             "Store locators · WFM/Target/Walmart/Sprouts/Costco · Faire · Instacart banners"),
+            ("Margin Viability", 20,
+             "Can it survive the full stack — distributor markup, commission, free fills, slotting? 50% gross margin minimum.",
+             "SRP vs category benchmarks · Faire wholesale · funding signals"),
+            ("Brand Story Clarity", 20,
+             "Can a rep explain it to a buyer in 30 seconds? Hero SKU, defined consumer, clear difference on shelf.",
+             "Website · Instagram/TikTok · trade press · Expo West · certifications"),
+            ("Promotional Independence", 15,
+             "Will it pull through without leaning on promo funding? The strongest brands don’t promote at all.",
+             "DTC & subscription · organic social · TPR frequency · Subscribe & Save"),
+        ]
+        rubric_rows = "".join(
+            f'<div style="padding:12px 0; border-bottom:1px solid #F2F2EE;">'
+            f'<div style="display:flex; justify-content:space-between;'
+            f'align-items:baseline; margin-bottom:4px;">'
+            f'<span style="font-size:14px; color:#1A1A18; font-weight:500;">{name}</span>'
+            f'<span class="sedge-number" style="font-size:12px; color:#8B8A83;">{pts} pts</span>'
+            f'</div>'
+            f'<p style="font-size:13px; line-height:1.55; color:#57564F; margin:0 0 4px 0;">{desc}</p>'
+            f'<p style="font-size:12px; color:#9CA3AF; margin:0;">Sources: {sources}</p>'
+            f'</div>'
+            for name, pts, desc, sources in rubric
         )
-        st.session_state.mode = "autonomous" if "Run it" in mode_choice else "manual"
+        st.markdown(rubric_rows, unsafe_allow_html=True)
 
-    st.markdown("<div style='margin-top: 24px;'></div>", unsafe_allow_html=True)
-
-    # Brand input grid
-    st.markdown(
-        '<p class="sedge-section-title">QUALIFY UP TO 5 BRANDS</p>',
-        unsafe_allow_html=True,
-    )
-    if "brand_inputs" not in st.session_state:
-        st.session_state.brand_inputs = ["", "", "", "", ""]
-    placeholders = ["Chomps", "Fishwife", "Graza", "Olipop", "Magic Spoon"]
-    cols = st.columns(5)
-    for i, col in enumerate(cols):
-        with col:
-            st.session_state.brand_inputs[i] = st.text_input(
-                f"Brand {i + 1}",
-                value=st.session_state.brand_inputs[i],
-                placeholder=placeholders[i],
-                key=f"brand_input_{i}",
-                label_visibility="collapsed",
-            )
-    filled_brands = [b for b in st.session_state.brand_inputs if b.strip()]
-    st.markdown("<div style='margin-top: 16px;'></div>", unsafe_allow_html=True)
-
-    col_l, col_c, col_r3 = st.columns([1, 2, 1])
-    with col_c:
-        btn_label = (
-            f"Qualify {len(filled_brands)} brand{'s' if len(filled_brands) != 1 else ''} →"
-            if filled_brands
-            else "Enter brand names above"
+    with st.expander("Verdict thresholds"):
+        thresholds = [
+            ("badge-ready",       "Broker Ready · 45–69",
+             "Emerging brand in the sweet spot — credible traction, not yet locked into national distribution."),
+            ("badge-established", "Established · 70+",
+             "Proven brand, probably already has a broker. Lead with what their current broker isn’t doing."),
+            ("badge-early",       "Too Early · under 45",
+             "Not there yet on turns, doors, or story. Worth a check-in in six months."),
+        ]
+        thresh_html = "".join(
+            f'<div style="padding:10px 0; border-bottom:1px solid #F2F2EE;">'
+            f'<span class="{cls}" style="margin-right:8px;">{lbl}</span>'
+            f'<p style="font-size:13px; line-height:1.55; color:#57564F; margin:8px 0 0 0;">{desc}</p>'
+            f'</div>'
+            for cls, lbl, desc in thresholds
         )
-        if st.button(
-            btn_label,
-            disabled=len(filled_brands) == 0,
-            use_container_width=True,
-            type="primary",
-            key="run_triage_btn",
-        ):
-            st.session_state.triage_brands = filled_brands
-            st.session_state.phase = (
-                "autonomous_running" if st.session_state.mode == "autonomous"
-                else "triaging"
-            )
-            st.rerun()
+        st.markdown(thresh_html, unsafe_allow_html=True)
 
-    st.markdown(
-        '<p class="sedge-caption" style="text-align:center; margin-top:12px;">'
-        "~30 seconds. We'll tell you which ones are worth a meeting."
-        '</p>',
-        unsafe_allow_html=True,
-    )
+    with st.expander("On missing data"):
+        st.markdown(
+            "<p style='font-size:13px; line-height:1.6; color:#57564F; margin:0;'>"
+            "Missing data scores neutral, not negative. Early brands often "
+            "don’t have trackable signals yet — that’s not the same "
+            "as failing."
+            "</p>",
+            unsafe_allow_html=True,
+        )
 
-    # Scoring tier cards
-    st.markdown("<div style='margin-top:32px;'></div>", unsafe_allow_html=True)
-    st.markdown(
-        '<p class="sedge-section-title" style="margin-bottom:16px;">Scoring tiers</p>',
-        unsafe_allow_html=True,
-    )
-    tier_cols = st.columns(3)
-    for _col, (_lbl, _range, _cta, _desc, _cls) in zip(tier_cols, [
-        ("Broker Ready", "45–69", "Worth a meeting",         "Enough traction to be credible, not yet locked into national distribution.", "badge-ready"),
-        ("Established",  "70+",   "Check who reps them now", "Proven brand, likely working with brokers. Pitch angle: why you're better.", "badge-established"),
-        ("Too Early",    "< 45",  "Check back in 6 months",  "Missing velocity proof, distribution, or brand story clarity.",              "badge-early"),
-    ]):
-        with _col:
-            _col.markdown(
-                f'<div class="sedge-card" style="padding:20px;">'
-                f'<span class="{_cls}">{_lbl}</span>'
-                f'<p class="sedge-number" style="font-size:20px;color:#1A1A18;margin:12px 0 4px;font-weight:400;">{_range}</p>'
-                f'<p class="sedge-caption" style="font-weight:500;color:#57564F;margin-bottom:8px;">{_cta}</p>'
-                f'<p class="sedge-caption">{_desc}</p>'
-                f'</div>',
-                unsafe_allow_html=True,
-            )
-
-    # ── How Brand Scout Works + Rubric (anchor target) ────────────────────────
-    st.markdown(
-        "<hr style='border:none; border-top:1px solid #EAEAE4; margin:56px 0 40px;'>",
-        unsafe_allow_html=True,
-    )
-    st.markdown('<div id="how-brand-scout-works"></div>', unsafe_allow_html=True)
-    st.markdown('<p class="sedge-section-title">HOW BRAND SCOUT WORKS</p>', unsafe_allow_html=True)
-    st.markdown(
-        "Brand Scout pulls everything you'd find by hand — distribution, velocity signals, "
-        "social presence, margin viability — across 10+ sources. It scores the brand on 5 "
-        "criteria and gives you a verdict: worth a meeting, watch for 6 months, or pass."
-    )
-
-    st.markdown(
-        "<hr style='border:none; border-top:1px solid #EAEAE4; margin:48px 0;'>",
-        unsafe_allow_html=True,
-    )
-    st.markdown('<p class="sedge-section-title">THE SCORING RUBRIC</p>', unsafe_allow_html=True)
-    st.markdown("""
-**Five criteria, 100 points.**
-Built from what brokers actually told us they look for before signing a brand.
-""")
-    _rubric = [
-        ("Velocity Proof", 25,
-         "Does the brand turn on shelf without being on promo? This is what kills "
-         "brands at the distributor level — not enough turns and you get dropped.",
-         "Amazon reviews & rating · Subscribe & Save · Instacart banners · "
-         "SPINS/NIQ mentions · trade press sell-through"),
-        ("Distribution Density", 20,
-         "Enough stores to prove the brand works, not so many that you can't add "
-         "value. Sweet spot: 20–300 stores with regional momentum.",
-         "Store locators · Whole Foods/Target/Walmart/Sprouts/Costco listings · "
-         "Faire door count · Instacart banner count"),
-        ("Margin Viability", 20,
-         "Can the brand survive the full stack — 12–28% distributor markup, 5% "
-         "commission, free fills, slotting, deductions? Rule of thumb: 50% gross "
-         "margin minimum, 60% if you want room to breathe.",
-         "SRP vs category benchmarks · Faire wholesale pricing · "
-         "funding signals (can they absorb slotting?)"),
-        ("Brand Story Clarity", 20,
-         "Can a rep explain it to a buyer in 30 seconds? Hero SKU, defined "
-         "consumer, clear difference vs. what's already on shelf.",
-         "Website · Instagram/TikTok following · trade press (NOSH, "
-         "FoodNavigator) · Expo West presence · certifications"),
-        ("Promotional Independence", 15,
-         "Will the brand pull through without leaning on you for promo funding? "
-         "The strongest brands don't promote at all.",
-         "DTC channel & subscription model · organic social following · "
-         "TPR frequency · Amazon Subscribe & Save · promotional history"),
-    ]
-    for _name, _pts, _desc, _sources in _rubric:
-        st.markdown(f"""
-        <div class="sedge-card" style="margin-bottom: 16px;">
-          <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px;">
-            <h3 style="font-family:'Instrument Serif', serif; font-size:20px;
-                       font-weight:400; margin:0;">{_name}</h3>
-            <span class="sedge-number" style="color:#1A1A18; font-size:14px;
-                         background:#E8EDE9; padding:4px 12px; border-radius:99px;">
-              {_pts} pts
-            </span>
-          </div>
-          <p style="font-size:14px; line-height:1.6; color:#1A1A18; margin:0 0 12px 0;">{_desc}</p>
-          <p style="font-size:12px; color:#8B8A83; margin:0;"><strong>Sources:</strong> {_sources}</p>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("<div style='margin-top: 32px;'></div>", unsafe_allow_html=True)
-    st.markdown('<p class="sedge-section-title">VERDICT THRESHOLDS</p>', unsafe_allow_html=True)
-    vc1, vc2, vc3 = st.columns(3)
-    with vc1:
-        st.markdown("""
-        <div class="sedge-card">
-          <span class="sedge-pill sedge-pill-ready">Broker Ready · 45–69</span>
-          <p style="font-size:14px; margin:12px 0 0 0;">
-            Emerging brand in the sweet spot. Enough traction to be credible,
-            not yet locked into national distribution.
-          </p>
-        </div>
-        """, unsafe_allow_html=True)
-    with vc2:
-        st.markdown("""
-        <div class="sedge-card">
-          <span class="sedge-pill sedge-pill-established">Established · 70+</span>
-          <p style="font-size:14px; margin:12px 0 0 0;">
-            Proven brand, probably already has a broker. If you go after them,
-            lead with what their current broker isn't doing.
-          </p>
-        </div>
-        """, unsafe_allow_html=True)
-    with vc3:
-        st.markdown("""
-        <div class="sedge-card">
-          <span class="sedge-pill sedge-pill-early">Too Early · under 45</span>
-          <p style="font-size:14px; margin:12px 0 0 0;">
-            Not there yet. Too early on turns, doors, or story. Worth a
-            check-in in 6 months — most of these never make it.
-          </p>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown(
-        "<hr style='border:none; border-top:1px solid #EAEAE4; margin:48px 0;'>",
-        unsafe_allow_html=True,
-    )
-    st.markdown('<p class="sedge-section-title">ON MISSING DATA</p>', unsafe_allow_html=True)
-    st.markdown("""
-Missing data scores neutral, not negative. Early brands often don't have
-trackable signals yet — that's not the same as failing.
-""")
-    st.markdown("<div style='margin: 48px 0;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin: 24px 0;'></div>", unsafe_allow_html=True)
 
 
 # ── Brand Scout workspace ─────────────────────────────────────────────────────
 
 def render_brand_scout_workspace() -> None:
-    from ui.labels import LABEL_BRAND_SCOUT, LABEL_BRAND_SCOUT_SCOPE
+    from ui.labels import LABEL_BRAND_SCOUT, LABEL_BRAND_SCOUT_SUB
     st.markdown(
-        f"<h1 style='font-family:\"Instrument Serif\", Georgia, serif; "
-        f"font-size:44px; font-weight:400; margin-bottom:0.25rem;'>{LABEL_BRAND_SCOUT}</h1>",
+        f"<div style='margin-bottom:14px;'>"
+        f"<h1 style='font-family:\"Instrument Serif\", Georgia, serif;"
+        f"font-size:32px; font-weight:400; letter-spacing:-0.01em;"
+        f"line-height:1.1; color:#1A1A18; margin:0 0 4px 0;'>"
+        f"{LABEL_BRAND_SCOUT}</h1>"
+        f"<p style='font-family:\"Instrument Serif\", Georgia, serif;"
+        f"font-style:italic; font-size:16px; color:#6b6b6b; line-height:1.4;"
+        f"margin:0;'>{LABEL_BRAND_SCOUT_SUB}.</p>"
+        f"</div>"
+        f"<hr style='border:none; border-top:1px solid #EAEAE4;"
+        f"margin:0 0 18px 0;'>",
         unsafe_allow_html=True,
     )
-    st.markdown(
-        "<p style='font-family:\"Instrument Serif\", Georgia, serif; "
-        "font-style:italic; font-size:18px; color:#6b6b6b; margin-bottom:1rem;'>"
-        "Qualify new brands before you take a meeting.</p>",
-        unsafe_allow_html=True,
-    )
-    st.caption(LABEL_BRAND_SCOUT_SCOPE)
-    st.divider()
 
     # Phase-based flow — idle uses dedicated Brand Scout idle renderer
     phase = st.session_state.get("phase", "idle")
