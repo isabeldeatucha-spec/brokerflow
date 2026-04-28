@@ -800,8 +800,11 @@ def render_per_agent_page(agent_key: str) -> None:
             unsafe_allow_html=True,
         )
 
-    # ── Admin & Ops: recent forms, then pending review ────────────────────────
+    # ── Admin & Ops: fill action first, then recent forms, then pending review ─
     if agent_key == "admin_ops":
+        if client:
+            _render_admin_action(client)
+
         _divider()
         _section_heading("Recent New Item Forms")
         recent_forms = _fetch_recent_admin_forms(client) if client else []
@@ -853,11 +856,8 @@ def render_per_agent_page(agent_key: str) -> None:
         _render_admin_pending_review(messages, brand_name_map)
 
     # ── Action interface ───────────────────────────────────────────────────────
-    if client:
-        if agent_key == "retailer_pitcher":
-            _render_pitcher_action(client)
-        else:
-            _render_admin_action(client)
+    if client and agent_key == "retailer_pitcher":
+        _render_pitcher_action(client)
 
     # ── Activity timeline ──────────────────────────────────────────────────────
     _divider()
