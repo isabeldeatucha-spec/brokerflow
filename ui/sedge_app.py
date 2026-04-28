@@ -1653,13 +1653,13 @@ def _render_demo_banner(client, brands_list: list) -> None:
 
     chain_active = bool(st.session_state.get("_demo_chain_active"))
     last_kicked  = st.session_state.get("_demo_kicked_at")
+    fleet_active = rs.get("active_chains", 0) > 0
 
-    # Auto-refresh while a chain is running, for ~90s after kick
-    if chain_active and last_kicked:
+    # Auto-refresh while ANY chain is running (for up to 3 minutes after kick)
+    if (chain_active or fleet_active) and last_kicked:
         import time as _t
         elapsed = _t.time() - last_kicked
-        if elapsed < 90:
-            # Lightweight polling: schedule a rerun in 3s
+        if elapsed < 180:
             try:
                 _t.sleep(3)
                 st.rerun()
@@ -1668,73 +1668,81 @@ def _render_demo_banner(client, brands_list: list) -> None:
         else:
             st.session_state["_demo_chain_active"] = False
 
+    # ── Banner with live runner metrics ───────────────────────────────────
     dot = "#22C55E" if rs.get("running") else "#9CA3AF"
+    avg_ms     = rs.get("avg_ms", 0.0)
+    msgs_min   = rs.get("msgs_per_minute", 0)
+    active_n   = rs.get("active_chains", 0)
+    failures   = rs.get("failures_last_hour", 0)
+    samples    = rs.get("samples", 0)
+
     st.markdown(
-        f'<div style="display:flex; align-items:center; justify-content:space-between; '
-        f'background:#0F0F0E; color:#FAFAF7; border-radius:14px; '
-        f'padding:18px 24px; margin-bottom:24px;">'
-        f'<div>'
+        f'<div style="background:#0F0F0E; color:#FAFAF7; border-radius:14px; '
+        f'padding:18px 24px; margin-bottom:14px;">'
         f'<div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">'
         f'<span style="width:8px; height:8px; border-radius:50%; background:{dot};"></span>'
         f'<span style="font-size:11px; font-weight:600; letter-spacing:0.08em; '
-        f'color:#9CA3AF; text-transform:uppercase;">Coordination protocol</span>'
+        f'color:#9CA3AF; text-transform:uppercase;">Sedge Coordination Protocol v1</span>'
         f'</div>'
+        f'<div style="display:flex; align-items:flex-end; justify-content:space-between; '
+        f'flex-wrap:wrap; gap:24px;">'
+        f'<div>'
         f'<div style="font-family:\'Instrument Serif\', Georgia, serif; '
-        f'font-size:22px; font-weight:400;">Run end-to-end demo</div>'
-        f'<div style="font-size:13px; color:#A1A09B; margin-top:4px;">'
+        f'font-size:24px; font-weight:400;">Fleet mode — autonomous chains across your book</div>'
+        f'<div style="font-size:12px; color:#A1A09B; margin-top:4px;">'
         f'Onboard → Pitcher → Admin & Ops → PO Processing &nbsp;·&nbsp; '
-        f'autonomous chain via SCP v1 blackboard</div>'
+        f'pub-sub, ack/consume, parallel handlers, failure-resilient</div>'
+        f'</div>'
+        f'<div style="display:flex; gap:24px;">'
+        f'<div style="text-align:right;">'
+        f'<div style="font-size:22px; font-weight:600; color:#FAFAF7; line-height:1;">{active_n}</div>'
+        f'<div style="font-size:10px; color:#9CA3AF; letter-spacing:0.05em; '
+        f'text-transform:uppercase; margin-top:4px;">Active chains</div>'
+        f'</div>'
+        f'<div style="text-align:right;">'
+        f'<div style="font-size:22px; font-weight:600; color:#FAFAF7; line-height:1;">{msgs_min}</div>'
+        f'<div style="font-size:10px; color:#9CA3AF; letter-spacing:0.05em; '
+        f'text-transform:uppercase; margin-top:4px;">Msgs / min</div>'
+        f'</div>'
+        f'<div style="text-align:right;">'
+        f'<div style="font-size:22px; font-weight:600; color:#FAFAF7; line-height:1;">'
+        f'{int(avg_ms)}<span style="font-size:13px; color:#9CA3AF;">ms</span></div>'
+        f'<div style="font-size:10px; color:#9CA3AF; letter-spacing:0.05em; '
+        f'text-transform:uppercase; margin-top:4px;">Avg handler ({samples}n)</div>'
+        f'</div>'
+        f'<div style="text-align:right;">'
+        f'<div style="font-size:22px; font-weight:600; color:'
+        f'{"#FCA5A5" if failures else "#FAFAF7"}; line-height:1;">{failures}</div>'
+        f'<div style="font-size:10px; color:#9CA3AF; letter-spacing:0.05em; '
+        f'text-transform:uppercase; margin-top:4px;">Failures (1h)</div>'
+        f'</div>'
+        f'</div>'
         f'</div>'
         f'</div>',
         unsafe_allow_html=True,
     )
 
-    col_brand, col_btn, col_log = st.columns([2, 1, 1])
-    with col_brand:
-        if olipop:
-            st.markdown(
-                f'<p style="font-size:13px; color:#57564F; margin-top:6px;">'
-                f'Demo brand: <strong>Olipop</strong> '
-                f'<span style="color:#8B8A83;">(found in book)</span></p>',
-                unsafe_allow_html=True,
-            )
-        else:
-            st.markdown(
-                '<p style="font-size:13px; color:#92400E; margin-top:6px;">'
-                'Olipop not found in book — load sandbox first or onboard it.</p>',
-                unsafe_allow_html=True,
-            )
-    with col_btn:
+    # ── Action row ─────────────────────────────────────────────────────────
+    col_solo, col_fleet, col_log = st.columns([1, 1, 1])
+    with col_solo:
         kick = st.button(
-            "▶ Run demo chain",
+            "▶ Run demo on Olipop",
             key="run_demo_chain_btn",
-            disabled=(olipop is None) or chain_active,
-            type="primary",
+            disabled=(olipop is None),
             use_container_width=True,
         )
         if kick and olipop:
-            try:
-                from agents.coordination.protocol import EventType, publish as scp_publish
-                scp_publish(
-                    from_agent="user",
-                    to_agent="*",
-                    brand_id=olipop["id"],
-                    event_type=EventType.BRAND_ONBOARDED,
-                    payload={
-                        "brand_name":   olipop["brand_name"],
-                        "category":     olipop.get("category"),
-                        "trigger":      "manual_demo",
-                        "action_label": f"Demo: kicked off coordination chain for {olipop['brand_name']}",
-                        "agent_status": "completed",
-                    },
-                )
-                import time as _t
-                st.session_state["_demo_chain_active"] = True
-                st.session_state["_demo_kicked_at"] = _t.time()
-                st.toast("Demo chain kicked off — agents are running in the background")
-                st.rerun()
-            except Exception as exc:
-                st.error(f"Failed to kick demo: {exc}")
+            _kick_chain([olipop])
+    with col_fleet:
+        kick_all = st.button(
+            f"▶ Run on all {len(brands_list)} brands",
+            key="run_demo_fleet_btn",
+            disabled=len(brands_list) == 0,
+            type="primary",
+            use_container_width=True,
+        )
+        if kick_all and brands_list:
+            _kick_chain(brands_list)
     with col_log:
         if st.button(
             "View coordination log",
@@ -1744,15 +1752,50 @@ def _render_demo_banner(client, brands_list: list) -> None:
             st.session_state["_show_coord_log"] = not st.session_state.get("_show_coord_log", False)
             st.rerun()
 
-    # Inline coord log when toggled or chain is active
-    if st.session_state.get("_show_coord_log") or chain_active:
-        st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
+    # ── Fleet status grid (always shown when there are brands) ────────────
+    if brands_list:
+        st.markdown("<div style='margin-top:14px;'></div>", unsafe_allow_html=True)
+        with st.container(border=True):
+            from ui.fleet_view import render_fleet_view
+            render_fleet_view(client, brands_list)
+
+    # ── Live coordination log (toggle) ─────────────────────────────────────
+    if st.session_state.get("_show_coord_log") or chain_active or fleet_active:
+        st.markdown("<div style='margin-top:14px;'></div>", unsafe_allow_html=True)
         with st.container(border=True):
             from ui.coordination_log import render_coordination_log
-            render_coordination_log(
-                brand_id=olipop["id"] if olipop and chain_active else None,
-                limit=20,
+            render_coordination_log(brand_id=None, limit=30)
+
+
+def _kick_chain(brands: list[dict]) -> None:
+    """Publish BRAND_ONBOARDED for each brand. Runner picks them up."""
+    import time as _t
+    try:
+        from agents.coordination.protocol import EventType, publish as scp_publish
+        kicked = 0
+        for b in brands:
+            if not b.get("id"):
+                continue
+            scp_publish(
+                from_agent="user",
+                to_agent="*",
+                brand_id=b["id"],
+                event_type=EventType.BRAND_ONBOARDED,
+                payload={
+                    "brand_name":   b.get("brand_name"),
+                    "category":     b.get("category"),
+                    "trigger":      "manual_demo",
+                    "action_label": f"Demo: kicked off coordination chain for {b.get('brand_name')}",
+                    "agent_status": "completed",
+                },
             )
+            kicked += 1
+        st.session_state["_demo_chain_active"] = True
+        st.session_state["_demo_kicked_at"] = _t.time()
+        st.toast(f"Kicked off {kicked} chain{'s' if kicked != 1 else ''} — agents running in background")
+        st.rerun()
+    except Exception as exc:
+        st.error(f"Failed to kick chain(s): {exc}")
 
 
 def render_brand_roster() -> None:

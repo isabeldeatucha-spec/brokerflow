@@ -55,9 +55,24 @@ def render_coordination_log(brand_id: str | None = None, limit: int = 25) -> Non
     """Render the SCP live message log."""
     from agents.coordination.protocol import recent_traffic, list_subscriptions
     from agents.runner import status as runner_status
+    from ui.fleet_view import brand_color
+    from memory import _get_client
 
     rs = runner_status()
     running = rs["running"]
+
+    # Resolve brand_id → name once for the events we'll show
+    brand_id_to_name: dict[str, str] = {}
+    try:
+        client = _get_client()
+        # Fetch all brand names referenced in the recent traffic in one round-trip
+        events_preview = recent_traffic(brand_id=brand_id, limit=limit)
+        bids = list({e.brand_id for e in events_preview if e.brand_id})
+        if bids:
+            br = client.table("brands").select("id, brand_name").in_("id", bids).execute()
+            brand_id_to_name = {r["id"]: r["brand_name"] for r in (br.data or [])}
+    except Exception:
+        events_preview = []
 
     # Header with runner status
     dot_color = "#22C55E" if running else "#9CA3AF"
@@ -95,8 +110,8 @@ def render_coordination_log(brand_id: str | None = None, limit: int = 25) -> Non
                     unsafe_allow_html=True,
                 )
 
-    # Live traffic
-    events = recent_traffic(brand_id=brand_id, limit=limit)
+    # Live traffic (already fetched above to resolve brand names)
+    events = events_preview
     if not events:
         st.markdown(
             '<p style="font-size:13px; color:#8B8A83;">No protocol traffic yet — '
@@ -112,7 +127,6 @@ def render_coordination_log(brand_id: str | None = None, limit: int = 25) -> Non
         from_pill  = _agent_pill(ev.from_agent or "*")
         to_pill    = _agent_pill(ev.to_agent or "*")
         evt_label  = ev.message_type
-        # Strip the v1. prefix for display
         if evt_label.startswith("v1."):
             evt_label = evt_label[3:].replace("_", " ")
         else:
@@ -125,11 +139,26 @@ def render_coordination_log(brand_id: str | None = None, limit: int = 25) -> Non
                  'padding:1px 6px; border-radius:99px;">pending</span>'
         )
 
+        # Brand pill — colored consistently per brand (so you can see chains
+        # interleaving in the log when multiple brands are running in parallel)
+        bname = brand_id_to_name.get(ev.brand_id, "")
+        brand_pill_html = ""
+        border_color = "#EAEAE4"
+        if bname:
+            bg, fg = brand_color(ev.brand_id)
+            border_color = fg + "40"  # 25% opacity hint via hex alpha
+            brand_pill_html = (
+                f'<span style="background:{bg}; color:{fg}; font-size:10px; '
+                f'font-weight:600; padding:2px 8px; border-radius:99px; '
+                f'white-space:nowrap;">{bname}</span>'
+            )
+
         st.markdown(
-            f'<div style="border-left:2px solid #EAEAE4; padding:8px 0 8px 12px; '
+            f'<div style="border-left:3px solid {border_color}; padding:8px 0 8px 12px; '
             f'margin-bottom:6px;">'
             f'<div style="display:flex; align-items:center; gap:6px; margin-bottom:4px; '
             f'flex-wrap:wrap;">'
+            f'{brand_pill_html}'
             f'{from_pill}'
             f'<span style="color:#9CA3AF; font-size:14px;">→</span>'
             f'{to_pill}'

@@ -131,17 +131,27 @@ def publish(
     event_type:   EventType,
     payload:      Optional[dict] = None,
 ) -> Optional[str]:
-    """Write a typed event to the blackboard. Returns inserted row id, or None on failure."""
+    """Write a typed event to the blackboard. Returns inserted row id, or None on failure.
+
+    Events with no registered subscriber are auto-acked at publish time
+    (fire-and-forget status events), so they don't sit forever in the
+    unconsumed queue and inflate the active_chains metric.
+    """
     from memory import _get_client
     try:
-        client = _get_client()
-        result = client.table("coordination_messages").insert({
+        has_subscriber = bool(_HANDLERS.get(event_type.value))
+        row = {
             "from_agent":   from_agent,
             "to_agent":     to_agent,
             "brand_id":     brand_id,
             "message_type": event_type.value,
             "payload":      payload or {},
-        }).execute()
+        }
+        # Fire-and-forget if no subscriber — visible in the log but not queued
+        if not has_subscriber:
+            row["consumed_at"] = datetime.now(timezone.utc).isoformat()
+        client = _get_client()
+        result = client.table("coordination_messages").insert(row).execute()
         rows = result.data or []
         return rows[0]["id"] if rows else None
     except Exception as exc:
@@ -200,11 +210,50 @@ def ack(envelope_id: str) -> None:
 
 # ── Dispatch (single tick) ──────────────────────────────────────────────────
 
-def dispatch_tick() -> int:
-    """Pull unconsumed messages and route to handlers. Returns # processed."""
+# Per-handler latency log (rolling, in-memory). Used by runner.status().
+import collections
+import time as _time
+_LATENCY_LOG: collections.deque = collections.deque(maxlen=200)
+
+
+def _run_envelope(env: Envelope) -> None:
+    """Run all subscribers for one envelope, then ack. Used by dispatch_tick."""
+    handlers = get_handlers(env.message_type)
+    for sub_name, handler in handlers:
+        t0 = _time.monotonic()
+        try:
+            logger.info("dispatch %s → %s (brand=%s)",
+                        env.message_type, sub_name, env.brand_id)
+            handler(env)
+            _LATENCY_LOG.append(("ok", (_time.monotonic() - t0) * 1000))
+        except Exception as exc:
+            _LATENCY_LOG.append(("fail", (_time.monotonic() - t0) * 1000))
+            logger.exception("handler %s failed for %s", sub_name, env.message_type)
+            publish(
+                from_agent="scp_runner",
+                to_agent=sub_name,
+                brand_id=env.brand_id,
+                event_type=EventType.HANDLER_FAILED,
+                payload={
+                    "original_type": env.message_type,
+                    "subscriber":    sub_name,
+                    "error":         f"{type(exc).__name__}: {exc}",
+                },
+            )
+    ack(env.id)
+
+
+def dispatch_tick(executor=None) -> int:
+    """Pull unconsumed messages and route to handlers. Returns # processed.
+
+    If `executor` (a ThreadPoolExecutor) is provided, handlers run in parallel.
+    Each tick still blocks until all handlers in that batch complete, so the
+    next tick sees a clean state. This is what lets multiple chains run
+    truly concurrently without races on the consume marker.
+    """
     pending = fetch_unconsumed()
-    seen_keys: set[tuple] = set()  # in-tick dedup
-    processed = 0
+    seen_keys: set[tuple] = set()
+    to_dispatch: list[Envelope] = []
 
     for env in pending:
         # Idempotency within a tick: skip duplicate (brand_id, type) pairs
@@ -213,34 +262,40 @@ def dispatch_tick() -> int:
             ack(env.id)
             continue
         seen_keys.add(key)
-
-        handlers = get_handlers(env.message_type)
-        if not handlers:
-            # No subscriber — leave it (UI may still display it)
+        if not get_handlers(env.message_type):
             continue
+        to_dispatch.append(env)
 
-        for sub_name, handler in handlers:
+    if not to_dispatch:
+        return 0
+
+    if executor is not None:
+        futures = [executor.submit(_run_envelope, env) for env in to_dispatch]
+        for f in futures:
             try:
-                logger.info("dispatch %s → %s (brand=%s)",
-                            env.message_type, sub_name, env.brand_id)
-                handler(env)
-            except Exception as exc:
-                logger.exception("handler %s failed for %s", sub_name, env.message_type)
-                publish(
-                    from_agent="scp_runner",
-                    to_agent=sub_name,
-                    brand_id=env.brand_id,
-                    event_type=EventType.HANDLER_FAILED,
-                    payload={
-                        "original_type": env.message_type,
-                        "subscriber":    sub_name,
-                        "error":         f"{type(exc).__name__}: {exc}",
-                    },
-                )
-        ack(env.id)
-        processed += 1
+                f.result(timeout=120)
+            except Exception:
+                logger.exception("envelope future failed")
+    else:
+        for env in to_dispatch:
+            _run_envelope(env)
 
-    return processed
+    return len(to_dispatch)
+
+
+def latency_stats() -> dict:
+    """Return p50/avg of recent handler latencies in ms."""
+    if not _LATENCY_LOG:
+        return {"avg_ms": 0.0, "p50_ms": 0.0, "samples": 0, "fail_pct": 0.0}
+    durs = sorted([d for _, d in _LATENCY_LOG])
+    fails = sum(1 for tag, _ in _LATENCY_LOG if tag == "fail")
+    n = len(durs)
+    return {
+        "avg_ms":   sum(durs) / n,
+        "p50_ms":   durs[n // 2],
+        "samples":  n,
+        "fail_pct": 100 * fails / n,
+    }
 
 
 # ── Live coordination log fetch (UI) ────────────────────────────────────────
