@@ -1,5 +1,5 @@
 """
-Global CSS injection for every Sedge page.
+Global CSS injection for every BrokerFlow page.
 Call inject_global_css() once at the top of any render function.
 This is the single source of truth — do NOT add <style> blocks elsewhere.
 """
@@ -504,6 +504,6 @@ div[data-testid="stSelectbox"] [data-baseweb="select"] {
 
 
 def inject_global_css() -> None:
-    """Inject the Sedge design system CSS into the current Streamlit page."""
+    """Inject the BrokerFlow design system CSS into the current Streamlit page."""
     import streamlit as st
     st.markdown(_CSS, unsafe_allow_html=True)

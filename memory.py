@@ -1,5 +1,5 @@
 """
-Memory layer for all Sedge agents.
+Memory layer for all BrokerFlow agents.
 
 Two distinct systems:
   1. LangGraph checkpointer (MemorySaver) — in-process thread state for graph interrupts.

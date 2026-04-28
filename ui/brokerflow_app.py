@@ -1,9 +1,9 @@
 """
-Sedge — multi-brand triage + pitch operating system for independent food brokers.
+BrokerFlow — multi-brand triage + pitch operating system for independent food brokers.
 
 Run:
-    cd /Users/isabelatucha/sedge
-    streamlit run ui/sedge_app.py
+    cd /Users/isabelatucha/brokerflow
+    streamlit run ui/brokerflow_app.py
 """
 from __future__ import annotations
 
@@ -32,7 +32,7 @@ except Exception:
 # ── Page config ───────────────────────────────────────────────────────────────
 
 st.set_page_config(
-    page_title="Sedge",
+    page_title="BrokerFlow",
     page_icon="",
     layout="centered",
     initial_sidebar_state="collapsed",
@@ -126,7 +126,7 @@ def render_landing() -> None:
     # Header
     st.markdown(
         '<div style="text-align:center; padding: 48px 0 24px;">'
-        '<h1 class="sedge-h1" style="text-align:center;">Sedge</h1>'
+        '<h1 class="sedge-h1" style="text-align:center;">BrokerFlow</h1>'
         '<p class="sedge-subtitle" style="text-align:center;">'
         'The operating system for CPG brokers.'
         '</p>'
@@ -219,7 +219,7 @@ def render_landing() -> None:
         unsafe_allow_html=True,
     )
 
-    # How Sedge Works cards
+    # How BrokerFlow Works cards
     st.markdown(
         '<p class="sedge-section-title">HOW SEDGE WORKS</p>',
         unsafe_allow_html=True,
@@ -788,13 +788,13 @@ def render_sent() -> None:
 def render_how_it_works() -> None:
     col_l, _ = st.columns([1, 5])
     with col_l:
-        if st.button("← Back to Sedge", key="back_howitworks"):
+        if st.button("← Back to BrokerFlow", key="back_howitworks"):
             st.session_state.phase = "idle"
             st.rerun()
 
     st.markdown("""
     <div style="padding: 32px 0 48px;">
-      <h1 class="sedge-h1" style="font-size: 64px;">How Sedge works</h1>
+      <h1 class="sedge-h1" style="font-size: 64px;">How BrokerFlow works</h1>
       <p class="sedge-subtitle">Built from 150+ broker interviews.</p>
     </div>
     """, unsafe_allow_html=True)
@@ -933,7 +933,7 @@ def render_autonomous_running() -> None:
     st.markdown(
         f'<div style="text-align:center; padding: 48px 0;">'
         f'<h1 class="sedge-h1" style="text-align:center; font-size:48px;">'
-        f'Sedge is running'
+        f'BrokerFlow is running'
         f'</h1>'
         f'<p class="sedge-subtitle" style="text-align:center;">'
         f'Qualify → select → pitch → form. You\'ll review at the end.'
@@ -1037,7 +1037,7 @@ def render_landing_cards() -> None:
         """
         <div style="text-align:center; padding: 2rem 1rem 2.5rem 1rem;">
             <div style="font-family:'Instrument Serif', Georgia, serif;
-                        font-size:64px; line-height:1.1; color:#1a1a1a;">Sedge</div>
+                        font-size:64px; line-height:1.1; color:#1a1a1a;">BrokerFlow</div>
             <div style="font-family:'Instrument Serif', Georgia, serif;
                         font-style:italic; font-size:22px; color:#6b6b6b;
                         margin-top:0.5rem;">
@@ -1084,7 +1084,7 @@ def render_back_nav() -> None:
     from ui.labels import LABEL_EXISTING_BUSINESS, LABEL_BRAND_SCOUT
     col_back, col_crumb = st.columns([1, 6])
     with col_back:
-        if st.button("← Sedge", key="back_to_landing"):
+        if st.button("← BrokerFlow", key="back_to_landing"):
             st.session_state["workspace"] = None
             # Reset sub-navigation so re-entering starts fresh
             st.session_state.pop("open_agent", None)
@@ -1680,7 +1680,7 @@ def render_brand_roster() -> None:
             'font-weight:400; color:#1A1A18; margin:0 0 12px 0;\'>'
             'Your agents are ready — add a brand to get started</h2>'
             '<p style="font-size:14px; color:#8B8A83; max-width:480px; margin:0 auto 32px;">'
-            "Onboard your first brand and Sedge's agents will start pitching, "
+            "Onboard your first brand and BrokerFlow's agents will start pitching, "
             'processing paperwork, and tracking the book automatically.</p>'
             '</div>',
             unsafe_allow_html=True,
@@ -2203,20 +2203,20 @@ def render_existing_business_workspace() -> None:
 def render_docs() -> None:
     col_l, _ = st.columns([1, 5])
     with col_l:
-        if st.button("← Sedge", key="back_from_docs"):
+        if st.button("← BrokerFlow", key="back_from_docs"):
             st.query_params.clear()
             st.rerun()
 
     st.markdown("""
     <div style="padding: 32px 0 48px;">
       <div style="font-family:'Instrument Serif', Georgia, serif; font-size:56px;
-                  line-height:1.1; color:#1a1a1a;">Sedge</div>
+                  line-height:1.1; color:#1a1a1a;">BrokerFlow</div>
       <div style="font-family:'Instrument Serif', Georgia, serif; font-style:italic;
                   font-size:22px; color:#6b6b6b; margin-top:0.5rem; margin-bottom:1.5rem;">
         the operating system for CPG brokers
       </div>
       <p style="font-size:16px; color:#444; max-width:640px; line-height:1.7;">
-        Sedge replaces the manual research, pitching, and paperwork that independent
+        BrokerFlow replaces the manual research, pitching, and paperwork that independent
         food &amp; beverage brokers do by hand with a multi-agent workspace that runs
         continuously across their entire book of business.
       </p>
@@ -2235,7 +2235,7 @@ def render_docs() -> None:
         (
             "Brand Scout",
             "New brand qualification",
-            "Enter any CPG brand name. Sedge researches it across Amazon, Instacart, "
+            "Enter any CPG brand name. BrokerFlow researches it across Amazon, Instacart, "
             "Faire, social media, and trade press, then scores it on five criteria "
             "(0–100) and returns a broker-ready brief.",
         ),
@@ -2250,7 +2250,7 @@ def render_docs() -> None:
             "Admin & Ops",
             "Form autofill",
             "Autofills the Whole Foods New Item Setup Form (~70 fields across 10 "
-            "sections) from everything Sedge knows about the brand. Two-pass fill: "
+            "sections) from everything BrokerFlow knows about the brand. Two-pass fill: "
             "deterministic rules first, LLM inference for ambiguous fields. Exports "
             "a ready-to-submit Excel file and flags required gaps.",
         ),
@@ -2356,7 +2356,7 @@ Set `SEDGE_LLM_PROVIDER=gemini` to route all Claude calls through Gemini 2.5 Fla
 Supabase and survives restarts.
 """)
 
-    st.code("""ui/sedge_app.py          ← Streamlit app, workspace router
+    st.code("""ui/brokerflow_app.py          ← Streamlit app, workspace router
 ui/per_agent_page.py    ← Retailer Pitcher + Admin & Ops pages
 ui/onboarding_flow.py   ← Brand onboarding 3-step UI
 
@@ -2383,7 +2383,7 @@ state.py                ← Shared TypedDict state types""", language="text")
 cd sedge
 pip install -r requirements.txt
 cp .env.example .env   # then fill in your keys
-streamlit run ui/sedge_app.py""", language="bash")
+streamlit run ui/brokerflow_app.py""", language="bash")
 
     st.markdown("**Required environment variables:**")
     st.code("""ANTHROPIC_API_KEY=sk-ant-...       # or set SEDGE_LLM_PROVIDER=gemini + GEMINI_API_KEY
@@ -2402,7 +2402,7 @@ FIRECRAWL_API_KEY=fc-...            # for Brand Scout web scraping""", language=
         ("Brand Scout accuracy", "Scores are estimates from public signals. Not sourced from SPINS, Nielsen, or any paid data provider. Door counts and velocity figures are inferred, not authoritative."),
         ("Retailer coverage", "Three buyer personas supported: Whole Foods, Sprouts, Erewhon. KeHE, UNFI, Kroger, and Costco are on the roadmap."),
         ("Admin & Ops forms", "Only the Whole Foods New Item Setup Form is implemented. The form template is the 2018 version; field layouts change periodically."),
-        ("No email sending", "Sedge drafts and exports pitches and forms but does not send email. 'Send to buyer' buttons are UI placeholders."),
+        ("No email sending", "BrokerFlow drafts and exports pitches and forms but does not send email. 'Send to buyer' buttons are UI placeholders."),
         ("No PO ingestion", "PO processing, deduction tracking, demo spend reconciliation, and commission reconciliation are on the roadmap but not yet implemented."),
         ("Checkpointer", "Agent state uses MemorySaver (in-process). If the Streamlit process restarts mid-run, in-flight graph state is lost. Persisted Supabase data is unaffected."),
     ]

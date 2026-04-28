@@ -3,7 +3,7 @@
 Standalone page showcasing the SCP v1 protocol — banner, brand picker,
 live metrics, fleet grid, coord log.
 
-Routed from sedge_app.py via workspace == "demo".
+Routed from brokerflow_app.py via workspace == "demo".
 """
 from __future__ import annotations
 
@@ -119,7 +119,7 @@ def render_demo_view() -> None:
     # ── Back nav ───────────────────────────────────────────────────────────
     col_back, _ = st.columns([1, 5])
     with col_back:
-        if st.button("← Sedge", key="demo_back_btn"):
+        if st.button("← BrokerFlow", key="demo_back_btn"):
             st.session_state["workspace"] = None
             st.rerun()
 
@@ -146,7 +146,7 @@ def render_demo_view() -> None:
         '<div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">'
         '<span style="width:8px; height:8px; border-radius:50%; background:#22C55E;"></span>'
         '<span style="font-size:11px; font-weight:600; letter-spacing:0.08em; '
-        'color:#9CA3AF; text-transform:uppercase;">Sedge Coordination Protocol v1</span>'
+        'color:#9CA3AF; text-transform:uppercase;">BrokerFlow Coordination Protocol v1</span>'
         '</div>'
         '<div style="font-family:\'Instrument Serif\', Georgia, serif; '
         'font-size:28px; font-weight:400;">Fleet mode — autonomous chains across your book</div>'

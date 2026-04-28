@@ -1,5 +1,5 @@
 """
-Sedge Coordination Protocol — handoff contracts.
+BrokerFlow Coordination Protocol — handoff contracts.
 
 These dataclasses are the typed messages that pass between agents via the
 Supabase blackboard. Agents read/write through these contracts, not through

@@ -1,5 +1,5 @@
 """
-Brand Scout page — extracted from ui/app.py for use in sedge_app.
+Brand Scout page — extracted from ui/app.py for use in brokerflow_app.
 Export: render_brand_scout_page()
 
 Standalone dev (unchanged behaviour):
@@ -883,7 +883,7 @@ def render_brand_scout_page() -> None:
 
 if __name__ == "__main__":
     st.set_page_config(
-        page_title="Brand Scout · Sedge",
+        page_title="Brand Scout · BrokerFlow",
         page_icon="🌾",
         layout="wide",
         initial_sidebar_state="expanded",

@@ -1,6 +1,6 @@
 """
 Retailer Pitcher — Streamlit page extracted from hw8/pitcher_demo.py.
-Import and call render_retailer_pitcher_page() from sedge_app.py.
+Import and call render_retailer_pitcher_page() from brokerflow_app.py.
 """
 from __future__ import annotations
 
@@ -330,7 +330,7 @@ if __name__ == "__main__":
     import streamlit as st
 
     st.set_page_config(
-        page_title="Retailer Pitcher · Sedge",
+        page_title="Retailer Pitcher · BrokerFlow",
         page_icon="📬",
         layout="wide",
     )

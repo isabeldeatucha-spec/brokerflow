@@ -1,6 +1,6 @@
-# Sedge
+# BrokerFlow
 
-An AI-powered operating system for independent CPG food brokers. Sedge replaces the manual research, pitching, and paperwork that brokers do by hand with a multi-agent workspace that runs continuously across their entire book of business.
+An AI-powered operating system for independent CPG food brokers. BrokerFlow replaces the manual research, pitching, and paperwork that brokers do by hand with a multi-agent workspace that runs continuously across their entire book of business.
 
 **[Live app](https://retailer-pitcher-production.up.railway.app)** · **[Documentation](https://retailer-pitcher-production.up.railway.app/?page=docs)** · **[GitHub](https://github.com/isabeldeatucha-spec/sedge)**
 
@@ -12,7 +12,7 @@ An AI-powered operating system for independent CPG food brokers. Sedge replaces 
 A persistent workspace for every brand a broker represents. Two agents — Retailer Pitcher and Admin & Ops — run continuously across the book and surface items that need human review. Brokers see what each agent has done, approve or edit drafts, and onboard new brands.
 
 ### Brand Scout (new brand qualification)
-Evaluates whether a CPG brand is worth pursuing. Enter a brand name; Sedge researches it across Amazon, Instacart, Faire, social media, and trade press, then scores it on five criteria:
+Evaluates whether a CPG brand is worth pursuing. Enter a brand name; BrokerFlow researches it across Amazon, Instacart, Faire, social media, and trade press, then scores it on five criteria:
 
 | Criterion | Weight | What it measures |
 |---|---|---|
@@ -28,7 +28,7 @@ Verdict thresholds: **Established** (70+), **Broker Ready** (45–69), **Too Ear
 Drafts buyer-persona-tailored outreach emails and one-page sell sheets for Whole Foods, Sprouts, and Erewhon. Each pitch is adapted to what the specific buyer cares about, what kills a pitch with them, and which proof points resonate.
 
 ### Admin & Ops
-Autofills the Whole Foods New Item Setup Form (~70 fields across 10 sections) from everything Sedge knows about the brand. Two-pass fill: deterministic rule-based first, LLM inference for ambiguous fields. Exports a ready-to-submit Excel file and flags required gaps.
+Autofills the Whole Foods New Item Setup Form (~70 fields across 10 sections) from everything BrokerFlow knows about the brand. Two-pass fill: deterministic rule-based first, LLM inference for ambiguous fields. Exports a ready-to-submit Excel file and flags required gaps.
 
 ### Brand Onboarding
 Three-step onboarding flow (brand info form → agent processing → review) that adds a brand to the book, extracts a canonical record from uploaded materials (PDF, DOCX, XLSX), and hands off to Retailer Pitcher and Admin & Ops automatically.
@@ -38,7 +38,7 @@ Three-step onboarding flow (brand info form → agent processing → review) tha
 ## Architecture
 
 ```
-ui/sedge_app.py              ← Streamlit app, workspace router
+ui/brokerflow_app.py              ← Streamlit app, workspace router
 ui/per_agent_page.py         ← Retailer Pitcher + Admin & Ops agent pages
 ui/onboarding_flow.py        ← Brand onboarding 3-step UI
 
@@ -59,9 +59,9 @@ supabase/
   migrations/                ← Applied migration files
 ```
 
-### Agent coordination — Sedge Coordination Protocol (SCP v1)
+### Agent coordination — BrokerFlow Coordination Protocol v1
 
-Sedge implements a typed pub-sub coordination protocol on top of a shared Supabase blackboard. Inspired by MCP/A2A, specialized for the broker-agent domain. Agents do not call each other directly — they publish typed events, and a background runner dispatches them to subscribers.
+BrokerFlow implements a typed pub-sub coordination protocol on top of a shared Supabase blackboard. Inspired by MCP/A2A, specialized for the broker-agent domain. Agents do not call each other directly — they publish typed events, and a background runner dispatches them to subscribers.
 
 **Primitives** (see [agents/coordination/protocol.py](agents/coordination/protocol.py)):
 
@@ -133,8 +133,8 @@ The `llm_shim` module patches `anthropic.Anthropic` at import time. By default (
 ### 1. Clone and install
 
 ```bash
-git clone https://github.com/isabeldeatucha-spec/sedge.git
-cd sedge
+git clone https://github.com/isabeldeatucha-spec/sedge.git brokerflow
+cd brokerflow
 pip install -r requirements.txt
 ```
 
@@ -171,7 +171,7 @@ The `sent_bundles` table is auto-created on first use via `memory.store_sent_bun
 ### 4. Run
 
 ```bash
-streamlit run ui/sedge_app.py
+streamlit run ui/brokerflow_app.py
 ```
 
 The app opens at `http://localhost:8501`.
@@ -184,10 +184,10 @@ On the "Your book of business" page, expand "Dev utilities" at the bottom and cl
 
 ## Deployment
 
-Sedge is configured for [Railway](https://railway.app) via `railway.json`. The start command is:
+BrokerFlow is configured for [Railway](https://railway.app) via `railway.json`. The start command is:
 
 ```
-python3 -m streamlit run ui/sedge_app.py --server.port $PORT --server.address 0.0.0.0 --server.headless true
+python3 -m streamlit run ui/brokerflow_app.py --server.port $PORT --server.address 0.0.0.0 --server.headless true
 ```
 
 Set the same environment variables in your Railway project settings.
@@ -202,7 +202,7 @@ Set the same environment variables in your Railway project settings.
 
 **Admin & Ops forms** — Only the Whole Foods New Item Setup Form is implemented. The form template is the 2018 version; field layouts change periodically.
 
-**No email sending** — Sedge drafts and exports pitches and forms but does not send email. "Send to buyer" buttons are UI placeholders.
+**No email sending** — BrokerFlow drafts and exports pitches and forms but does not send email. "Send to buyer" buttons are UI placeholders.
 
 **No PO or deduction ingestion** — PO processing, deduction tracking, demo spend reconciliation, and commission reconciliation are on the roadmap (Q2–Q3) but not yet implemented.
 

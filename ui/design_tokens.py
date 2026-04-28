@@ -1,5 +1,5 @@
 """
-Sedge design tokens — single source of truth for colors, typography, and spacing.
+BrokerFlow design tokens — single source of truth for colors, typography, and spacing.
 Import in any UI file that builds inline HTML/CSS.
 """
 

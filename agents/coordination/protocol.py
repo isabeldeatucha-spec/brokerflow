@@ -1,4 +1,4 @@
-"""Sedge Coordination Protocol (SCP) v1.
+"""BrokerFlow Coordination Protocol (SCP) v1.
 
 A typed, observable pub-sub protocol for agent-to-agent coordination,
 backed by Supabase. Inspired by MCP/A2A, specialized for the

@@ -12,7 +12,7 @@ import streamlit as st
 from ui.brand_scout_page import render_brand_scout_page
 
 st.set_page_config(
-    page_title="Brand Scout · Sedge",
+    page_title="Brand Scout · BrokerFlow",
     page_icon="🌾",
     layout="wide",
     initial_sidebar_state="expanded",

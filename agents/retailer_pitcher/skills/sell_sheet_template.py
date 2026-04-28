@@ -13,7 +13,7 @@ Layout (top to bottom, ~816 × 1056 px letter):
   5. Retail     badge wall of confirmed retailers from Scout
   6. Fit        category-fit paragraph for this specific buyer
   7. Next step  1-sentence meeting ask
-  8. Footer     score + "Sedge"
+  8. Footer     score + "BrokerFlow"
 """
 from __future__ import annotations
 
@@ -158,7 +158,7 @@ def render(fields: SellSheetFields) -> str:
   <div class="next">Next step · {esc(fields['next_step'])}</div>
 
   <div class="foot">
-    <span>Sedge Broker Readiness</span>
+    <span>BrokerFlow Broker Readiness</span>
     <span class="score">Score {fields['score']}/100</span>
   </div>
 

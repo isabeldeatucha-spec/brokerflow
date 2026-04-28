@@ -1,4 +1,4 @@
-"""Retailer Pitcher agent — second agent in the Sedge pipeline.
+"""Retailer Pitcher agent — second agent in the BrokerFlow pipeline.
 
 Consumes Brand Scout output from shared memory, drafts a buyer-specific
 outreach email and a 1-page sell sheet (HTML), and persists artifacts

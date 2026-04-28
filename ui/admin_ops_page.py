@@ -3,7 +3,7 @@ Admin & Ops page — autofill WFM new item forms from Brand Scout data.
 Export: render_admin_ops_page()
 
 Standalone dev:
-    cd /Users/isabelatucha/sedge
+    cd /Users/isabelatucha/brokerflow
     streamlit run ui/admin_ops_page.py
 """
 from __future__ import annotations
@@ -165,7 +165,7 @@ def _render_empty_state() -> None:
     <div style="padding:48px 0 32px;">
         <h1 class="sedge-h1" style="margin-bottom:8px;">Pick a brand to fill its new-item form</h1>
         <p class="sedge-caption" style="max-width:420px;">
-            Select a brand from your book above. Sedge will fill a
+            Select a brand from your book above. BrokerFlow will fill a
             Whole Foods new-item form from your book — and flag what's missing before you submit.
         </p>
     </div>
@@ -741,7 +741,7 @@ def render_admin_ops_page() -> None:
 
 if __name__ == "__main__":
     st.set_page_config(
-        page_title="Admin & Ops · Sedge",
+        page_title="Admin & Ops · BrokerFlow",
         page_icon="📋",
         layout="wide",
         initial_sidebar_state="expanded",

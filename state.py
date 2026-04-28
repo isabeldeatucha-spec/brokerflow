@@ -1,5 +1,5 @@
 """
-Shared state types for all Sedge agents.
+Shared state types for all BrokerFlow agents.
 
 Each agent defines its own TypedDict that extends or mirrors these base shapes.
 Adding a new agent? Drop its state class here so the UI and memory layer can
