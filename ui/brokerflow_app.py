@@ -2120,14 +2120,19 @@ def render_existing_business_workspace() -> None:
             st.session_state["workspace"] = "demo"
             st.rerun()
 
-    # Watchdog — run once per session
+    # Watchdog — run once per session in a background thread so it never
+    # blocks the first render of this workspace. (Synchronous scan was making
+    # the previous page's DOM linger visibly during navigation.)
     if "watchdog_ran" not in st.session_state:
+        st.session_state["watchdog_ran"] = True
         try:
+            import threading
             from agents.brand_onboarding.watchdog import scan_and_flag_stale_brands
-            scan_and_flag_stale_brands()
+            threading.Thread(
+                target=scan_and_flag_stale_brands, daemon=True
+            ).start()
         except Exception:
             pass
-        st.session_state["watchdog_ran"] = True
 
     # Watchdog banner
     try:
