@@ -11,6 +11,27 @@ from pathlib import Path
 import streamlit as st
 
 
+def _fetch_recent_admin_forms(client, limit: int = 5) -> list[dict]:
+    """Most recent rows from new_item_forms, newest first. Returns []."""
+    if not client:
+        return []
+    try:
+        client.table("new_item_forms").select("id").limit(1).execute()
+    except Exception:
+        return []
+    try:
+        res = (
+            client.table("new_item_forms")
+            .select("brand_name, retailer, gaps, output_status, generated_at")
+            .order("generated_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        return res.data or []
+    except Exception:
+        return []
+
+
 # ── Metadata ───────────────────────────────────────────────────────────────────
 
 _AGENT_META = {
@@ -779,8 +800,54 @@ def render_per_agent_page(agent_key: str) -> None:
             unsafe_allow_html=True,
         )
 
-    # ── Admin & Ops: pending review at top ────────────────────────────────────
+    # ── Admin & Ops: recent forms, then pending review ────────────────────────
     if agent_key == "admin_ops":
+        _divider()
+        _section_heading("Recent New Item Forms")
+        recent_forms = _fetch_recent_admin_forms(client) if client else []
+        if recent_forms:
+            for row in recent_forms:
+                brand_nm  = row.get("brand_name") or "—"
+                retailer  = (row.get("retailer") or "whole_foods").replace("_", " ").title()
+                gap_count = len(row.get("gaps") or [])
+                ago       = _ago_str(row.get("generated_at", ""))
+                gap_html  = (
+                    f'<span style="color:#8B8A83; margin:0 6px;">·</span>'
+                    f'<span style="color:#92400E;">{gap_count} gap'
+                    f'{"s" if gap_count != 1 else ""} to review</span>'
+                    if gap_count else ""
+                )
+                ago_html = (
+                    f'<span style="color:#B0AFA8; font-size:11px; margin-left:8px;">'
+                    f'{ago}</span>' if ago else ""
+                )
+                col_info, col_btn = st.columns([6, 1])
+                with col_info:
+                    st.markdown(
+                        f'<div style="padding:8px 0;">'
+                        f'<span style="font-weight:500; color:#1A1A18;">{brand_nm}</span>'
+                        f'<span style="color:#8B8A83; margin:0 6px;">·</span>'
+                        f'<span style="color:#57564F;">{retailer}</span>'
+                        f'{gap_html}{ago_html}'
+                        f'</div>',
+                        unsafe_allow_html=True,
+                    )
+                with col_btn:
+                    btn_key = f"recent_form_open_{brand_nm}_{row.get('retailer','')}"
+                    if st.button("Open →", key=btn_key, use_container_width=True):
+                        st.session_state["admin_brand_pick"] = brand_nm
+                        st.rerun()
+                st.markdown(
+                    "<div style='height:1px; background:#F3F3F0; margin:0;'></div>",
+                    unsafe_allow_html=True,
+                )
+        else:
+            st.markdown(
+                '<p style="font-size:13px; color:#8B8A83; margin:4px 0 0;">'
+                "No forms filled yet — pick a brand below to fill one.</p>",
+                unsafe_allow_html=True,
+            )
+
         _divider()
         _section_heading("Needs your review")
         _render_admin_pending_review(messages, brand_name_map)

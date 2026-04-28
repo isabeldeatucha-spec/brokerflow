@@ -76,25 +76,6 @@ def _fetch_stats() -> dict:
         return {"brands": 0, "pitches": 0, "forms": 0, "bundles": 0}
 
 
-def _fetch_recent_forms(client, limit: int = 5) -> tuple[int, list]:
-    """Returns (total_count, recent_rows) from the new_item_forms table."""
-    if not client or not _table_exists("new_item_forms"):
-        return 0, []
-    try:
-        cnt = client.table("new_item_forms").select("id", count="exact").execute()
-        total = cnt.count or 0
-        recent = (
-            client.table("new_item_forms")
-            .select("brand_name, retailer, gaps, output_status, generated_at")
-            .order("generated_at", desc=True)
-            .limit(limit)
-            .execute()
-        )
-        return total, recent.data or []
-    except Exception:
-        return 0, []
-
-
 def _progress_row(label: str, icon_type: str, status_text: str) -> str:
     icons = {
         "spinner": (
@@ -1703,62 +1684,7 @@ def render_brand_roster() -> None:
                     "created_at":   msg.get("created_at", ""),
                 })
 
-    # ── Section: New Item Forms (top) ─────────────────────────────────────────
-    forms_total, recent_forms = _fetch_recent_forms(client)
-    st.markdown(
-        f'<h2 style=\'font-family:"Instrument Serif", Georgia, serif; '
-        f'font-size:26px; font-weight:400; margin:0 0 2px 0;\'>New Item Forms</h2>'
-        f'<p style="font-size:13px; color:#8B8A83; margin-bottom:12px;">'
-        f'<span class="sedge-number">{forms_total}</span> '
-        f'form{"s" if forms_total != 1 else ""} filled across the book</p>',
-        unsafe_allow_html=True,
-    )
-    if recent_forms:
-        for row in recent_forms:
-            brand_nm  = row.get("brand_name") or "—"
-            retailer  = (row.get("retailer") or "whole_foods").replace("_", " ").title()
-            gap_count = len(row.get("gaps") or [])
-            ago       = _ago_str(row.get("generated_at", ""))
-            gap_html  = (
-                f'<span style="color:#8B8A83; margin:0 6px;">·</span>'
-                f'<span style="color:#92400E;">{gap_count} gap'
-                f'{"s" if gap_count != 1 else ""} to review</span>'
-                if gap_count else ""
-            )
-            ago_html = (
-                f'<span style="color:#B0AFA8; font-size:11px; margin-left:8px;">'
-                f'{ago}</span>' if ago else ""
-            )
-            col_info, col_btn = st.columns([6, 1])
-            with col_info:
-                st.markdown(
-                    f'<div style="padding:8px 0;">'
-                    f'<span style="font-weight:500; color:#1A1A18;">{brand_nm}</span>'
-                    f'<span style="color:#8B8A83; margin:0 6px;">·</span>'
-                    f'<span style="color:#57564F;">{retailer}</span>'
-                    f'{gap_html}{ago_html}'
-                    f'</div>',
-                    unsafe_allow_html=True,
-                )
-            with col_btn:
-                btn_key = f"form_open_{brand_nm}_{row.get('retailer','')}"
-                if st.button("Open →", key=btn_key, use_container_width=True):
-                    st.session_state["admin_brand_pick"] = brand_nm
-                    st.session_state["workspace"] = "book/admin_ops"
-                    st.rerun()
-            st.markdown(
-                "<div style='height:1px; background:#F3F3F0; margin:0;'></div>",
-                unsafe_allow_html=True,
-            )
-    else:
-        st.markdown(
-            '<p style="font-size:13px; color:#8B8A83;">'
-            "No forms filled yet — open New Item Forms below to fill one.</p>",
-            unsafe_allow_html=True,
-        )
-    st.markdown("<div style='margin-bottom:32px;'></div>", unsafe_allow_html=True)
-
-    # ── Section A: Your agents ────────────────────────────────────────────────
+    # ── Section A: Your agents (top) ──────────────────────────────────────────
     st.markdown(
         f'<h2 style=\'font-family:"Instrument Serif", Georgia, serif; '
         f'font-size:26px; font-weight:400; margin:0 0 2px 0;\'>Your agents</h2>'
