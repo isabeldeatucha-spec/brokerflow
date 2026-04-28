@@ -1639,202 +1639,6 @@ def _render_agent_panel_content(brand_id: str, agent_key: str, status: str, clie
             )
 
 
-_ALL_BRANDS_LABEL  = "All brands (run in parallel)"
-_NEW_BRAND_LABEL   = "+ Onboard a new brand…"
-
-
-def _render_demo_banner(client, brands_list: list) -> None:
-    """Demo banner: brand picker + Run button + live coordination dashboard.
-
-    The live dashboard (metrics, fleet grid, log) auto-refreshes every 2s
-    via st.fragment, so the rest of the page stays responsive.
-    """
-    # ── Static header (no auto-refresh) ───────────────────────────────────
-    st.markdown(
-        '<div style="background:#0F0F0E; color:#FAFAF7; border-radius:14px 14px 0 0; '
-        'padding:18px 24px 14px; margin-bottom:0;">'
-        '<div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">'
-        '<span style="width:8px; height:8px; border-radius:50%; background:#22C55E;"></span>'
-        '<span style="font-size:11px; font-weight:600; letter-spacing:0.08em; '
-        'color:#9CA3AF; text-transform:uppercase;">Sedge Coordination Protocol v1</span>'
-        '</div>'
-        '<div style="font-family:\'Instrument Serif\', Georgia, serif; '
-        'font-size:24px; font-weight:400;">Fleet mode — autonomous chains across your book</div>'
-        '<div style="font-size:12px; color:#A1A09B; margin-top:4px;">'
-        'Onboard → Pitcher → Admin &amp; Ops → PO Processing &nbsp;·&nbsp; '
-        'pub-sub, ack/consume, parallel handlers, failure-resilient</div>'
-        '</div>',
-        unsafe_allow_html=True,
-    )
-
-    # ── Live metrics strip (auto-refreshes via fragment) ──────────────────
-    _live_metrics_strip()
-
-    # ── Brand picker + Run button (static) ────────────────────────────────
-    st.markdown("<div style='margin-top:14px;'></div>", unsafe_allow_html=True)
-
-    options: list[str] = []
-    if len(brands_list) > 1:
-        options.append(_ALL_BRANDS_LABEL)
-    options.extend([b["brand_name"] for b in brands_list])
-    options.append(_NEW_BRAND_LABEL)
-
-    col_pick, col_run, col_log = st.columns([2, 1, 1])
-    with col_pick:
-        # Default to Olipop if present, else first brand
-        default_idx = 0
-        if "Olipop" in options:
-            default_idx = options.index("Olipop")
-        elif _ALL_BRANDS_LABEL in options:
-            default_idx = options.index(_ALL_BRANDS_LABEL)
-        selection = st.selectbox(
-            "Demo target",
-            options=options,
-            index=default_idx,
-            key="demo_brand_pick",
-            label_visibility="collapsed",
-            placeholder="Pick a brand to demo",
-        )
-    with col_run:
-        kick = st.button(
-            "▶ Run demo chain",
-            key="run_demo_chain_btn",
-            type="primary",
-            use_container_width=True,
-            disabled=(selection == _NEW_BRAND_LABEL),
-        )
-        if kick and selection != _NEW_BRAND_LABEL:
-            if selection == _ALL_BRANDS_LABEL:
-                _kick_chain(brands_list)
-            else:
-                target = next((b for b in brands_list if b.get("brand_name") == selection), None)
-                if target:
-                    _kick_chain([target])
-    with col_log:
-        if st.button(
-            ("Hide log" if st.session_state.get("_show_coord_log") else "Show coord log"),
-            key="open_coord_log_btn",
-            use_container_width=True,
-        ):
-            st.session_state["_show_coord_log"] = not st.session_state.get("_show_coord_log", False)
-            st.rerun()
-
-    # If the user picked "Onboard new brand", route to onboarding flow
-    if selection == _NEW_BRAND_LABEL:
-        st.markdown(
-            '<p style="font-size:12px; color:#8B8A83; margin-top:6px;">'
-            "Use the “+ Onboard new brand” button next to the Your brands heading "
-            "below to add a fresh brand. Onboarding auto-publishes the "
-            "<code>v1.brand_onboarded</code> event and the chain runs immediately.</p>",
-            unsafe_allow_html=True,
-        )
-
-    # ── Live fleet grid + coord log (auto-refresh via fragment) ───────────
-    st.markdown("<div style='margin-top:14px;'></div>", unsafe_allow_html=True)
-    _live_dashboard_fragment(brands_list)
-
-
-@st.fragment(run_every=2)
-def _live_metrics_strip() -> None:
-    """Auto-refreshing metrics strip. Reruns every 2s without touching the rest of the page."""
-    from agents.runner import status as runner_status
-    rs = runner_status()
-    avg_ms     = rs.get("avg_ms", 0.0)
-    msgs_min   = rs.get("msgs_per_minute", 0)
-    active_n   = rs.get("active_chains", 0)
-    failures   = rs.get("failures_last_hour", 0)
-    samples    = rs.get("samples", 0)
-
-    st.markdown(
-        f'<div style="background:#0F0F0E; color:#FAFAF7; border-radius:0 0 14px 14px; '
-        f'padding:0 24px 18px;">'
-        f'<div style="display:flex; gap:24px; flex-wrap:wrap;">'
-        f'<div style="text-align:left;">'
-        f'<div style="font-size:22px; font-weight:600; color:#FAFAF7; line-height:1;">{active_n}</div>'
-        f'<div style="font-size:10px; color:#9CA3AF; letter-spacing:0.05em; '
-        f'text-transform:uppercase; margin-top:4px;">Active chains</div>'
-        f'</div>'
-        f'<div>'
-        f'<div style="font-size:22px; font-weight:600; color:#FAFAF7; line-height:1;">{msgs_min}</div>'
-        f'<div style="font-size:10px; color:#9CA3AF; letter-spacing:0.05em; '
-        f'text-transform:uppercase; margin-top:4px;">Msgs / min</div>'
-        f'</div>'
-        f'<div>'
-        f'<div style="font-size:22px; font-weight:600; color:#FAFAF7; line-height:1;">'
-        f'{int(avg_ms)}<span style="font-size:13px; color:#9CA3AF;">ms</span></div>'
-        f'<div style="font-size:10px; color:#9CA3AF; letter-spacing:0.05em; '
-        f'text-transform:uppercase; margin-top:4px;">Avg handler ({samples}n)</div>'
-        f'</div>'
-        f'<div>'
-        f'<div style="font-size:22px; font-weight:600; color:'
-        f'{"#FCA5A5" if failures else "#FAFAF7"}; line-height:1;">{failures}</div>'
-        f'<div style="font-size:10px; color:#9CA3AF; letter-spacing:0.05em; '
-        f'text-transform:uppercase; margin-top:4px;">Failures (1h)</div>'
-        f'</div>'
-        f'</div>'
-        f'</div>',
-        unsafe_allow_html=True,
-    )
-
-
-@st.fragment(run_every=2)
-def _live_dashboard_fragment(brands_list: list) -> None:
-    """Auto-refreshing fleet grid + (optional) coord log."""
-    from memory import _get_client
-    try:
-        client = _get_client()
-    except Exception:
-        return
-
-    if brands_list:
-        with st.container(border=True):
-            from ui.fleet_view import render_fleet_view
-            render_fleet_view(client, brands_list)
-
-    if st.session_state.get("_show_coord_log"):
-        st.markdown("<div style='margin-top:14px;'></div>", unsafe_allow_html=True)
-        with st.container(border=True):
-            from ui.coordination_log import render_coordination_log
-            render_coordination_log(brand_id=None, limit=30)
-
-
-def _kick_chain(brands: list[dict]) -> None:
-    """Publish BRAND_ONBOARDED for each brand. Runner picks them up.
-
-    Auto-show the coord log so the user immediately sees protocol traffic.
-    The live fragment will then auto-refresh every 2s.
-    """
-    try:
-        from agents.coordination.protocol import EventType, publish as scp_publish
-        kicked = 0
-        for b in brands:
-            if not b.get("id"):
-                continue
-            scp_publish(
-                from_agent="user",
-                to_agent="*",
-                brand_id=b["id"],
-                event_type=EventType.BRAND_ONBOARDED,
-                payload={
-                    "brand_name":   b.get("brand_name"),
-                    "category":     b.get("category"),
-                    "trigger":      "manual_demo",
-                    "action_label": f"Demo: kicked off coordination chain for {b.get('brand_name')}",
-                    "agent_status": "completed",
-                },
-            )
-            kicked += 1
-        st.session_state["_show_coord_log"] = True
-        st.toast(
-            f"▶ Kicked off {kicked} chain{'s' if kicked != 1 else ''} — "
-            "live fleet grid + log below auto-refresh every 2s",
-            icon="🚀",
-        )
-        # No st.rerun() — the fragment polls. Avoids a 1-2s blank flash.
-    except Exception as exc:
-        st.error(f"Failed to kick chain(s): {exc}")
-
-
 def render_brand_roster() -> None:
     from datetime import datetime, timezone
 
@@ -1896,9 +1700,6 @@ def render_brand_roster() -> None:
         render_onboarding_flow()
         return
 
-    # ── Coordination protocol demo banner ─────────────────────────────────────
-    _render_demo_banner(client, brands_list)
-
     # ── Build review items list ────────────────────────────────────────────────
     review_items: list[dict] = []
     for brand in brands_list:
@@ -1920,7 +1721,59 @@ def render_brand_roster() -> None:
                     "created_at":   msg.get("created_at", ""),
                 })
 
-    # ── Section A: Needs your review inbox ───────────────────────────────────
+    # ── Section A: Your agents (top) ──────────────────────────────────────────
+    st.markdown(
+        f'<h2 style=\'font-family:"Instrument Serif", Georgia, serif; '
+        f'font-size:26px; font-weight:400; margin:0 0 2px 0;\'>Your agents</h2>'
+        f'<p style="font-size:13px; color:#8B8A83; margin-bottom:16px;">'
+        f'See what each agent has been doing across your entire book.</p>',
+        unsafe_allow_html=True,
+    )
+    ba_col1, ba_col2 = st.columns(2, gap="medium")
+
+    def _agent_stats(ak: str) -> tuple[int, str, int]:
+        total = sum(1 for b in brands_list if (activity_map.get(b.get("id")) or {}).get(ak))
+        msgs_with_status = [
+            (activity_map.get(b.get("id")) or {}).get(ak) for b in brands_list
+        ]
+        review_n = sum(
+            1 for m in msgs_with_status
+            if m and (m.get("payload") or {}).get("agent_status") == "awaiting_review"
+        )
+        latest = None
+        for m in msgs_with_status:
+            if m and m.get("created_at"):
+                if not latest or m["created_at"] > latest:
+                    latest = m["created_at"]
+        last_str = _ago_str(latest) if latest else "No activity"
+        return total, last_str, review_n
+
+    for ba_col, ak in zip([ba_col1, ba_col2], _AGENT_KEYS):
+        with ba_col:
+            total, last_str, review_n = _agent_stats(ak)
+            review_indicator = (
+                f'<span style="font-size:12px; color:#92400E;">'
+                f' · {review_n} pending review</span>' if review_n else ""
+            )
+            with st.container(border=True):
+                st.markdown(
+                    f'<div style="font-family:\'Instrument Serif\', Georgia, serif; '
+                    f'font-size:20px; font-weight:400; color:#1A1A18; margin-bottom:4px;">'
+                    f'{_AGENT_LABELS[ak]}</div>'
+                    f'<div style="font-size:13px; color:#8B8A83; margin-bottom:8px;">'
+                    f'{total} brand{"s" if total != 1 else ""} · last active {last_str}'
+                    f'{review_indicator}</div>',
+                    unsafe_allow_html=True,
+                )
+                dest = "book/retailer_pitcher" if ak == "retailer_pitcher" else "book/admin_ops"
+                if st.button(f"Open {_AGENT_LABELS[ak]} →",
+                             key=f"browse_{ak}", use_container_width=True):
+                    st.session_state["workspace"] = dest
+                    st.rerun()
+
+    st.markdown("<div style='margin-bottom:32px;'></div>", unsafe_allow_html=True)
+
+    # ── Section B: Needs your review inbox ────────────────────────────────────
     if review_items:
         st.markdown(
             '<h2 style=\'font-family:"Instrument Serif", Georgia, serif; '
@@ -1973,58 +1826,6 @@ def render_brand_roster() -> None:
             'Nothing needs your attention. Agents are running.</p>',
             unsafe_allow_html=True,
         )
-
-    # ── Section B: Browse by agent ────────────────────────────────────────────
-    st.markdown(
-        f'<h2 style=\'font-family:"Instrument Serif", Georgia, serif; '
-        f'font-size:26px; font-weight:400; margin:0 0 2px 0;\'>Your agents</h2>'
-        f'<p style="font-size:13px; color:#8B8A83; margin-bottom:16px;">'
-        f'See what each agent has been doing across your entire book.</p>',
-        unsafe_allow_html=True,
-    )
-    ba_col1, ba_col2 = st.columns(2, gap="medium")
-
-    def _agent_stats(ak: str) -> tuple[int, str, int]:
-        total = sum(1 for b in brands_list if (activity_map.get(b.get("id")) or {}).get(ak))
-        msgs_with_status = [
-            (activity_map.get(b.get("id")) or {}).get(ak) for b in brands_list
-        ]
-        review_n = sum(
-            1 for m in msgs_with_status
-            if m and (m.get("payload") or {}).get("agent_status") == "awaiting_review"
-        )
-        latest = None
-        for m in msgs_with_status:
-            if m and m.get("created_at"):
-                if not latest or m["created_at"] > latest:
-                    latest = m["created_at"]
-        last_str = _ago_str(latest) if latest else "No activity"
-        return total, last_str, review_n
-
-    for ba_col, ak in zip([ba_col1, ba_col2], _AGENT_KEYS):
-        with ba_col:
-            total, last_str, review_n = _agent_stats(ak)
-            review_indicator = (
-                f'<span style="font-size:12px; color:#92400E;">'
-                f' · {review_n} pending review</span>' if review_n else ""
-            )
-            with st.container(border=True):
-                st.markdown(
-                    f'<div style="font-family:\'Instrument Serif\', Georgia, serif; '
-                    f'font-size:20px; font-weight:400; color:#1A1A18; margin-bottom:4px;">'
-                    f'{_AGENT_LABELS[ak]}</div>'
-                    f'<div style="font-size:13px; color:#8B8A83; margin-bottom:8px;">'
-                    f'{total} brand{"s" if total != 1 else ""} · last active {last_str}'
-                    f'{review_indicator}</div>',
-                    unsafe_allow_html=True,
-                )
-                dest = "book/retailer_pitcher" if ak == "retailer_pitcher" else "book/admin_ops"
-                if st.button(f"Open {_AGENT_LABELS[ak]} →",
-                             key=f"browse_{ak}", use_container_width=True):
-                    st.session_state["workspace"] = dest
-                    st.rerun()
-
-    st.markdown("<div style='margin-bottom:32px;'></div>", unsafe_allow_html=True)
 
     # ── Section C: Your brands ────────────────────────────────────────────────
     n = len(brands_list)
@@ -2348,6 +2149,14 @@ def render_agent_picker() -> None:
 # ── Existing business workspace ───────────────────────────────────────────────
 
 def render_existing_business_workspace() -> None:
+    # Top-right "Coordination demo" entry point
+    _, col_demo = st.columns([5, 2])
+    with col_demo:
+        if st.button("▶ Coordination protocol demo", key="open_demo_btn",
+                     use_container_width=True):
+            st.session_state["workspace"] = "demo"
+            st.rerun()
+
     # Watchdog — run once per session
     if "watchdog_ran" not in st.session_state:
         try:
@@ -2630,6 +2439,9 @@ try:
     elif workspace in ("book/retailer_pitcher", "book/admin_ops"):
         from ui.per_agent_page import render_per_agent_page
         render_per_agent_page(workspace.split("/")[1])
+    elif workspace == "demo":
+        from ui.demo_view import render_demo_view
+        render_demo_view()
     else:
         render_landing_cards()
 except Exception as _top_exc:
