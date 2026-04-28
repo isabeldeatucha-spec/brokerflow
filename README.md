@@ -59,14 +59,48 @@ supabase/
   migrations/                ← Applied migration files
 ```
 
-### Agent coordination
+### Agent coordination — Sedge Coordination Protocol (SCP v1)
 
-Agents communicate through a shared Supabase blackboard (`coordination_messages` table). Each agent writes structured messages when it completes work or needs human review. The book-of-business page reads these messages to show status across all brands without any agent-to-agent API calls.
+Sedge implements a typed pub-sub coordination protocol on top of a shared Supabase blackboard. Inspired by MCP/A2A, specialized for the broker-agent domain. Agents do not call each other directly — they publish typed events, and a background runner dispatches them to subscribers.
+
+**Primitives** (see [agents/coordination/protocol.py](agents/coordination/protocol.py)):
+
+| Primitive | Implementation |
+|---|---|
+| **Typed events** | Versioned `EventType` enum (`v1.brand_onboarded`, `v1.pitch_drafted`, ...) |
+| **Publish** | `publish(from_agent, to_agent, brand_id, event_type, payload)` → blackboard insert |
+| **Subscribe** | `@subscribe(EventType.X, subscriber="agent_name")` decorator on a handler |
+| **Dispatch** | Background daemon polls unconsumed messages every 3s, routes to handlers |
+| **Ack** | `consumed_at` timestamp set on success — at-least-once delivery semantics |
+| **Idempotency** | In-tick dedup on `(brand_id, message_type)` to handle retries |
+| **Failure handling** | On handler exception, publish `v1.handler_failed` event, ack original |
+
+**Demo chain — fully autonomous after one trigger:**
 
 ```
-Brand Onboarding ──writes──▶ coordination_messages ◀──reads── Retailer Pitcher
-                                                    ◀──reads── Admin & Ops
+user → BRAND_ONBOARDED
+              ↓ (runner picks up, dispatches to subscriber)
+       Retailer Pitcher
+              ↓ PITCH_DRAFTED  (or PITCH_FAILED — chain continues either way)
+       Admin & Ops
+              ↓ FORM_GAPS_FLAGGED
+       Whole Foods (simulated retailer)
+              ↓ PO_RECEIVED
+       PO Processing
+              ↓ PO_VALIDATED  or  PO_DISPUTE_NEEDED
+            END
 ```
+
+The full chain runs without any further human input. Each agent reads from Supabase, calls its tools (LLM, Excel, web), writes typed events back to the blackboard, and the runner routes the next agent. Failure of any single agent does not stall the chain — `PITCH_FAILED` is a first-class event that Admin & Ops also subscribes to.
+
+**Why this qualifies as a coordination protocol, not just plumbing:**
+
+- **Autonomy** — agents act without prompting; runner ticks every 3s
+- **Memory** — Supabase persists every message + ack state; survives process restart
+- **Tool use** — Anthropic, Supabase, openpyxl, Firecrawl, Excel template
+- **Coordination** — typed pub-sub, multi-agent task chain, failure-resilient
+
+**Live observability** — the book-of-business page renders the live message bus ([ui/coordination_log.py](ui/coordination_log.py)) so you can watch typed events flow between agents in real-time. Click "▶ Run demo chain" to kick off an end-to-end run on Olipop.
 
 State within a single agent run is managed by LangGraph's `MemorySaver` checkpointer (in-process, per thread).
 

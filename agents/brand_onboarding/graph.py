@@ -403,6 +403,29 @@ def node_notify_downstream(state: OnboardingState) -> dict:
     missing = state.get("missing_fields", [])
     merged = state.get("merged_record", {})
 
+    # Always publish the typed SCP v1 event so the coordination runner
+    # picks up downstream agents autonomously. The legacy untyped messages
+    # below remain for backward compat with existing UI activity feeds.
+    try:
+        from agents.coordination.protocol import EventType, publish as scp_publish
+        scp_publish(
+            from_agent="brand_onboarding",
+            to_agent="*",
+            brand_id=brand_id,
+            event_type=EventType.BRAND_ONBOARDED,
+            payload={
+                "brand_name":       merged.get("brand_name"),
+                "category":         merged.get("category"),
+                "completeness_pct": pct,
+                "action_label":     f"Onboarded {merged.get('brand_name')} ({pct:.0f}% complete)",
+                "agent_status":     "completed",
+            },
+        )
+        messages.append("scp_brand_onboarded")
+    except Exception as exc:
+        # Don't let coordination publish failures kill the onboarding run
+        pass
+
     ready_for_matcher = pct >= 50 and "category" in merged
     ready_for_admin = pct >= 40 and "wholesale_price_range" in merged
 
