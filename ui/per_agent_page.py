@@ -543,8 +543,11 @@ def _render_admin_action(client) -> None:
         with st.spinner(f"Filling WFM form for {sel_brand}…"):
             try:
                 from agents.admin_ops.graph import run_admin_ops
-                result = run_admin_ops(sel_brand, retailer=retailer_key)
-                st.session_state["_admin_form_result"] = dict(result)
+                result = dict(run_admin_ops(sel_brand, retailer=retailer_key))
+                xlsx_path = result.get("output_xlsx_path") or ""
+                if xlsx_path and Path(xlsx_path).exists():
+                    result["output_xlsx_bytes"] = Path(xlsx_path).read_bytes()
+                st.session_state["_admin_form_result"] = result
                 st.session_state["_admin_form_brand"]  = sel_brand
             except Exception as exc:
                 st.error(f"Form fill failed: {exc}")
@@ -638,18 +641,40 @@ def _render_admin_result(result: dict, brand_name: str) -> None:
 
     st.markdown("<div style='margin-top:16px;'></div>", unsafe_allow_html=True)
     dl_col, reset_col, _ = st.columns([1, 1, 3])
+
+    xlsx_bytes = result.get("output_xlsx_bytes")
+    if not xlsx_bytes and xlsx_path and Path(xlsx_path).exists():
+        # Fallback: re-read from /tmp if the file is still around. Backfill the
+        # cache so subsequent reruns don't depend on /tmp persisting.
+        try:
+            xlsx_bytes = Path(xlsx_path).read_bytes()
+            result["output_xlsx_bytes"] = xlsx_bytes
+        except OSError:
+            xlsx_bytes = None
+
     with dl_col:
-        if xlsx_path and Path(xlsx_path).exists():
-            with open(xlsx_path, "rb") as f:
-                st.download_button(
-                    "Download filled form",
-                    data=f.read(),
-                    file_name=f"WFM_NewItem_{brand_name}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    key="admin_dl_form",
-                )
+        if xlsx_bytes:
+            st.download_button(
+                "Download filled form",
+                data=xlsx_bytes,
+                file_name=f"WFM_NewItem_{brand_name}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key="admin_dl_form",
+                use_container_width=True,
+            )
         else:
-            st.button("Download filled form", key="admin_dl_form_disabled", disabled=True)
+            err_msgs = result.get("artifact_errors") or []
+            err_text = "; ".join(err_msgs) if err_msgs else (
+                "Excel file is no longer available. Click Regenerate to rebuild it."
+            )
+            st.button(
+                "Download filled form",
+                key="admin_dl_form_disabled",
+                disabled=True,
+                use_container_width=True,
+                help=err_text,
+            )
+            st.caption(err_text)
 
     with reset_col:
         if st.button("Fill another →", key="admin_reset_btn", use_container_width=True):

@@ -402,10 +402,14 @@ def _render_footer(result: dict) -> None:
     col_dl, col_slack, col_regen = st.columns(3)
 
     with col_dl:
-        xlsx_bytes: bytes | None = None
-        if output_path and os.path.exists(output_path):
-            with open(output_path, "rb") as fh:
-                xlsx_bytes = fh.read()
+        xlsx_bytes: bytes | None = result.get("output_xlsx_bytes")
+        if not xlsx_bytes and output_path and os.path.exists(output_path):
+            try:
+                with open(output_path, "rb") as fh:
+                    xlsx_bytes = fh.read()
+                result["output_xlsx_bytes"] = xlsx_bytes
+            except OSError:
+                xlsx_bytes = None
         if xlsx_bytes:
             st.download_button(
                 label="Download the filled form",
@@ -415,7 +419,17 @@ def _render_footer(result: dict) -> None:
                 use_container_width=True,
             )
         else:
-            st.button("Download the filled form", disabled=True, use_container_width=True)
+            err_msgs = result.get("artifact_errors") or []
+            err_text = "; ".join(err_msgs) if err_msgs else (
+                "Excel file is no longer available. Click Regenerate to rebuild it."
+            )
+            st.button(
+                "Download the filled form",
+                disabled=True,
+                use_container_width=True,
+                help=err_text,
+            )
+            st.caption(err_text)
 
     with col_slack:
         st.html(f"""
@@ -665,7 +679,14 @@ def render_admin_ops_page() -> None:
             unsafe_allow_html=True,
         )
 
-        result = _run_graph(brand_name, "whole_foods")
+        result = dict(_run_graph(brand_name, "whole_foods"))
+        out_path = result.get("output_xlsx_path") or ""
+        if out_path and os.path.exists(out_path):
+            try:
+                with open(out_path, "rb") as fh:
+                    result["output_xlsx_bytes"] = fh.read()
+            except OSError:
+                pass
         st.session_state.ao_result = result
 
         if result.get("handoff_status") in ("miss", "stale"):
