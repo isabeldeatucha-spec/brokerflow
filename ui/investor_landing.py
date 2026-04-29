@@ -5,11 +5,12 @@ agents w/ orchestration diagram, CTA). Both CTA buttons flip
 st.session_state.investor_entered so subsequent visits drop straight into the
 existing two-card workspace selector.
 
-CSS is scoped under .bf-investor and .bf-investor-nav. The hero CTA is a
-real st.button styled as a dark pill via [data-testid="stButton"]. The
-sticky nav has a single right-aligned "I'm a broker →" link rendered as
-raw HTML (<a href="?goto=app">) so it can live inside a sticky <header>;
-the workspace router catches ?goto=app and flips investor_entered.
+CSS is scoped under .bf-investor and .bf-investor-nav. The page has a
+single CTA: a sticky right-aligned "I'm a broker →" link in the nav,
+rendered as raw HTML (<a href="?goto=app">) so it can live inside a
+sticky <header>. The workspace router catches ?goto=app and flips
+investor_entered. The hero is intentionally CTA-less — the sticky nav
+button is always visible and is the only conversion point.
 
 All HTML strings are passed through a _md() helper that collapses every
 whitespace run to a single space (single-line output) before going to
@@ -84,21 +85,30 @@ _CSS = """
     align-items: center;
     justify-content: flex-end;
 }
-.bf-investor-nav-cta {
-    font-family: 'Inter', sans-serif;
-    font-size: 0.9rem;
-    font-weight: 500;
-    color: #FFFFFF;
-    background: var(--bf-fg);
-    padding: 0.6rem 1.4rem;
-    border-radius: 999px;
-    text-decoration: none;
-    transition: background 0.15s ease;
+/* !important on color/text-decoration is required: Streamlit's theme
+   applies a high-specificity link color (blue) and underline to <a>
+   elements that otherwise wins over our class-scoped rule. */
+.bf-investor-nav-cta,
+.bf-investor-nav-cta:link,
+.bf-investor-nav-cta:visited,
+.bf-investor-nav-cta:active {
+    font-family: 'Inter', sans-serif !important;
+    font-size: 0.9rem !important;
+    font-weight: 500 !important;
+    color: #FFFFFF !important;
+    background: var(--bf-fg) !important;
+    padding: 0.6rem 1.4rem !important;
+    border-radius: 999px !important;
+    text-decoration: none !important;
+    border: 1px solid var(--bf-fg) !important;
+    display: inline-block !important;
+    transition: background 0.15s ease, opacity 0.15s ease !important;
 }
 .bf-investor-nav-cta:hover {
-    background: #1F1F1F;
-    color: #FFFFFF;
-    text-decoration: none;
+    background: #1F1F1F !important;
+    color: #FFFFFF !important;
+    text-decoration: none !important;
+    opacity: 0.92;
 }
 
 /* ── Scoped page wrapper ───────────────────────────────────────────── */
@@ -346,28 +356,6 @@ _CSS = """
     line-height: 1;
 }
 
-/* ── st.button styled as dark pill (hero CTA only) ─────────────────── */
-[data-testid="stButton"] {
-    max-width: 280px;
-    margin: 0 auto;
-}
-[data-testid="stButton"] > button {
-    background: var(--bf-fg) !important;
-    color: #FFFFFF !important;
-    border: none !important;
-    border-radius: 999px !important;
-    padding: 0.95rem 2.25rem !important;
-    font-family: 'Inter', sans-serif !important;
-    font-weight: 500 !important;
-    font-size: 1rem !important;
-    width: 100%;
-    transition: background 0.15s ease;
-}
-[data-testid="stButton"] > button:hover {
-    background: #1F1F1F !important;
-    color: #FFFFFF !important;
-}
-
 /* ── Mobile collapse ───────────────────────────────────────────────── */
 @media (max-width: 720px) {
     .bf-investor-nav-inner { padding: 1rem 1.25rem; }
@@ -382,7 +370,6 @@ _CSS = """
     }
     .bf-investor-stat-number { font-size: 3.5rem; }
     .bf-investor-orch { display: none; }
-    [data-testid="stButton"] { max-width: 100%; }
 }
 </style>
 """
@@ -554,20 +541,11 @@ def _render_bottom_padding() -> None:
     _md('<div class="bf-investor" style="padding-bottom:6rem;"></div>')
 
 
-def _enter_app() -> None:
-    st.session_state["investor_entered"] = True
-    st.rerun()
-
-
 def render_investor_landing() -> None:
     st.markdown(_CSS, unsafe_allow_html=True)
 
     _render_nav()
     _render_hero()
-
-    # Hero CTA — real Streamlit button styled by the dark-pill rule above
-    if st.button("I'm a broker →", key="bf_investor_enter_hero"):
-        _enter_app()
 
     _render_problem()
     _render_product()
