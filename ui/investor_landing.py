@@ -9,10 +9,22 @@ CSS is scoped under .bf-investor and .bf-investor-nav. Both CTA buttons are
 real st.buttons styled as dark pills via [data-testid="stButton"]; the
 in-nav Docs link is a plain <a href="?page=docs"> that matches the existing
 docs router in brokerflow_app.py.
+
+All HTML strings are passed through textwrap.dedent before going to
+st.markdown so leading indentation doesn't get parsed as a code block.
+Headings use <div> instead of <h1>/<h2> so Streamlit doesn't auto-attach
+its anchor-link icon.
 """
 from __future__ import annotations
 
+import textwrap
+
 import streamlit as st
+
+
+def _md(html: str) -> None:
+    """Render dedented HTML through st.markdown with unsafe_allow_html."""
+    st.markdown(textwrap.dedent(html).strip(), unsafe_allow_html=True)
 
 
 _CSS = """
@@ -22,17 +34,25 @@ _CSS = """
 /* Hide Streamlit's default menu and footer for an editorial feel */
 #MainMenu, footer {visibility: hidden;}
 
+/* Suppress the auto-anchor link icon Streamlit attaches to headings.
+   Belt-and-suspenders: we also use <div> instead of <h1>/<h2> below. */
+.bf-investor h1 a, .bf-investor h2 a,
+.bf-investor h3 a, .bf-investor h4 a {
+    display: none !important;
+}
+
 /* Cream page background; cards stay pure white for lift without shadows. */
 [data-testid="stAppViewContainer"], .stApp {
     background: #FAFAF7 !important;
 }
 
-/* ── Color tokens shared by nav + body ─────────────────────────────── */
+/* ── Color tokens ──────────────────────────────────────────────────── */
 :root {
     --bf-fg: #0A0A0A;
     --bf-muted: #6B6B6B;
     --bf-faint: #A8A8A8;
     --bf-border: #E5E5E5;
+    --bf-border-soft: #EFEFEF;
     --bf-bg: #FAFAF7;
     --bf-card: #FFFFFF;
 }
@@ -45,7 +65,7 @@ _CSS = """
     background: rgba(250, 250, 247, 0.92);
     backdrop-filter: saturate(140%) blur(8px);
     -webkit-backdrop-filter: saturate(140%) blur(8px);
-    border-bottom: 1px solid var(--bf-border);
+    border-bottom: 1px solid var(--bf-border-soft);
     margin: -1rem -2rem 0;
 }
 .bf-investor-nav-inner {
@@ -90,22 +110,14 @@ _CSS = """
     padding: 0 0 4rem;
 }
 
-/* ── Hero ──────────────────────────────────────────────────────────── */
+/* ── Hero — title + tagline + CTA only ─────────────────────────────── */
 .bf-investor-hero {
     text-align: center;
-    padding: 5rem 1rem 1.25rem;
-}
-.bf-investor-hero-eyebrow {
-    font-family: 'Inter', sans-serif;
-    text-transform: uppercase;
-    font-size: 0.7rem;
-    letter-spacing: 0.18em;
-    color: var(--bf-faint);
-    margin: 0 0 1.5rem 0;
+    padding: 5rem 1rem 1rem;
 }
 .bf-investor-hero-title {
     font-family: 'Playfair Display', Georgia, serif;
-    font-size: 6rem;
+    font-size: 5rem;
     font-weight: 500;
     line-height: 1;
     letter-spacing: -0.025em;
@@ -115,63 +127,51 @@ _CSS = """
 .bf-investor-hero-tagline {
     font-family: 'Playfair Display', Georgia, serif;
     font-style: italic;
-    font-size: 1.4rem;
+    font-size: 1.35rem;
     color: var(--bf-muted);
-    margin: 1.25rem 0 2rem 0;
+    margin: 1rem 0 3rem 0;
     font-weight: 400;
 }
-.bf-investor-hero-scroll {
-    font-family: 'Playfair Display', Georgia, serif;
-    font-style: italic;
-    font-size: 0.95rem;
-    color: var(--bf-faint);
-    margin: 1.25rem 0 0 0;
-}
 
-/* ── Section frame (top margin overridden per section) ─────────────── */
+/* ── Section frame (uniform 4rem top margin, lighter border) ───────── */
 .bf-investor-section {
-    border-top: 1px solid var(--bf-border);
+    border-top: 1px solid var(--bf-border-soft);
+    margin-top: 4rem;
+    padding-top: 2.5rem;
+}
+.bf-investor-section--cta {
+    margin-top: 5rem;
     padding-top: 3rem;
+    padding-bottom: 3rem;
 }
-.bf-investor-section--problem { margin-top: 3.5rem; }
-.bf-investor-section--product { margin-top: 6rem; }
-.bf-investor-section--agents  { margin-top: 5rem; }
-.bf-investor-section--cta     { margin-top: 6rem; padding-top: 3.5rem; padding-bottom: 4rem; }
 
-.bf-investor-connector {
-    font-family: 'Playfair Display', Georgia, serif;
-    font-style: italic;
-    font-size: 0.95rem;
-    color: var(--bf-faint);
-    margin: 0 0 0.4rem 0;
-}
 .bf-investor-eyebrow {
     font-family: 'Inter', sans-serif;
     text-transform: uppercase;
     font-size: 0.7rem;
     letter-spacing: 0.18em;
     color: var(--bf-faint);
-    margin: 0 0 1rem 0;
+    margin: 0 0 0.75rem 0;
 }
 .bf-investor-h2 {
     font-family: 'Playfair Display', Georgia, serif;
-    font-size: 2rem;
+    font-size: 1.75rem;
     font-weight: 500;
-    line-height: 1.2;
+    line-height: 1.22;
     letter-spacing: -0.01em;
     color: var(--bf-fg);
-    max-width: 760px;
-    margin: 0 0 1rem 0;
+    max-width: 720px;
+    margin: 0 0 0.75rem 0;
 }
 .bf-investor-sub {
-    font-size: 1rem;
+    font-size: 0.95rem;
     color: var(--bf-muted);
     max-width: 720px;
-    margin: 0 0 2.5rem 0;
+    margin: 0 0 2.25rem 0;
     line-height: 1.65;
 }
 
-/* ── Problem stat row — numbers as the visual anchors ──────────────── */
+/* ── Problem stat row — numbers as anchors ─────────────────────────── */
 .bf-investor-stat-row {
     display: grid;
     grid-template-columns: 1fr 1.4fr 1fr;
@@ -224,23 +224,21 @@ _CSS = """
     margin-left: auto;
     margin-right: auto;
 }
-/* Connecting hairlines between the three stat columns at the vertical
-   midpoint of the numbers (~2.5rem from the top of each cell). */
 .bf-investor-stat-row::before,
 .bf-investor-stat-row::after {
     content: "";
     position: absolute;
     top: 3.7rem;
     height: 1px;
-    background: var(--bf-border);
+    background: var(--bf-border-soft);
 }
 .bf-investor-stat-row::before { left: 16%; right: 64%; }
 .bf-investor-stat-row::after  { left: 64%; right: 16%; }
 
-/* ── Card primitives — Notion warmth ───────────────────────────────── */
+/* ── Card primitives ───────────────────────────────────────────────── */
 .bf-investor-card {
     background: var(--bf-card);
-    border: 1px solid var(--bf-border);
+    border: 1px solid var(--bf-border-soft);
     border-radius: 8px;
     transition: transform 200ms ease, box-shadow 200ms ease;
 }
@@ -272,7 +270,7 @@ _CSS = """
 }
 .bf-investor-workspace-title {
     font-family: 'Playfair Display', Georgia, serif;
-    font-size: 1.6rem;
+    font-size: 1.4rem;
     font-weight: 500;
     color: var(--bf-fg);
     margin: 1.5rem 0 0.4rem 0;
@@ -280,12 +278,12 @@ _CSS = """
 .bf-investor-workspace-tag {
     font-family: 'Playfair Display', Georgia, serif;
     font-style: italic;
-    font-size: 1rem;
+    font-size: 0.95rem;
     color: var(--bf-muted);
     margin: 0 0 1rem 0;
 }
 .bf-investor-workspace-body {
-    font-size: 0.92rem;
+    font-size: 0.9rem;
     color: var(--bf-fg);
     line-height: 1.65;
     margin: 0;
@@ -324,7 +322,7 @@ _CSS = """
 .bf-investor-orch-line {
     flex: 1 1 auto;
     height: 1px;
-    background: var(--bf-border);
+    background: var(--bf-border-soft);
     margin-top: 6px;
 }
 .bf-investor-orch-caption {
@@ -333,7 +331,7 @@ _CSS = """
     font-size: 0.95rem;
     color: var(--bf-muted);
     text-align: center;
-    margin: 1rem auto 2.25rem;
+    margin: 1rem auto 2rem;
     max-width: 560px;
 }
 
@@ -396,6 +394,7 @@ _CSS = """
     font-size: 0.85rem;
     color: var(--bf-faint);
     margin: 1.25rem 0 0 0;
+    text-align: center;
 }
 
 /* ── st.button styled as dark pill (applies to both CTAs) ──────────── */
@@ -408,10 +407,10 @@ _CSS = """
     color: #FFFFFF !important;
     border: none !important;
     border-radius: 999px !important;
-    padding: 1rem 2.5rem !important;
+    padding: 0.95rem 2.25rem !important;
     font-family: 'Inter', sans-serif !important;
     font-weight: 500 !important;
-    font-size: 1.05rem !important;
+    font-size: 1rem !important;
     width: 100%;
     transition: background 0.15s ease;
 }
@@ -424,9 +423,9 @@ _CSS = """
 @media (max-width: 720px) {
     .bf-investor-nav-inner { padding: 1rem 1.25rem; }
     .bf-investor-hero { padding: 3rem 1rem 1rem; }
-    .bf-investor-hero-title { font-size: 3.5rem; }
-    .bf-investor-hero-tagline { font-size: 1.1rem; }
-    .bf-investor-h2 { font-size: 1.6rem; }
+    .bf-investor-hero-title { font-size: 3.25rem; }
+    .bf-investor-hero-tagline { font-size: 1.05rem; }
+    .bf-investor-h2 { font-size: 1.5rem; }
     .bf-investor-stat-row,
     .bf-investor-workspaces,
     .bf-investor-agents {
@@ -443,231 +442,191 @@ _CSS = """
 
 
 def _render_nav() -> None:
-    st.markdown(
-        """
-        <header class="bf-investor-nav">
-          <div class="bf-investor-nav-inner">
-            <span class="bf-investor-nav-brand">BrokerFlow</span>
-            <a class="bf-investor-nav-docs" href="?page=docs" target="_self">Docs &rarr;</a>
-          </div>
-        </header>
-        """,
-        unsafe_allow_html=True,
-    )
+    _md("""
+    <header class="bf-investor-nav">
+      <div class="bf-investor-nav-inner">
+        <span class="bf-investor-nav-brand">BrokerFlow</span>
+        <a class="bf-investor-nav-docs" href="?page=docs" target="_self">Docs &rarr;</a>
+      </div>
+    </header>
+    """)
 
 
 def _render_hero() -> None:
-    st.markdown(
-        """
-        <div class="bf-investor">
-          <section class="bf-investor-hero">
-            <p class="bf-investor-hero-eyebrow">AI agents for CPG brokers</p>
-            <h1 class="bf-investor-hero-title">BrokerFlow</h1>
-            <p class="bf-investor-hero-tagline">the operating system for CPG brokers</p>
-          </section>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
-def _render_hero_scroll() -> None:
-    st.markdown(
-        """
-        <div class="bf-investor">
-          <p class="bf-investor-hero-scroll" style="text-align:center;">
-            &darr; Or scroll to learn more
-          </p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    _md("""
+    <div class="bf-investor">
+      <section class="bf-investor-hero">
+        <div class="bf-investor-hero-title">BrokerFlow</div>
+        <div class="bf-investor-hero-tagline">the operating system for CPG brokers</div>
+      </section>
+    </div>
+    """)
 
 
 def _render_problem() -> None:
-    st.markdown(
-        """
-        <div class="bf-investor">
-          <section class="bf-investor-section bf-investor-section--problem">
-            <p class="bf-investor-connector">Start here.</p>
-            <p class="bf-investor-eyebrow">The problem</p>
-            <h2 class="bf-investor-h2">
-              The broker is the center of gravity in CPG, and the most
-              under-tooled node in the chain.
-            </h2>
-            <p class="bf-investor-sub">
-              Brokers waste 60%+ of their time on admin instead of selling.
-              Every flow runs through them &mdash; new-item forms, buyer
-              outreach, PO processing, deductions &mdash; manually, in
-              spreadsheets and email.
-            </p>
-            <div class="bf-investor-stat-row">
-              <div class="bf-investor-stat">
-                <div class="bf-investor-stat-number">20k+</div>
-                <div class="bf-investor-stat-label">F&amp;B brands</div>
-              </div>
-              <div class="bf-investor-stat-center">
-                <div class="bf-investor-stat-center-title">Brokers</div>
-                <div class="bf-investor-stat-center-sub">the workflow layer</div>
-                <div class="bf-investor-stat-center-body">
-                  every flow runs through them: manually, in spreadsheets and email.
-                </div>
-              </div>
-              <div class="bf-investor-stat">
-                <div class="bf-investor-stat-number">60k+</div>
-                <div class="bf-investor-stat-label">retailers &amp; distributors</div>
-              </div>
-            </div>
-          </section>
+    _md("""
+    <div class="bf-investor">
+      <section class="bf-investor-section">
+        <div class="bf-investor-eyebrow">The problem</div>
+        <div class="bf-investor-h2">
+          The broker is the center of gravity in CPG, and the most
+          under-tooled node in the chain.
         </div>
-        """,
-        unsafe_allow_html=True,
-    )
+        <p class="bf-investor-sub">
+          Brokers waste 60%+ of their time on admin instead of selling.
+          Every flow runs through them &mdash; new-item forms, buyer
+          outreach, PO processing, deductions &mdash; manually, in
+          spreadsheets and email.
+        </p>
+        <div class="bf-investor-stat-row">
+          <div class="bf-investor-stat">
+            <div class="bf-investor-stat-number">20k+</div>
+            <div class="bf-investor-stat-label">F&amp;B brands</div>
+          </div>
+          <div class="bf-investor-stat-center">
+            <div class="bf-investor-stat-center-title">Brokers</div>
+            <div class="bf-investor-stat-center-sub">the workflow layer</div>
+            <div class="bf-investor-stat-center-body">
+              every flow runs through them: manually, in spreadsheets and email.
+            </div>
+          </div>
+          <div class="bf-investor-stat">
+            <div class="bf-investor-stat-number">60k+</div>
+            <div class="bf-investor-stat-label">retailers &amp; distributors</div>
+          </div>
+        </div>
+      </section>
+    </div>
+    """)
 
 
 def _render_product() -> None:
-    st.markdown(
-        """
-        <div class="bf-investor">
-          <section class="bf-investor-section bf-investor-section--product">
-            <p class="bf-investor-connector">What we built.</p>
-            <p class="bf-investor-eyebrow">The product</p>
-            <h2 class="bf-investor-h2">Two workspaces. One source of truth.</h2>
-            <p class="bf-investor-sub">
-              Brokers spend their day in two modes: deciding which brands
-              to take on, and servicing the ones they already represent.
-              BrokerFlow gives each its own workspace, with agents doing
-              the work underneath.
+    _md("""
+    <div class="bf-investor">
+      <section class="bf-investor-section">
+        <div class="bf-investor-eyebrow">The product</div>
+        <div class="bf-investor-h2">Two workspaces. One source of truth.</div>
+        <p class="bf-investor-sub">
+          Brokers spend their day in two modes: deciding which brands
+          to take on, and servicing the ones they already represent.
+          BrokerFlow gives each its own workspace, with agents doing
+          the work underneath.
+        </p>
+        <div class="bf-investor-workspaces">
+          <div class="bf-investor-card bf-investor-workspace">
+            <span class="bf-investor-workspace-monogram">S</span>
+            <div class="bf-investor-workspace-title">Scout new brands</div>
+            <div class="bf-investor-workspace-tag">qualify before you take a meeting</div>
+            <p class="bf-investor-workspace-body">
+              Brand Scout pulls signals across Amazon, Instacart, Faire,
+              social, and trade press. Scores the brand on five criteria
+              &mdash; velocity, distribution, margin, story, promo
+              independence &mdash; and returns a verdict before you
+              spend a meeting on it.
             </p>
-            <div class="bf-investor-workspaces">
-              <div class="bf-investor-card bf-investor-workspace">
-                <span class="bf-investor-workspace-monogram">S</span>
-                <h3 class="bf-investor-workspace-title">Scout new brands</h3>
-                <p class="bf-investor-workspace-tag">qualify before you take a meeting</p>
-                <p class="bf-investor-workspace-body">
-                  Brand Scout pulls signals across Amazon, Instacart, Faire,
-                  social, and trade press. Scores the brand on five criteria
-                  &mdash; velocity, distribution, margin, story, promo
-                  independence &mdash; and returns a verdict before you
-                  spend a meeting on it.
-                </p>
-              </div>
-              <div class="bf-investor-card bf-investor-workspace">
-                <span class="bf-investor-workspace-monogram">B</span>
-                <h3 class="bf-investor-workspace-title">Manage your book</h3>
-                <p class="bf-investor-workspace-tag">service the brands you already represent</p>
-                <p class="bf-investor-workspace-body">
-                  Drafts buyer-tailored pitches and one-pagers per persona,
-                  then auto-fills the new-item paperwork retailers require
-                  &mdash; Whole Foods, KeHE, Sprouts &mdash; from a single
-                  canonical brand record.
-                </p>
-              </div>
-            </div>
-          </section>
+          </div>
+          <div class="bf-investor-card bf-investor-workspace">
+            <span class="bf-investor-workspace-monogram">B</span>
+            <div class="bf-investor-workspace-title">Manage your book</div>
+            <div class="bf-investor-workspace-tag">service the brands you already represent</div>
+            <p class="bf-investor-workspace-body">
+              Drafts buyer-tailored pitches and one-pagers per persona,
+              then auto-fills the new-item paperwork retailers require
+              &mdash; Whole Foods, KeHE, Sprouts &mdash; from a single
+              canonical brand record.
+            </p>
+          </div>
         </div>
-        """,
-        unsafe_allow_html=True,
-    )
+      </section>
+    </div>
+    """)
 
 
 def _render_agents() -> None:
-    pipeline_nodes = [
-        ("Scout"), ("Onboard"), ("Match"), ("Pitch"), ("Form"),
-    ]
-    orch_html_parts: list[str] = []
+    pipeline_nodes = ["Scout", "Onboard", "Match", "Pitch", "Form"]
+    orch_parts: list[str] = []
     for i, label in enumerate(pipeline_nodes):
-        orch_html_parts.append(
+        orch_parts.append(
             f'<div class="bf-investor-orch-node">'
             f'<div class="bf-investor-orch-circle"></div>'
             f'<div class="bf-investor-orch-label">{label}</div>'
             f'</div>'
         )
         if i < len(pipeline_nodes) - 1:
-            orch_html_parts.append('<div class="bf-investor-orch-line"></div>')
-    orch_html = "".join(orch_html_parts)
+            orch_parts.append('<div class="bf-investor-orch-line"></div>')
+    orch_html = "".join(orch_parts)
 
-    st.markdown(
-        f"""
-        <div class="bf-investor">
-          <section class="bf-investor-section bf-investor-section--agents">
-            <p class="bf-investor-connector">How it works.</p>
-            <p class="bf-investor-eyebrow">Under the hood</p>
-            <h2 class="bf-investor-h2">An orchestrated agent team.</h2>
-            <p class="bf-investor-sub">
-              Each agent owns one workflow end-to-end. The orchestration
-              layer ties them together via a shared blackboard in Supabase,
-              so nothing slips across 100+ brands.
-            </p>
+    _md(f"""
+    <div class="bf-investor">
+      <section class="bf-investor-section">
+        <div class="bf-investor-eyebrow">Under the hood</div>
+        <div class="bf-investor-h2">An orchestrated agent team.</div>
+        <p class="bf-investor-sub">
+          Each agent owns one workflow end-to-end. The orchestration
+          layer ties them together via a shared blackboard in Supabase,
+          so nothing slips across 100+ brands.
+        </p>
 
-            <div class="bf-investor-orch">{orch_html}</div>
-            <p class="bf-investor-orch-caption">
-              Each agent owns a workflow. The orchestration layer ties them together.
-            </p>
+        <div class="bf-investor-orch">{orch_html}</div>
+        <p class="bf-investor-orch-caption">
+          Each agent owns a workflow. The orchestration layer ties them together.
+        </p>
 
-            <div class="bf-investor-agents">
-              <div class="bf-investor-card bf-investor-agent">
-                <h4 class="bf-investor-agent-title">Brand Scout</h4>
-                <p class="bf-investor-agent-desc">Research + score 0&ndash;100</p>
-                <p class="bf-investor-agent-tag">ReAct loop</p>
-              </div>
-              <div class="bf-investor-card bf-investor-agent">
-                <h4 class="bf-investor-agent-title">Brand Onboarding</h4>
-                <p class="bf-investor-agent-desc">Docs &rarr; canonical record</p>
-                <p class="bf-investor-agent-tag">6-node linear</p>
-              </div>
-              <div class="bf-investor-card bf-investor-agent">
-                <h4 class="bf-investor-agent-title">Retailer Matcher</h4>
-                <p class="bf-investor-agent-desc">Picks a buyer</p>
-                <p class="bf-investor-agent-tag">Heuristic</p>
-              </div>
-              <div class="bf-investor-card bf-investor-agent">
-                <h4 class="bf-investor-agent-title">Retailer Pitcher</h4>
-                <p class="bf-investor-agent-desc">Drafts email + sell sheet</p>
-                <p class="bf-investor-agent-tag">Parallel + interrupt</p>
-              </div>
-              <div class="bf-investor-card bf-investor-agent">
-                <h4 class="bf-investor-agent-title">New Item Forms</h4>
-                <p class="bf-investor-agent-desc">Fills new-item form</p>
-                <p class="bf-investor-agent-tag">Rules + LLM gaps</p>
-              </div>
-              <div class="bf-investor-card bf-investor-agent">
-                <h4 class="bf-investor-agent-title">+ more soon</h4>
-                <p class="bf-investor-agent-desc">PO Processing, Trade Spend, Accruals&hellip;</p>
-                <p class="bf-investor-agent-tag">12 on the roadmap</p>
-              </div>
-            </div>
-          </section>
+        <div class="bf-investor-agents">
+          <div class="bf-investor-card bf-investor-agent">
+            <div class="bf-investor-agent-title">Brand Scout</div>
+            <p class="bf-investor-agent-desc">Research + score 0&ndash;100</p>
+            <p class="bf-investor-agent-tag">ReAct loop</p>
+          </div>
+          <div class="bf-investor-card bf-investor-agent">
+            <div class="bf-investor-agent-title">Brand Onboarding</div>
+            <p class="bf-investor-agent-desc">Docs &rarr; canonical record</p>
+            <p class="bf-investor-agent-tag">6-node linear</p>
+          </div>
+          <div class="bf-investor-card bf-investor-agent">
+            <div class="bf-investor-agent-title">Retailer Matcher</div>
+            <p class="bf-investor-agent-desc">Picks a buyer</p>
+            <p class="bf-investor-agent-tag">Heuristic</p>
+          </div>
+          <div class="bf-investor-card bf-investor-agent">
+            <div class="bf-investor-agent-title">Retailer Pitcher</div>
+            <p class="bf-investor-agent-desc">Drafts email + sell sheet</p>
+            <p class="bf-investor-agent-tag">Parallel + interrupt</p>
+          </div>
+          <div class="bf-investor-card bf-investor-agent">
+            <div class="bf-investor-agent-title">New Item Forms</div>
+            <p class="bf-investor-agent-desc">Fills new-item form</p>
+            <p class="bf-investor-agent-tag">Rules + LLM gaps</p>
+          </div>
+          <div class="bf-investor-card bf-investor-agent">
+            <div class="bf-investor-agent-title">+ more soon</div>
+            <p class="bf-investor-agent-desc">PO Processing, Trade Spend, Accruals&hellip;</p>
+            <p class="bf-investor-agent-tag">12 on the roadmap</p>
+          </div>
         </div>
-        """,
-        unsafe_allow_html=True,
-    )
+      </section>
+    </div>
+    """)
 
 
 def _render_cta_open() -> None:
-    st.markdown(
-        """
-        <div class="bf-investor">
-          <section class="bf-investor-section bf-investor-section--cta bf-investor-cta">
-            <p class="bf-investor-cta-eyebrow">Ready to see it?</p>
-          </section>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    _md("""
+    <div class="bf-investor">
+      <section class="bf-investor-section bf-investor-section--cta bf-investor-cta">
+        <div class="bf-investor-cta-eyebrow">Ready to see it?</div>
+      </section>
+    </div>
+    """)
 
 
 def _render_cta_fineprint() -> None:
-    st.markdown(
-        """
-        <div class="bf-investor">
-          <p class="bf-investor-cta-fineprint" style="text-align:center;">
-            Takes ~30 seconds to evaluate your first brand
-          </p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    _md("""
+    <div class="bf-investor">
+      <p class="bf-investor-cta-fineprint">
+        Takes ~30 seconds to evaluate your first brand
+      </p>
+    </div>
+    """)
 
 
 def _enter_app() -> None:
@@ -684,8 +643,6 @@ def render_investor_landing() -> None:
     # Hero CTA — real Streamlit button styled by the dark-pill rule above
     if st.button("I'm a broker →", key="bf_investor_enter_hero"):
         _enter_app()
-
-    _render_hero_scroll()
 
     _render_problem()
     _render_product()
