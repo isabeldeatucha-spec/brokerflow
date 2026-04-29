@@ -1735,12 +1735,17 @@ def render_brand_roster() -> None:
             st.session_state["onboarding_active"] = True
             st.rerun()
 
+    # Hairline above the first brand
+    st.markdown(
+        "<div style='height:1px; background:#EAEAE4; margin:8px 0 0;'></div>",
+        unsafe_allow_html=True,
+    )
+
     for brand in brands_list:
         bid = brand.get("id")
         name = brand.get("brand_name", "?")
         category = brand.get("category") or "—"
         product_count = len(brand.get("products") or [])
-        door_count = brand.get("product_count", "")
         is_sb = brand.get("is_sandbox", False)
         brand_activity = activity_map.get(bid, {})
 
@@ -1754,68 +1759,65 @@ def render_brand_roster() -> None:
 
         sandbox_tag = (
             ' <span style="font-size:10px; background:#E8EDE9; color:#2D5F3F; '
-            'padding:2px 6px; border-radius:99px;">sandbox</span>'
+            'padding:1px 6px; border-radius:99px; margin-left:6px;'
+            'vertical-align:middle;">sandbox</span>'
             if is_sb else ""
         )
-        door_tag = (
-            f'<span style="font-size:12px; color:#8B8A83; margin-left:4px;">'
-            f'{door_count} SKU{"s" if door_count != 1 else ""}</span>' if door_count else ""
+        review_dot = (
+            '<span style="display:inline-block; width:6px; height:6px;'
+            'border-radius:99px; background:#F59E0B; margin-right:8px;'
+            'vertical-align:middle;"></span>'
+            if has_review else ""
         )
 
-        # Accent bar for cards needing review
-        if has_review:
-            st.markdown(
-                '<div style="height:3px; background:#F59E0B; border-radius:2px 2px 0 0;'
-                ' margin-bottom:-1px;"></div>',
-                unsafe_allow_html=True,
-            )
+        # ── Brand identity row — name, sandbox, category · SKUs ──────────────
+        st.markdown(
+            f'<div style="padding:14px 0 6px;">'
+            f'{review_dot}'
+            f'<span style="font-family:\'Instrument Serif\', Georgia, serif; '
+            f'font-size:20px; font-weight:400; color:#1A1A18;">{name}</span>'
+            f'{sandbox_tag}'
+            f'<div style="font-size:13px; color:#8B8A83; margin:2px 0 6px 0;">'
+            f'{category} &middot; {product_count} SKU'
+            f'{"s" if product_count != 1 else ""}</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
 
-        with st.container(border=True):
-            # Brand identity row
-            st.markdown(
-                f'<div style="display:flex; align-items:baseline; gap:8px; '
-                f'margin-bottom:10px; flex-wrap:wrap;">'
-                f'<span style="font-family:\'Instrument Serif\', Georgia, serif; '
-                f'font-size:22px; font-weight:400; color:#1A1A18;">{name}</span>'
-                f'{sandbox_tag}'
-                f'<span style="font-size:12px; color:#8B8A83;">{category}</span>'
-                f'{door_tag}'
-                f'<span style="font-size:12px; color:#B0AFA8;">'
-                f'&middot; {product_count} SKU{"s" if product_count != 1 else ""}</span>'
-                f'</div>',
-                unsafe_allow_html=True,
-            )
+        # ── Agent rows stacked under the brand ───────────────────────────────
+        for ak in _AGENT_KEYS:
+            msg = brand_activity.get(ak)
+            payload = (msg or {}).get("payload") or {}
+            status = payload.get("agent_status", "idle")
+            action = (payload.get("action_label") or "").strip()
+            pending = payload.get("pending_review_count", 0)
+            created_at = (msg or {}).get("created_at", "")
 
-            # Agent panels side by side
-            col1, col2 = st.columns(2, gap="small")
-            for col, ak in zip([col1, col2], _AGENT_KEYS):
-                with col:
-                    msg = brand_activity.get(ak)
-                    payload = (msg or {}).get("payload") or {}
-                    status = payload.get("agent_status", "idle")
-                    action = payload.get("action_label", "")
-                    pending = payload.get("pending_review_count", 0)
-                    created_at = (msg or {}).get("created_at", "")
+            if status == "awaiting_review":
+                outcome = action or (
+                    f"{pending} item{'s' if pending != 1 else ''} to review"
+                    if pending else "needs review"
+                )
+            elif status == "in_progress":
+                outcome = action or "running"
+            elif status == "completed":
+                outcome = action or "done"
+            else:
+                outcome = "not run yet"
 
-                    status_lbl = {
-                        "completed":       "done",
-                        "awaiting_review": f"review \xd7{pending}" if pending else "review",
-                        "in_progress":     "running",
-                        "idle":            "idle",
-                    }.get(status, status)
+            ago = _ago_str(created_at) if created_at else ""
+            ago_suffix = f" · {ago}" if ago and status != "idle" else ""
 
-                    exp_label = f"**{_AGENT_LABELS[ak]}** · {status_lbl}"
-                    if action:
-                        exp_label += f" — {action}"
-                    if created_at and status in ("completed", "in_progress"):
-                        exp_label += f" · {_ago_str(created_at)}"
+            exp_label = f"{_AGENT_LABELS[ak]} — {outcome}{ago_suffix}"
+            auto_expand = st.session_state.pop(f"expand_{bid}_{ak}", False)
+            with st.expander(exp_label, expanded=auto_expand):
+                _render_agent_panel_content(bid, ak, status, client)
 
-                    auto_expand = st.session_state.pop(f"expand_{bid}_{ak}", False)
-
-                    with st.expander(exp_label, expanded=auto_expand):
-                        _render_agent_panel_content(bid, ak, status, client)
-
-        st.markdown("<div style='margin-bottom:6px;'></div>", unsafe_allow_html=True)
+        # Hairline between brands
+        st.markdown(
+            "<div style='height:1px; background:#EAEAE4; margin:10px 0 0;'></div>",
+            unsafe_allow_html=True,
+        )
 
     # ── Section B: Your agents — capability roster ────────────────────────────
     _render_agent_roster(_agent_stats)
