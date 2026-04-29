@@ -1746,7 +1746,6 @@ def render_brand_roster() -> None:
         name = brand.get("brand_name", "?")
         category = brand.get("category") or "—"
         product_count = len(brand.get("products") or [])
-        is_sb = brand.get("is_sandbox", False)
         brand_activity = activity_map.get(bid, {})
 
         # Store brand name so artifact loader can use it
@@ -1757,27 +1756,21 @@ def render_brand_roster() -> None:
             for ak in _AGENT_KEYS
         )
 
-        sandbox_tag = (
-            ' <span style="font-size:10px; background:#E8EDE9; color:#2D5F3F; '
-            'padding:1px 6px; border-radius:99px; margin-left:6px;'
-            'vertical-align:middle;">sandbox</span>'
-            if is_sb else ""
-        )
         review_dot = (
-            '<span style="display:inline-block; width:6px; height:6px;'
-            'border-radius:99px; background:#F59E0B; margin-right:8px;'
+            '<span style="display:inline-block; width:7px; height:7px;'
+            'border-radius:99px; background:#F59E0B; margin-right:10px;'
             'vertical-align:middle;"></span>'
             if has_review else ""
         )
 
-        # ── Brand identity row — name, sandbox, category · SKUs ──────────────
+        # ── Brand identity row — name, category · SKUs ───────────────────────
         st.markdown(
-            f'<div style="padding:14px 0 6px;">'
+            f'<div style="padding:16px 0 6px;">'
             f'{review_dot}'
             f'<span style="font-family:\'Instrument Serif\', Georgia, serif; '
-            f'font-size:20px; font-weight:400; color:#1A1A18;">{name}</span>'
-            f'{sandbox_tag}'
-            f'<div style="font-size:13px; color:#8B8A83; margin:2px 0 6px 0;">'
+            f'font-size:28px; font-weight:400; color:#1A1A18;'
+            f'letter-spacing:-0.01em;">{name}</span>'
+            f'<div style="font-size:13px; color:#8B8A83; margin:4px 0 8px 0;">'
             f'{category} &middot; {product_count} SKU'
             f'{"s" if product_count != 1 else ""}</div>'
             f'</div>',
