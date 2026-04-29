@@ -2453,6 +2453,10 @@ try:
     if st.query_params.get("page") == "docs":
         render_docs()
     elif workspace is None:
+        if not st.session_state.get("investor_entered"):
+            from ui.investor_landing import render_investor_landing
+            render_investor_landing()
+            st.stop()
         render_landing_cards()
     elif workspace == "existing_business":
         render_back_nav()
