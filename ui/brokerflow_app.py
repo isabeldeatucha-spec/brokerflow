@@ -242,7 +242,7 @@ def render_landing() -> None:
         )
     with c3:
         _render_agent_card(
-            "Admin & Ops",
+            "New Item Forms",
             "Fills the new-item paperwork retailers require — pulls what we know, "
             "flags what's missing before you hit submit.",
             f"{stats['forms']} forms filled",
@@ -815,7 +815,7 @@ Three agents share one workspace and pass context to each other automatically:
 3. **Retailer Pitcher** — drafts buyer-specific outreach emails and
    printable 1-page sell sheets for the recommended retailers.
 
-4. **Admin & Ops** *(by-product)* — autofills the Whole Foods New Item
+4. **New Item Forms** *(by-product)* — autofills the Whole Foods New Item
    Setup Form (57 fields) from Brand Scout data whenever a brand
    qualifies, flagging gaps for broker review.
 """)
@@ -1334,7 +1334,7 @@ def render_brand_scout_workspace() -> None:
 _AGENT_KEYS = ["retailer_pitcher", "admin_ops"]
 _AGENT_LABELS = {
     "retailer_pitcher": "Retailer Pitcher",
-    "admin_ops":        "Admin & Ops",
+    "admin_ops":        "New Item Forms",
 }
 _STATUS_COLORS = {
     "completed":       ("#D1FAE5", "#065F46"),
@@ -1684,15 +1684,21 @@ def render_brand_roster() -> None:
                     "created_at":   msg.get("created_at", ""),
                 })
 
-    # ── Section A: Your agents (top) ──────────────────────────────────────────
+    # ── Hero — page title + one-line description ──────────────────────────────
     st.markdown(
-        f'<h2 style=\'font-family:"Instrument Serif", Georgia, serif; '
-        f'font-size:26px; font-weight:400; margin:0 0 2px 0;\'>Your agents</h2>'
-        f'<p style="font-size:13px; color:#8B8A83; margin-bottom:16px;">'
-        f'See what each agent has been doing across your entire book.</p>',
+        '<div style="margin-bottom:16px;">'
+        '<h1 style=\'font-family:"Instrument Serif", Georgia, serif;'
+        'font-size:32px; font-weight:400; letter-spacing:-0.01em;'
+        'line-height:1.1; color:#1A1A18; margin:0 0 4px 0;\'>'
+        'Your book of business</h1>'
+        '<p style="font-family:\'Instrument Serif\', Georgia, serif;'
+        'font-style:italic; font-size:16px; color:#6b6b6b; line-height:1.4;'
+        'margin:0;">'
+        'Manage your brands and track what your agents are doing across the portfolio.'
+        '</p></div>'
+        '<hr style="border:none; border-top:1px solid #EAEAE4; margin:0 0 18px 0;">',
         unsafe_allow_html=True,
     )
-    ba_col1, ba_col2 = st.columns(2, gap="medium")
 
     def _agent_stats(ak: str) -> tuple[int, str, int]:
         total = sum(1 for b in brands_list if (activity_map.get(b.get("id")) or {}).get(ak))
@@ -1711,94 +1717,15 @@ def render_brand_roster() -> None:
         last_str = _ago_str(latest) if latest else "No activity"
         return total, last_str, review_n
 
-    for ba_col, ak in zip([ba_col1, ba_col2], _AGENT_KEYS):
-        with ba_col:
-            total, last_str, review_n = _agent_stats(ak)
-            review_indicator = (
-                f'<span style="font-size:12px; color:#92400E;">'
-                f' · {review_n} pending review</span>' if review_n else ""
-            )
-            with st.container(border=True):
-                st.markdown(
-                    f'<div style="font-family:\'Instrument Serif\', Georgia, serif; '
-                    f'font-size:20px; font-weight:400; color:#1A1A18; margin-bottom:4px;">'
-                    f'{_AGENT_LABELS[ak]}</div>'
-                    f'<div style="font-size:13px; color:#8B8A83; margin-bottom:8px;">'
-                    f'{total} brand{"s" if total != 1 else ""} · last active {last_str}'
-                    f'{review_indicator}</div>',
-                    unsafe_allow_html=True,
-                )
-                dest = "book/retailer_pitcher" if ak == "retailer_pitcher" else "book/admin_ops"
-                if st.button(f"Open {_AGENT_LABELS[ak]} →",
-                             key=f"browse_{ak}", use_container_width=True):
-                    st.session_state["workspace"] = dest
-                    st.rerun()
-
-    st.markdown("<div style='margin-bottom:32px;'></div>", unsafe_allow_html=True)
-
-    # ── Section B: Needs your review inbox ────────────────────────────────────
-    if review_items:
-        st.markdown(
-            '<h2 style=\'font-family:"Instrument Serif", Georgia, serif; '
-            'font-size:26px; font-weight:400; margin:0 0 2px 0;\'>Needs your review</h2>',
-            unsafe_allow_html=True,
-        )
-        st.markdown(
-            f'<p style="font-size:13px; color:#8B8A83; margin-bottom:12px;">'
-            f'{len(review_items)} item{"s" if len(review_items) != 1 else ""} flagged by your agents '
-            f'— everything else is running autonomously</p>',
-            unsafe_allow_html=True,
-        )
-        for item in review_items:
-            ago = _ago_str(item["created_at"])
-            pending_str = f" ×{item['pending']}" if item["pending"] else ""
-            col_badge, col_info, col_btn = st.columns([1, 5, 1])
-            with col_badge:
-                bg = "#DBEAFE" if item["agent_key"] == "retailer_pitcher" else "#D1FAE5"
-                fg = "#1E40AF" if item["agent_key"] == "retailer_pitcher" else "#065F46"
-                st.markdown(
-                    f'<span style="background:{bg}; color:{fg}; font-size:11px; '
-                    f'padding:3px 8px; border-radius:99px; white-space:nowrap;">'
-                    f'{item["agent_label"]}</span>',
-                    unsafe_allow_html=True,
-                )
-            with col_info:
-                st.markdown(
-                    f'<span style="font-weight:500; color:#1A1A18;">{item["brand_name"]}</span>'
-                    f'<span style="color:#8B8A83; margin:0 6px;">·</span>'
-                    f'<span style="color:#57564F;">{item["action_label"]}{pending_str}</span>'
-                    f'<span style="color:#B0AFA8; font-size:11px; margin-left:8px;">'
-                    f'flagged {ago}</span>',
-                    unsafe_allow_html=True,
-                )
-            with col_btn:
-                if st.button("Review →",
-                             key=f"inbox_review_{item['brand_id']}_{item['agent_key']}",
-                             use_container_width=True):
-                    st.session_state[f"expand_{item['brand_id']}_{item['agent_key']}"] = True
-                    st.session_state[f"_expand_brand_name_{item['brand_id']}"] = item["brand_name"]
-                    st.rerun()
-            st.markdown(
-                "<div style='height:1px; background:#F3F3F0; margin:4px 0;'></div>",
-                unsafe_allow_html=True,
-            )
-        st.markdown("<div style='margin-bottom:32px;'></div>", unsafe_allow_html=True)
-    else:
-        st.markdown(
-            '<p style="font-size:13px; color:#8B8A83; margin-bottom:28px;">'
-            'Nothing needs your attention. Agents are running.</p>',
-            unsafe_allow_html=True,
-        )
-
-    # ── Section C: Your brands ────────────────────────────────────────────────
+    # ── Section A: Your brands (primary) ──────────────────────────────────────
     n = len(brands_list)
     head_col, btn_col = st.columns([5, 1])
     with head_col:
         st.markdown(
             f'<h2 style=\'font-family:"Instrument Serif", Georgia, serif; '
-            f'font-size:26px; font-weight:400; margin:0 0 2px 0;\'>Your brands</h2>'
-            f'<p style="font-size:13px; color:#8B8A83; margin-bottom:16px;">'
-            f'{n} brand{"s" if n != 1 else ""} · agents working continuously</p>',
+            f'font-size:24px; font-weight:400; margin:0 0 2px 0;\'>Your brands</h2>'
+            f'<p style="font-size:13px; color:#8B8A83; margin-bottom:14px;">'
+            f'{n} brand{"s" if n != 1 else ""} in your portfolio</p>',
             unsafe_allow_html=True,
         )
     with btn_col:
@@ -1890,12 +1817,153 @@ def render_brand_roster() -> None:
 
         st.markdown("<div style='margin-bottom:6px;'></div>", unsafe_allow_html=True)
 
-    # ── Section D: Activity feed ──────────────────────────────────────────────
-    st.markdown("<div style='margin-top:32px;'></div>", unsafe_allow_html=True)
+    # ── Section B: Your agents — capability roster ────────────────────────────
+    _render_agent_roster(_agent_stats)
+
+    # ── Section C: Needs your review ──────────────────────────────────────────
+    _render_needs_review(review_items)
+
+    # ── Section D: Recent activity ────────────────────────────────────────────
     _render_book_activity_feed(client, brand_ids)
 
     # ── Dev / utilities footer ────────────────────────────────────────────────
     _render_sandbox_footer(sandbox_on)
+
+
+# ── Capability roster shown on the book of business page ─────────────────────
+
+_BOOK_COMING_SOON: list[tuple[str, str, str]] = [
+    ("Q2", "PO processing",
+     "Parse POs from email or EDI, check pricing, confirm with the brand."),
+    ("Q2", "Deduction tracking",
+     "Pull deduction reports, tag by type, flag the ones worth disputing."),
+    ("Q3", "Forecasting",
+     "Project distribution, velocity, and reorder timing per brand and retailer."),
+    ("Q3", "CRM / buyer contacts",
+     "Buyer relationships across brands — last touch, what was pitched, follow-ups."),
+    ("Q3", "Trade spend planning",
+     "Plan TPRs, MCBs, and demos against a budget. Reconcile lift after the fact."),
+]
+
+
+def _render_agent_roster(stats_fn) -> None:
+    st.markdown("<div style='margin-top:32px;'></div>", unsafe_allow_html=True)
+    st.markdown(
+        '<h2 style=\'font-family:"Instrument Serif", Georgia, serif; '
+        'font-size:24px; font-weight:400; margin:0 0 2px 0;\'>Your agents</h2>'
+        '<p style="font-size:13px; color:#8B8A83; margin-bottom:14px;">'
+        "What's running now and what's next.</p>",
+        unsafe_allow_html=True,
+    )
+
+    # Working now — compact two-column roster
+    st.markdown(
+        '<p style="font-family:\'Inter\', sans-serif; font-size:12px;'
+        'font-weight:500; color:#9CA3AF; margin:0 0 8px 0;">Working now</p>',
+        unsafe_allow_html=True,
+    )
+    now_col1, now_col2 = st.columns(2, gap="medium")
+    for col, ak in zip([now_col1, now_col2], _AGENT_KEYS):
+        with col:
+            total, last_str, review_n = stats_fn(ak)
+            review_indicator = (
+                f' · <span style="color:#92400E;">{review_n} pending review</span>'
+                if review_n else ""
+            )
+            with st.container(border=True):
+                st.markdown(
+                    f'<div style="font-family:\'Instrument Serif\', Georgia, serif; '
+                    f'font-size:18px; font-weight:400; color:#1A1A18; margin-bottom:4px;">'
+                    f'{_AGENT_LABELS[ak]}</div>'
+                    f'<div style="font-size:13px; color:#8B8A83; margin-bottom:8px;">'
+                    f'{total} brand{"s" if total != 1 else ""} · last active {last_str}'
+                    f'{review_indicator}</div>',
+                    unsafe_allow_html=True,
+                )
+                dest = (
+                    "book/retailer_pitcher" if ak == "retailer_pitcher"
+                    else "book/admin_ops"
+                )
+                if st.button(f"Open {_AGENT_LABELS[ak]} →",
+                             key=f"browse_{ak}", use_container_width=True):
+                    st.session_state["workspace"] = dest
+                    st.rerun()
+
+    # Coming soon — quieter compact rows
+    st.markdown("<div style='margin-top:18px;'></div>", unsafe_allow_html=True)
+    st.markdown(
+        '<p style="font-family:\'Inter\', sans-serif; font-size:12px;'
+        'font-weight:500; color:#9CA3AF; margin:0 0 8px 0;">Coming soon</p>',
+        unsafe_allow_html=True,
+    )
+    for eyebrow, title, body in _BOOK_COMING_SOON:
+        st.markdown(
+            f'<div style="display:flex; align-items:baseline; gap:12px;'
+            f'padding:10px 0; border-bottom:1px solid #F2F2EE;">'
+            f'<span style="font-family:\'Inter\', sans-serif; font-size:11px;'
+            f'font-weight:600; letter-spacing:0.08em; color:#B0AFA8;'
+            f'min-width:28px; text-transform:uppercase;">{eyebrow}</span>'
+            f'<span style="font-size:14px; font-weight:500; color:#1A1A18;'
+            f'min-width:170px;">{title}</span>'
+            f'<span style="font-size:13px; color:#8B8A83; line-height:1.5;">{body}</span>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+
+def _render_needs_review(review_items: list) -> None:
+    st.markdown("<div style='margin-top:32px;'></div>", unsafe_allow_html=True)
+    st.markdown(
+        '<h2 style=\'font-family:"Instrument Serif", Georgia, serif; '
+        'font-size:24px; font-weight:400; margin:0 0 2px 0;\'>Needs your review</h2>',
+        unsafe_allow_html=True,
+    )
+    if not review_items:
+        st.markdown(
+            '<p style="font-size:13px; color:#8B8A83; margin:0 0 8px 0;">'
+            'Nothing flagged. Agents are running.</p>',
+            unsafe_allow_html=True,
+        )
+        return
+    st.markdown(
+        f'<p style="font-size:13px; color:#8B8A83; margin-bottom:10px;">'
+        f'{len(review_items)} item{"s" if len(review_items) != 1 else ""} '
+        f'flagged by your agents.</p>',
+        unsafe_allow_html=True,
+    )
+    for item in review_items:
+        ago = _ago_str(item["created_at"])
+        pending_str = f" ×{item['pending']}" if item["pending"] else ""
+        col_badge, col_info, col_btn = st.columns([1, 5, 1])
+        with col_badge:
+            bg = "#DBEAFE" if item["agent_key"] == "retailer_pitcher" else "#D1FAE5"
+            fg = "#1E40AF" if item["agent_key"] == "retailer_pitcher" else "#065F46"
+            st.markdown(
+                f'<span style="background:{bg}; color:{fg}; font-size:11px; '
+                f'padding:3px 8px; border-radius:99px; white-space:nowrap;">'
+                f'{item["agent_label"]}</span>',
+                unsafe_allow_html=True,
+            )
+        with col_info:
+            st.markdown(
+                f'<span style="font-weight:500; color:#1A1A18;">{item["brand_name"]}</span>'
+                f'<span style="color:#8B8A83; margin:0 6px;">·</span>'
+                f'<span style="color:#57564F;">{item["action_label"]}{pending_str}</span>'
+                f'<span style="color:#B0AFA8; font-size:11px; margin-left:8px;">'
+                f'flagged {ago}</span>',
+                unsafe_allow_html=True,
+            )
+        with col_btn:
+            if st.button("Review →",
+                         key=f"inbox_review_{item['brand_id']}_{item['agent_key']}",
+                         use_container_width=True):
+                st.session_state[f"expand_{item['brand_id']}_{item['agent_key']}"] = True
+                st.session_state[f"_expand_brand_name_{item['brand_id']}"] = item["brand_name"]
+                st.rerun()
+        st.markdown(
+            "<div style='height:1px; background:#F3F3F0; margin:4px 0;'></div>",
+            unsafe_allow_html=True,
+        )
 
 
 def _render_book_activity_feed(client, brand_ids: list) -> None:
@@ -1927,8 +1995,9 @@ def _render_book_activity_feed(client, brand_ids: list) -> None:
         bn_map = {}
 
     st.markdown(
+        '<div style=\'margin-top:32px;\'></div>'
         '<h2 style=\'font-family:"Instrument Serif", Georgia, serif; '
-        'font-size:24px; font-weight:400; margin-bottom:4px;\'>What the agents have been doing</h2>',
+        'font-size:24px; font-weight:400; margin:0 0 4px 0;\'>Recent activity</h2>',
         unsafe_allow_html=True,
     )
     for ev in events:
@@ -2112,14 +2181,6 @@ def render_agent_picker() -> None:
 # ── Existing business workspace ───────────────────────────────────────────────
 
 def render_existing_business_workspace() -> None:
-    # Top-right "Coordination demo" entry point
-    _, col_demo = st.columns([5, 2])
-    with col_demo:
-        if st.button("▶ Coordination protocol demo", key="open_demo_btn",
-                     use_container_width=True):
-            st.session_state["workspace"] = "demo"
-            st.rerun()
-
     # Watchdog — run once per session in a background thread so it never
     # blocks the first render of this workspace. (Synchronous scan was making
     # the previous page's DOM linger visibly during navigation.)
@@ -2215,7 +2276,7 @@ def render_docs() -> None:
             "and which proof points resonate. Supports Whole Foods, Sprouts, and Erewhon.",
         ),
         (
-            "Admin & Ops",
+            "New Item Forms",
             "Form autofill",
             "Autofills the Whole Foods New Item Setup Form (~70 fields across 10 "
             "sections) from everything BrokerFlow knows about the brand. Two-pass fill: "
@@ -2227,7 +2288,7 @@ def render_docs() -> None:
             "Canonical record extraction",
             "Three-step flow (brand info → agent processing → review) that adds a "
             "brand to the book, extracts a structured record from uploaded materials "
-            "(PDF, DOCX, XLSX), and hands off to Retailer Pitcher and Admin & Ops.",
+            "(PDF, DOCX, XLSX), and hands off to Retailer Pitcher and New Item Forms.",
         ),
     ]
 
@@ -2369,7 +2430,7 @@ FIRECRAWL_API_KEY=fc-...            # for Brand Scout web scraping""", language=
     limitations = [
         ("Brand Scout accuracy", "Scores are estimates from public signals. Not sourced from SPINS, Nielsen, or any paid data provider. Door counts and velocity figures are inferred, not authoritative."),
         ("Retailer coverage", "Three buyer personas supported: Whole Foods, Sprouts, Erewhon. KeHE, UNFI, Kroger, and Costco are on the roadmap."),
-        ("Admin & Ops forms", "Only the Whole Foods New Item Setup Form is implemented. The form template is the 2018 version; field layouts change periodically."),
+        ("New Item Forms", "Only the Whole Foods New Item Setup Form is implemented. The form template is the 2018 version; field layouts change periodically."),
         ("No email sending", "BrokerFlow drafts and exports pitches and forms but does not send email. 'Send to buyer' buttons are UI placeholders."),
         ("No PO ingestion", "PO processing, deduction tracking, demo spend reconciliation, and commission reconciliation are on the roadmap but not yet implemented."),
         ("Checkpointer", "Agent state uses MemorySaver (in-process). If the Streamlit process restarts mid-run, in-flight graph state is lost. Persisted Supabase data is unaffected."),

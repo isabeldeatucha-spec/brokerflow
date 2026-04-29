@@ -42,7 +42,7 @@ _AGENT_META = {
         "bg":          "#DBEAFE",
     },
     "admin_ops": {
-        "label":       "Admin & Ops",
+        "label":       "New Item Forms",
         "description": "The paperwork side of your job, handled.",
         "color":       "#065F46",
         "bg":          "#D1FAE5",
@@ -862,6 +862,3 @@ def render_per_agent_page(agent_key: str) -> None:
     # ── Activity timeline ──────────────────────────────────────────────────────
     _divider()
     _render_activity_timeline(messages, brand_name_map)
-
-    # ── Coming soon ────────────────────────────────────────────────────────────
-    _render_coming_soon(agent_key)
