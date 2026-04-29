@@ -10,21 +10,30 @@ real st.buttons styled as dark pills via [data-testid="stButton"]; the
 in-nav Docs link is a plain <a href="?page=docs"> that matches the existing
 docs router in brokerflow_app.py.
 
-All HTML strings are passed through textwrap.dedent before going to
-st.markdown so leading indentation doesn't get parsed as a code block.
+All HTML strings are passed through a _md() helper that collapses every
+whitespace run to a single space (single-line output) before going to
+st.markdown — Streamlit's Markdown parser otherwise turns 4-space-indented
+lines after a blank line into code blocks regardless of surrounding HTML.
 Headings use <div> instead of <h1>/<h2> so Streamlit doesn't auto-attach
 its anchor-link icon.
 """
 from __future__ import annotations
 
-import textwrap
-
 import streamlit as st
 
 
 def _md(html: str) -> None:
-    """Render dedented HTML through st.markdown with unsafe_allow_html."""
-    st.markdown(textwrap.dedent(html).strip(), unsafe_allow_html=True)
+    """Render HTML through st.markdown with unsafe_allow_html.
+
+    Collapses all whitespace runs to single spaces so the result is a single
+    line. This is the only reliable way to stop Streamlit's Markdown parser
+    from turning indented HTML into a code block: any blank line followed by
+    a 4-space-indented line becomes a fenced code block, regardless of the
+    surrounding HTML. textwrap.dedent alone doesn't fix it because nested
+    inner indentation survives. None of the HTML on this page uses <pre>
+    or whitespace-sensitive tags, so single-line collapse is safe.
+    """
+    st.markdown(" ".join(html.split()), unsafe_allow_html=True)
 
 
 _CSS = """

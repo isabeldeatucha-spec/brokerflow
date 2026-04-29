@@ -1027,24 +1027,45 @@ def render_landing_cards() -> None:
         LABEL_BRAND_SCOUT, LABEL_BRAND_SCOUT_SUB,
     )
 
-    _, col_docs = st.columns([5, 1])
-    with col_docs:
-        if st.button("Docs →", key="open_docs"):
-            st.query_params["page"] = "docs"
+    # Style the lone "← Back" button as a plain text link via the
+    # st-key-* class Streamlit applies to keyed containers.
+    st.markdown(
+        '<style>'
+        '.st-key-bf_back_link [data-testid="stButton"] > button {'
+        ' background: transparent !important; border: none !important;'
+        ' color: #6B6B6B !important; padding: 0 !important;'
+        ' font-family: \'Inter\', sans-serif !important;'
+        ' font-size: 0.85rem !important; font-weight: 400 !important;'
+        ' box-shadow: none !important; width: auto !important;'
+        ' border-radius: 0 !important; margin: 2rem 0 0 1rem;'
+        '}'
+        '.st-key-bf_back_link [data-testid="stButton"] > button:hover {'
+        ' color: #0A0A0A !important; background: transparent !important;'
+        '}'
+        '</style>',
+        unsafe_allow_html=True,
+    )
+
+    with st.container(key="bf_back_link"):
+        if st.button("← Back", key="bf_landing_back_btn"):
+            st.session_state["investor_entered"] = False
             st.rerun()
 
+    # Tighter "you're inside the app now" hero
     st.markdown(
-        """
-        <div style="text-align:center; padding: 2rem 1rem 2.5rem 1rem;">
-            <div style="font-family:'Instrument Serif', Georgia, serif;
-                        font-size:64px; line-height:1.1; color:#1a1a1a;">BrokerFlow</div>
-            <div style="font-family:'Instrument Serif', Georgia, serif;
-                        font-style:italic; font-size:22px; color:#6b6b6b;
-                        margin-top:0.5rem;">
-                the operating system for CPG brokers
-            </div>
+        " ".join("""
+        <div style="text-align:center; padding: 1.5rem 1rem 3rem 1rem;">
+          <div style="font-family:'Inter', sans-serif; text-transform:uppercase;
+                      font-size:0.75rem; letter-spacing:0.16em;
+                      color:#A8A8A8; margin-bottom:1rem;">Workspaces</div>
+          <div style="font-family:'Playfair Display', 'Instrument Serif', Georgia, serif;
+                      font-size:2rem; font-weight:500; line-height:1.15;
+                      letter-spacing:-0.01em; color:#0A0A0A;">Choose a workspace</div>
+          <div style="font-family:'Playfair Display', 'Instrument Serif', Georgia, serif;
+                      font-style:italic; font-size:1rem; color:#6B6B6B;
+                      margin-top:0.5rem;">Pick where you want to start</div>
         </div>
-        """,
+        """.split()),
         unsafe_allow_html=True,
     )
 
