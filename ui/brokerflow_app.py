@@ -1027,29 +1027,22 @@ def render_landing_cards() -> None:
         LABEL_BRAND_SCOUT, LABEL_BRAND_SCOUT_SUB,
     )
 
-    # Style the lone "← Back" button as a plain text link via the
-    # st-key-* class Streamlit applies to keyed containers.
+    # Plain text "← Back" link as raw HTML — bulletproof against any
+    # Streamlit container/key class differences. Click sets ?goto=landing
+    # in the URL, which the router catches at the top of the try block.
     st.markdown(
         '<style>'
-        '.st-key-bf_back_link [data-testid="stButton"] > button {'
-        ' background: transparent !important; border: none !important;'
-        ' color: #6B6B6B !important; padding: 0 !important;'
-        ' font-family: \'Inter\', sans-serif !important;'
-        ' font-size: 0.85rem !important; font-weight: 400 !important;'
-        ' box-shadow: none !important; width: auto !important;'
-        ' border-radius: 0 !important; margin: 2rem 0 0 1rem;'
+        'a.bf-back-link {'
+        ' display: inline-block; margin: 2rem 0 0 1rem;'
+        ' color: #6B6B6B; font-family: \'Inter\', sans-serif;'
+        ' font-size: 0.85rem; font-weight: 400; text-decoration: none;'
         '}'
-        '.st-key-bf_back_link [data-testid="stButton"] > button:hover {'
-        ' color: #0A0A0A !important; background: transparent !important;'
-        '}'
-        '</style>',
+        'a.bf-back-link:hover { color: #0A0A0A; text-decoration: none; }'
+        '</style>'
+        '<a class="bf-back-link" href="?goto=landing" target="_self">'
+        '&larr; Back</a>',
         unsafe_allow_html=True,
     )
-
-    with st.container(key="bf_back_link"):
-        if st.button("← Back", key="bf_landing_back_btn"):
-            st.session_state["investor_entered"] = False
-            st.rerun()
 
     # Tighter "you're inside the app now" hero
     st.markdown(
@@ -2471,6 +2464,12 @@ if "workspace" not in st.session_state:
 workspace = st.session_state["workspace"]
 
 try:
+    # HTML-link navigation triggers (no Streamlit button needed).
+    if st.query_params.get("goto") == "landing":
+        st.session_state["investor_entered"] = False
+        st.query_params.clear()
+        st.rerun()
+
     if st.query_params.get("page") == "docs":
         render_docs()
     elif workspace is None:

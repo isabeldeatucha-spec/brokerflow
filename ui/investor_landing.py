@@ -149,7 +149,7 @@ _CSS = """
     padding-top: 2.5rem;
 }
 .bf-investor-section--cta {
-    margin-top: 5rem;
+    margin-top: 6rem;
     padding-top: 3rem;
     padding-bottom: 3rem;
 }
@@ -265,24 +265,13 @@ _CSS = """
 }
 .bf-investor-workspace {
     padding: 2rem 1.75rem;
-    position: relative;
-}
-.bf-investor-workspace-monogram {
-    position: absolute;
-    top: 1.2rem;
-    left: 1.5rem;
-    font-family: 'Playfair Display', Georgia, serif;
-    font-style: italic;
-    font-size: 1.5rem;
-    color: var(--bf-faint);
-    line-height: 1;
 }
 .bf-investor-workspace-title {
     font-family: 'Playfair Display', Georgia, serif;
     font-size: 1.4rem;
     font-weight: 500;
     color: var(--bf-fg);
-    margin: 1.5rem 0 0.4rem 0;
+    margin: 0 0 0.4rem 0;
 }
 .bf-investor-workspace-tag {
     font-family: 'Playfair Display', Georgia, serif;
@@ -314,34 +303,29 @@ _CSS = """
     flex: 0 0 auto;
     min-width: 60px;
 }
+.bf-investor-orch-node {
+    z-index: 1;
+}
 .bf-investor-orch-circle {
-    width: 12px;
-    height: 12px;
-    border: 1px solid var(--bf-border);
+    width: 16px;
+    height: 16px;
+    border: 1.5px solid var(--bf-fg);
     border-radius: 99px;
     background: #FFFFFF;
 }
 .bf-investor-orch-label {
     font-family: 'Inter', sans-serif;
-    font-size: 0.7rem;
-    color: var(--bf-faint);
+    font-size: 0.72rem;
+    color: var(--bf-muted);
     margin-top: 0.5rem;
     letter-spacing: 0.04em;
 }
 .bf-investor-orch-line {
     flex: 1 1 auto;
     height: 1px;
-    background: var(--bf-border-soft);
-    margin-top: 6px;
-}
-.bf-investor-orch-caption {
-    font-family: 'Playfair Display', Georgia, serif;
-    font-style: italic;
-    font-size: 0.95rem;
-    color: var(--bf-muted);
-    text-align: center;
-    margin: 1rem auto 2rem;
-    max-width: 560px;
+    background: #D0D0D0;
+    margin-top: 8px;
+    z-index: 0;
 }
 
 .bf-investor-agents {
@@ -395,15 +379,26 @@ _CSS = """
     font-style: italic;
     font-size: 1.5rem;
     color: var(--bf-muted);
-    margin: 0 0 1.5rem 0;
+    margin: 0 0 1.25rem 0;
 }
 .bf-investor-cta-fineprint {
     font-family: 'Playfair Display', Georgia, serif;
     font-style: italic;
     font-size: 0.85rem;
     color: var(--bf-faint);
-    margin: 1.25rem 0 0 0;
+    margin: 1rem 0 0 0;
     text-align: center;
+}
+
+/* Bigger bottom CTA, scoped via a keyed container wrapper. */
+.st-key-bf_investor_cta_wrap [data-testid="stButton"] {
+    max-width: 320px;
+    margin: 0 auto;
+}
+.st-key-bf_investor_cta_wrap [data-testid="stButton"] > button {
+    padding: 1.1rem 3rem !important;
+    font-size: 1.05rem !important;
+    font-weight: 500 !important;
 }
 
 /* ── st.button styled as dark pill (applies to both CTAs) ──────────── */
@@ -523,7 +518,6 @@ def _render_product() -> None:
         </p>
         <div class="bf-investor-workspaces">
           <div class="bf-investor-card bf-investor-workspace">
-            <span class="bf-investor-workspace-monogram">S</span>
             <div class="bf-investor-workspace-title">Scout new brands</div>
             <div class="bf-investor-workspace-tag">qualify before you take a meeting</div>
             <p class="bf-investor-workspace-body">
@@ -535,7 +529,6 @@ def _render_product() -> None:
             </p>
           </div>
           <div class="bf-investor-card bf-investor-workspace">
-            <span class="bf-investor-workspace-monogram">B</span>
             <div class="bf-investor-workspace-title">Manage your book</div>
             <div class="bf-investor-workspace-tag">service the brands you already represent</div>
             <p class="bf-investor-workspace-body">
@@ -577,9 +570,6 @@ def _render_agents() -> None:
         </p>
 
         <div class="bf-investor-orch">{orch_html}</div>
-        <p class="bf-investor-orch-caption">
-          Each agent owns a workflow. The orchestration layer ties them together.
-        </p>
 
         <div class="bf-investor-agents">
           <div class="bf-investor-card bf-investor-agent">
@@ -659,7 +649,8 @@ def render_investor_landing() -> None:
 
     _render_cta_open()
 
-    if st.button("I'm a broker →", key="bf_investor_enter_cta"):
-        _enter_app()
+    with st.container(key="bf_investor_cta_wrap"):
+        if st.button("I'm a broker →", key="bf_investor_enter_cta"):
+            _enter_app()
 
     _render_cta_fineprint()
