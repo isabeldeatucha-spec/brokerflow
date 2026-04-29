@@ -2469,6 +2469,10 @@ try:
         st.session_state["investor_entered"] = False
         st.query_params.clear()
         st.rerun()
+    if st.query_params.get("goto") == "app":
+        st.session_state["investor_entered"] = True
+        st.query_params.clear()
+        st.rerun()
 
     if st.query_params.get("page") == "docs":
         render_docs()

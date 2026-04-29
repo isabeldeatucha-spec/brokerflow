@@ -5,10 +5,11 @@ agents w/ orchestration diagram, CTA). Both CTA buttons flip
 st.session_state.investor_entered so subsequent visits drop straight into the
 existing two-card workspace selector.
 
-CSS is scoped under .bf-investor and .bf-investor-nav. Both CTA buttons are
-real st.buttons styled as dark pills via [data-testid="stButton"]; the
-in-nav Docs link is a plain <a href="?page=docs"> that matches the existing
-docs router in brokerflow_app.py.
+CSS is scoped under .bf-investor and .bf-investor-nav. The hero CTA is a
+real st.button styled as a dark pill via [data-testid="stButton"]. The
+sticky nav has a single right-aligned "I'm a broker →" link rendered as
+raw HTML (<a href="?goto=app">) so it can live inside a sticky <header>;
+the workspace router catches ?goto=app and flips investor_entered.
 
 All HTML strings are passed through a _md() helper that collapses every
 whitespace run to a single space (single-line output) before going to
@@ -66,44 +67,35 @@ _CSS = """
     --bf-card: #FFFFFF;
 }
 
-/* ── Sticky nav bar ────────────────────────────────────────────────── */
+/* ── Sticky nav bar — single right-aligned CTA, no wordmark ────────── */
 .bf-investor-nav {
     position: sticky;
     top: 0;
-    z-index: 10;
-    background: rgba(250, 250, 247, 0.92);
-    backdrop-filter: saturate(140%) blur(8px);
-    -webkit-backdrop-filter: saturate(140%) blur(8px);
+    z-index: 100;
+    background: #FAFAF7;
     border-bottom: 1px solid var(--bf-border-soft);
     margin: -1rem -2rem 0;
 }
 .bf-investor-nav-inner {
     max-width: 980px;
     margin: 0 auto;
-    padding: 1.25rem 2rem;
+    padding: 1rem 2rem;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
 }
-.bf-investor-nav-brand {
-    font-family: 'Playfair Display', Georgia, serif;
-    font-size: 1.1rem;
-    font-weight: 500;
-    color: var(--bf-fg);
-    letter-spacing: -0.01em;
-}
-.bf-investor-nav-docs {
+.bf-investor-nav-cta {
     font-family: 'Inter', sans-serif;
-    font-size: 0.82rem;
+    font-size: 0.9rem;
     font-weight: 500;
     color: #FFFFFF;
     background: var(--bf-fg);
-    padding: 0.5rem 1rem;
+    padding: 0.6rem 1.4rem;
     border-radius: 999px;
     text-decoration: none;
     transition: background 0.15s ease;
 }
-.bf-investor-nav-docs:hover {
+.bf-investor-nav-cta:hover {
     background: #1F1F1F;
     color: #FFFFFF;
     text-decoration: none;
@@ -148,11 +140,6 @@ _CSS = """
     margin-top: 4rem;
     padding-top: 2.5rem;
 }
-.bf-investor-section--cta {
-    margin-top: 6rem;
-    padding-top: 3rem;
-    padding-bottom: 3rem;
-}
 
 .bf-investor-eyebrow {
     font-family: 'Inter', sans-serif;
@@ -187,7 +174,6 @@ _CSS = """
     gap: 0;
     align-items: center;
     margin-top: 1.25rem;
-    position: relative;
 }
 .bf-investor-stat,
 .bf-investor-stat-center {
@@ -233,16 +219,6 @@ _CSS = """
     margin-left: auto;
     margin-right: auto;
 }
-.bf-investor-stat-row::before,
-.bf-investor-stat-row::after {
-    content: "";
-    position: absolute;
-    top: 3.7rem;
-    height: 1px;
-    background: var(--bf-border-soft);
-}
-.bf-investor-stat-row::before { left: 16%; right: 64%; }
-.bf-investor-stat-row::after  { left: 64%; right: 16%; }
 
 /* ── Card primitives ───────────────────────────────────────────────── */
 .bf-investor-card {
@@ -370,38 +346,7 @@ _CSS = """
     line-height: 1;
 }
 
-/* ── CTA section ───────────────────────────────────────────────────── */
-.bf-investor-cta {
-    text-align: center;
-}
-.bf-investor-cta-eyebrow {
-    font-family: 'Playfair Display', Georgia, serif;
-    font-style: italic;
-    font-size: 1.5rem;
-    color: var(--bf-muted);
-    margin: 0 0 1.25rem 0;
-}
-.bf-investor-cta-fineprint {
-    font-family: 'Playfair Display', Georgia, serif;
-    font-style: italic;
-    font-size: 0.85rem;
-    color: var(--bf-faint);
-    margin: 1rem 0 0 0;
-    text-align: center;
-}
-
-/* Bigger bottom CTA, scoped via a keyed container wrapper. */
-.st-key-bf_investor_cta_wrap [data-testid="stButton"] {
-    max-width: 320px;
-    margin: 0 auto;
-}
-.st-key-bf_investor_cta_wrap [data-testid="stButton"] > button {
-    padding: 1.1rem 3rem !important;
-    font-size: 1.05rem !important;
-    font-weight: 500 !important;
-}
-
-/* ── st.button styled as dark pill (applies to both CTAs) ──────────── */
+/* ── st.button styled as dark pill (hero CTA only) ─────────────────── */
 [data-testid="stButton"] {
     max-width: 280px;
     margin: 0 auto;
@@ -435,8 +380,6 @@ _CSS = """
     .bf-investor-agents {
         grid-template-columns: 1fr;
     }
-    .bf-investor-stat-row::before,
-    .bf-investor-stat-row::after { display: none; }
     .bf-investor-stat-number { font-size: 3.5rem; }
     .bf-investor-orch { display: none; }
     [data-testid="stButton"] { max-width: 100%; }
@@ -449,8 +392,7 @@ def _render_nav() -> None:
     _md("""
     <header class="bf-investor-nav">
       <div class="bf-investor-nav-inner">
-        <span class="bf-investor-nav-brand">BrokerFlow</span>
-        <a class="bf-investor-nav-docs" href="?page=docs" target="_self">Docs &rarr;</a>
+        <a class="bf-investor-nav-cta" href="?goto=app" target="_self">I'm a broker &rarr;</a>
       </div>
     </header>
     """)
@@ -608,24 +550,8 @@ def _render_agents() -> None:
     """)
 
 
-def _render_cta_open() -> None:
-    _md("""
-    <div class="bf-investor">
-      <section class="bf-investor-section bf-investor-section--cta bf-investor-cta">
-        <div class="bf-investor-cta-eyebrow">Ready to see it?</div>
-      </section>
-    </div>
-    """)
-
-
-def _render_cta_fineprint() -> None:
-    _md("""
-    <div class="bf-investor">
-      <p class="bf-investor-cta-fineprint">
-        Takes ~30 seconds to evaluate your first brand
-      </p>
-    </div>
-    """)
+def _render_bottom_padding() -> None:
+    _md('<div class="bf-investor" style="padding-bottom:6rem;"></div>')
 
 
 def _enter_app() -> None:
@@ -646,11 +572,4 @@ def render_investor_landing() -> None:
     _render_problem()
     _render_product()
     _render_agents()
-
-    _render_cta_open()
-
-    with st.container(key="bf_investor_cta_wrap"):
-        if st.button("I'm a broker →", key="bf_investor_enter_cta"):
-            _enter_app()
-
-    _render_cta_fineprint()
+    _render_bottom_padding()
