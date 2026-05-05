@@ -105,7 +105,6 @@ def _render_doc_panel() -> None:
     from agents._shared import document_data as _dd
     from ui import doc_preview as _dp
 
-    info = _ds.get(card_id, doc_type)
     payload = _dd.get_payload(card_id, doc_type)
     if not payload:
         return
@@ -116,13 +115,30 @@ def _render_doc_panel() -> None:
 
     # Agent label comes from the card's agent_origin (first one).
     agent_label = "BrokerFlow"
+    agent_for_doc = "retailer_pitcher"
     for c in SEED_CARDS:
         if c.id == card_id and c.agent_origin:
             agent_label = _AGENT_LABELS.get(c.agent_origin[0], "BrokerFlow")
             break
+    # Resolve the right agent for PDF storage path
+    agent_for_doc = (
+        "retailer_pitcher" if doc_type in ("sell_sheet", "cost_build")
+        else "brand_scout"  if doc_type == "one_pager"
+        else "new_item_forms"
+    )
 
-    # If PDFs aren't generated yet (rare race), fall back to # so the
-    # actions still render but don't break.
+    # Lazily generate THIS PDF only (cached after first call). Defers
+    # the cost from queue load to the first time the broker actually
+    # opens a doc panel — much faster initial render.
+    info = _ds.get(card_id, doc_type)
+    if not info:
+        try:
+            info = _ds.ensure_pdf(card_id, agent_for_doc, doc_type, payload)
+        except Exception as exc:  # noqa: BLE001
+            print(f"[doc_panel] lazy PDF generation failed: "
+                  f"{type(exc).__name__}: {exc}")
+            info = None
+
     pdf_url = info["url"] if info else "#"
 
     close_href = f"?nav=queue{_preserve_filter_query()}&close_doc=1"
@@ -1807,6 +1823,19 @@ def _handle_skip(card: Card) -> None:
     st.rerun()
 
 
+def _handle_edit(card: Card) -> None:
+    """Edit handler — for v1, opens the card and toasts a hint that
+    inline edit is coming next. The persist-open script ensures the
+    card stays expanded after the rerun so the broker can read the
+    drafted body."""
+    print(f"[edit] requested for {card.id}")
+    # Mark card as expanded so the JS persist script keeps it open
+    # after this rerun.
+    st.session_state.setdefault("queue_open_cards", set()).add(card.id)
+    st.toast(f"Editing {card.context} · inline edit coming soon")
+    st.rerun()
+
+
 def _build_extras_html(card: Card) -> str:
     """Build the FROM / DRAFTED / WHY / ATTACHMENTS HTML as a single
     string. Lives inside the <details> body so expansion is pure CSS."""
@@ -1948,17 +1977,17 @@ def _render_card_unified(card: Card) -> None:
             with edit_col:
                 if st.button("Edit", key=f"edit_{card.id}",
                              use_container_width=True):
-                    st.session_state["expanded_card"] = card.id
-                    st.session_state[f"editing_{card.id}"] = True
-                    st.rerun()
+                    _handle_edit(card)
             with skip_col:
                 if st.button(card.skip_label, key=f"skip_{card.id}",
                              type="tertiary", use_container_width=True):
                     _handle_skip(card)
 
-        # Summary + collapsible extras
+        # Summary + collapsible extras. data-card-id lets the
+        # restore-open-state script remember which cards the user had
+        # expanded across Streamlit reruns (Send/Skip/Edit clicks).
         st.markdown(
-            '<details class="bf-card-details">'
+            f'<details class="bf-card-details" data-card-id="{card.id}">'
             '<summary class="bf-card-summary-row">'
             f'<div class="bf-card-summary">{summary_with_links}</div>'
             '<span class="bf-show-reasoning">'
@@ -2124,6 +2153,67 @@ def _render_chat_panel() -> None:
                 _submit_chat_query(followup.strip())
 
 
+def _inject_card_expand_persistence() -> None:
+    """Persist each card's <details> open state across Streamlit reruns.
+
+    Native HTML <details> handles expand/collapse instantly with no
+    Streamlit rerun. But when the user clicks a Streamlit button
+    (Send / Skip / Edit), Streamlit reruns and emits fresh HTML —
+    which defaults all <details> to closed. This script syncs each
+    card's open state to localStorage on toggle and restores it on
+    every render so card state survives reruns."""
+    import streamlit.components.v1 as components
+    components.html(
+        """
+        <script>
+        (function () {
+            const doc = window.parent.document;
+            const cards = doc.querySelectorAll(
+                '.bf-card-details[data-card-id]'
+            );
+            if (!cards.length) return;
+
+            // Clean up stale localStorage entries for cards that are
+            // no longer in the DOM (e.g. sent/skipped). Without this
+            // an "approved" card would silently re-open if it ever
+            // returned to the queue.
+            const visibleIds = new Set(
+                Array.from(cards).map(c => c.dataset.cardId)
+            );
+            for (let i = localStorage.length - 1; i >= 0; i--) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('bf-card-open-')) {
+                    const cid = key.slice('bf-card-open-'.length);
+                    if (!visibleIds.has(cid)) {
+                        localStorage.removeItem(key);
+                    }
+                }
+            }
+
+            cards.forEach(card => {
+                const id = card.dataset.cardId;
+                const key = `bf-card-open-${id}`;
+                if (localStorage.getItem(key) === '1') {
+                    card.open = true;
+                }
+                if (!card.dataset.bfToggleBound) {
+                    card.dataset.bfToggleBound = '1';
+                    card.addEventListener('toggle', () => {
+                        if (card.open) {
+                            localStorage.setItem(key, '1');
+                        } else {
+                            localStorage.removeItem(key);
+                        }
+                    });
+                }
+            });
+        })();
+        </script>
+        """,
+        height=0,
+    )
+
+
 def _inject_chat_autoscroll() -> None:
     """Pin the chat scroll area to the bottom as new content arrives.
 
@@ -2277,15 +2367,10 @@ def _md_to_html(md: str) -> str:
 def render_queue_view() -> None:
     st.markdown(_QUEUE_CSS, unsafe_allow_html=True)
 
-    # Lazy-generate the seed PDFs once per session. Skipped if already on
-    # disk (idempotent). Doesn't block render — runs synchronously but
-    # is fast (~50ms total for the 6 seed cards) and only happens once.
-    try:
-        from ui.seed_docs import ensure_seed_docs
-        ensure_seed_docs()
-    except Exception as exc:  # noqa: BLE001
-        print(f"[queue_view] seed PDF generation failed: "
-              f"{type(exc).__name__}: {exc}")
+    # PDFs are generated on-demand when the user opens a doc panel
+    # (see _render_doc_panel). The in-app preview reads from the
+    # payload directly — no PDF needed for the visible queue. This
+    # keeps the initial "I'm a broker" → queue load fast.
 
     # All ?nav=, ?open_doc=, ?close_doc=, ?chat_*= query params are
     # handled by broker_shell.consume_nav_query_param() in one pass
@@ -2331,6 +2416,13 @@ def render_queue_view() -> None:
     # pure CSS (no Streamlit rerun, instant). See _render_card_unified.
     for card in cards:
         _render_card_unified(card)
+
+    # Persist <details> open state across Streamlit reruns. Without
+    # this, clicking any st.button (Send/Skip/Edit) reruns the script
+    # and re-emits fresh HTML — losing the user's expanded card. The
+    # script syncs open state to localStorage on toggle and restores
+    # it on every render.
+    _inject_card_expand_persistence()
 
     # Chat panel renders so it overlays the queue
     if st.session_state.get("chat_open"):
