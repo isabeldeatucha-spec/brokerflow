@@ -19,22 +19,29 @@ import streamlit as st
 # ── Seed brand book (used for sidebar counts + queue filtering) ──────────────
 
 BROKER_BRANDS: list[tuple[str, int]] = [
-    ("Brami",        4),
+    ("Brami",        1),
     ("Olipop",       1),
     ("Spudsy",       1),
+    ("Tia Lupita",   1),
     ("Banza",        0),
-    ("Tia Lupita",   0),
 ]
 
 
 def _shell_css() -> str:
     return """
     <style>
-    /* Make room for the fixed sidebar on every shell-wrapped page */
+    /* Make room for the fixed sidebar on every shell-wrapped page.
+       Override global_css's 980px cap so the queue + agent pages can
+       fill modern desktop widths up to 1440px. !important wins by
+       source order since shell CSS injects after global. */
+    .stApp .main .block-container,
+    .stApp [data-testid="stMain"] .block-container,
+    .stApp [data-testid="stMainBlockContainer"],
     .stApp .block-container {
-        padding-left: 280px !important;
-        max-width: 1100px !important;
+        padding-left: 288px !important;   /* 240 sidebar + 48 gap */
+        padding-right: 48px !important;
         padding-top: 32px !important;
+        max-width: 1440px !important;
     }
 
     /* ── Sidebar ─────────────────────────────────────────────────────── */
@@ -133,54 +140,19 @@ def _shell_css() -> str:
         flex-shrink: 0;
     }
 
-    /* ── Main top bar (breadcrumb + ask bar) ────────────────────────── */
+    /* ── Main top bar (breadcrumb only — ask bar lives in queue body) ─ */
     .bf-shell-topbar {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 24px;
-        padding: 0 0 22px;
-        border-bottom: 1px solid #F2F2EE;
-        margin-bottom: 28px;
+        padding: 0 0 18px;
+        margin-bottom: 24px;
     }
     .bf-crumb {
         font-family: 'Instrument Serif', Georgia, serif;
-        font-size: 17px;
+        font-size: 16px;
         line-height: 1.2;
         color: #1A1A18;
     }
     .bf-crumb-muted { color: #B0AFA8; font-style: italic; }
     .bf-crumb-bold  { font-weight: 500; }
-
-    .bf-ask {
-        position: relative;
-        flex: 0 1 460px;
-    }
-    .bf-ask input {
-        width: 100%;
-        background: #FFFFFF;
-        border: 1px solid #EAEAE4;
-        border-radius: 999px;
-        padding: 9px 60px 9px 16px;
-        font-family: 'Inter', sans-serif;
-        font-size: 13px;
-        color: #1A1A18;
-        outline: none;
-    }
-    .bf-ask input::placeholder { color: #A8A8A8; }
-    .bf-ask input:focus { border-color: #1A1A18; }
-    .bf-ask-kbd {
-        position: absolute;
-        right: 8px; top: 50%;
-        transform: translateY(-50%);
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 10.5px;
-        color: #8B8A83;
-        background: #F2F2EE;
-        padding: 3px 7px;
-        border-radius: 5px;
-        pointer-events: none;
-    }
 
     /* ── Mobile collapse ─────────────────────────────────────────────── */
     @media (max-width: 820px) {
@@ -214,8 +186,8 @@ def _queue_count(filter_key: str) -> int:
     """Counts shown next to each Queue sidebar item."""
     counts = {
         "today":     6,
-        "needs_you": 3,
-        "drafted":   14,
+        "needs_you": 2,
+        "drafted":   4,
         "sent":      st.session_state.get("queue_sent_count", 0),
         "skipped":   st.session_state.get("queue_skipped_count", 0),
     }
@@ -335,19 +307,11 @@ def _crumb_html(parts: list[tuple[str, bool]]) -> str:
 
 def _render_topbar(crumb_parts: list[tuple[str, bool]],
                    show_ask: bool = True) -> None:
-    ask_html = ""
-    if show_ask:
-        ask_html = (
-            '<form class="bf-ask" onsubmit="return false;">'
-            '<input type="text" placeholder="Ask BrokerFlow anything... '
-            'e.g. How much Olipop accrual is left this year?" disabled>'
-            '<span class="bf-ask-kbd">&#8984;K</span>'
-            '</form>'
-        )
+    # show_ask is retained for API compat but the ask input is now rendered
+    # by the queue body so it can drive a stateful response card.
     st.markdown(
         '<div class="bf-shell-topbar">'
         f'{_crumb_html(crumb_parts)}'
-        f'{ask_html}'
         '</div>',
         unsafe_allow_html=True,
     )
