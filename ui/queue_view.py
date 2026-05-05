@@ -1142,6 +1142,28 @@ div[data-testid="stLayoutWrapper"]:has(.bf-chat-input-marker)::after {
     letter-spacing: 0.02em;
 }
 
+/* st.form chrome inside the chat input — strip border + padding so
+   the pill input is the only visible chrome. The form_submit_button
+   stays rendered (Enter submits) but is visually hidden — the CSS
+   ::after Send pill above is the user-facing affordance. */
+div[data-testid="stLayoutWrapper"]:has(.bf-chat-input-marker)
+  div[data-testid="stForm"] {
+    border: none !important;
+    padding: 0 !important;
+    background: transparent !important;
+    width: 100% !important;
+}
+div[data-testid="stLayoutWrapper"]:has(.bf-chat-input-marker)
+  div[data-testid="stFormSubmitButton"] {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    pointer-events: none !important;
+    opacity: 0 !important;
+}
+
 .bf-queue-section-row {
     display: flex;
     align-items: center;
@@ -1216,8 +1238,7 @@ div[data-testid="stHorizontalBlock"]:has(.bf-queue-topbar-marker)
     content: "⌘K";
     position: absolute;
     right: 18px;
-    top: 50%;
-    transform: translateY(-50%);
+    top: 22px;
     font-family: 'JetBrains Mono', 'SF Mono', monospace;
     font-size: 10.5px;
     color: #8B8A83;
@@ -1225,6 +1246,30 @@ div[data-testid="stHorizontalBlock"]:has(.bf-queue-topbar-marker)
     padding: 3px 8px;
     border-radius: 5px;
     pointer-events: none;
+}
+
+/* st.form wrapper inside the topbar — kill its border + padding so
+   the input pill stays the only visible chrome */
+div[data-testid="stHorizontalBlock"]:has(.bf-queue-topbar-marker)
+  div[data-testid="stForm"] {
+    border: none !important;
+    padding: 0 !important;
+    background: transparent !important;
+    width: 100%;
+    max-width: 480px;
+    position: relative;
+}
+/* Hide the form_submit_button — Enter on the input still submits the
+   form. The ⌘K hint above is the visual affordance. */
+div[data-testid="stHorizontalBlock"]:has(.bf-queue-topbar-marker)
+  div[data-testid="stFormSubmitButton"] {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    pointer-events: none !important;
+    opacity: 0 !important;
 }
 
 .bf-queue-pills {
@@ -1289,6 +1334,30 @@ div[data-testid="stLayoutWrapper"]:has(.bf-card-marker) > div[data-testid="stVer
     justify-content: space-between;
     gap: 16px;
     margin-bottom: 10px;
+}
+/* New header-row layout: tag/context left + inline actions right.
+   Streamlit places these inside an stHorizontalBlock; the card marker
+   scopes the styling. */
+.bf-card-header-l {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    min-height: 30px;
+}
+.bf-card-time-cell {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    height: 100%;
+    min-height: 30px;
+}
+/* Tighten the column gap inside the card header */
+div[data-testid="stLayoutWrapper"]:has(.bf-card-marker)
+  div[data-testid="stHorizontalBlock"] {
+    gap: 8px !important;
+    align-items: center !important;
+    margin-bottom: 8px !important;
 }
 .bf-tagrow {
     display: flex;
@@ -1467,12 +1536,15 @@ div[data-testid="stLayoutWrapper"]:has(.bf-card-details[open]) {
    button[kind=primary|secondary|tertiary] instead. */
 div[data-testid="stLayoutWrapper"]:has(.bf-card-marker) div[data-testid="stButton"] > button {
     font-family: 'Inter', sans-serif !important;
-    font-size: 12.5px !important;
+    font-size: 11.5px !important;
     font-weight: 500 !important;
     border-radius: 999px !important;
-    padding: 7px 14px !important;
+    padding: 4px 12px !important;
+    min-height: 28px !important;
+    line-height: 1.2 !important;
     box-shadow: none !important;
     transition: all 0.12s ease !important;
+    white-space: nowrap !important;
 }
 
 /* Primary (Approve & send / Send / Draft / Review) — mustard pill */
@@ -1690,34 +1762,74 @@ def _render_card_unified(card: Card) -> None:
 
     Layout:
         [container border=True]
-          [marker + header HTML]
-          [<details>
-            <summary>summary text + show-reasoning hint</summary>
-            FROM / DRAFTED / WHY / ATTACHMENTS
-          </details>]
-          [Streamlit action buttons]
+          [HEADER ROW columns]
+            LEFT col: tag + needs + context
+            RIGHT col: time | primary | edit | skip   (compact pills)
+          [summary + <details> with extras]
     """
     avail_doc_types = {dt for dt, _ in card.docs}
     summary_with_links = _linkify_doc_refs(
         _esc(card.summary_html), card.id, avail_doc_types,
     )
 
+    needs_tag = (
+        '<span class="bf-tag bf-tag--needs">NEEDS YOU</span>'
+        if card.needs_you else ""
+    )
+    header_left_html = (
+        '<div class="bf-card-header-l">'
+        f'<span class="bf-tag">{card.type}</span>'
+        f'{needs_tag}'
+        f'<span class="bf-context">{card.context}</span>'
+        '</div>'
+    )
+    elapsed_html = f'<span class="bf-elapsed">{card.elapsed}</span>'
+
     with st.container(border=True):
+        st.markdown('<div class="bf-card-marker"></div>',
+                    unsafe_allow_html=True)
+
+        # Header row — left content + right (time + 3 inline buttons)
+        left_col, right_col = st.columns([1, 1.05])
+        with left_col:
+            st.markdown(header_left_html, unsafe_allow_html=True)
+        with right_col:
+            time_col, prim_col, edit_col, skip_col = st.columns(
+                [0.45, 1.4, 0.65, 0.6]
+            )
+            with time_col:
+                st.markdown(
+                    f'<div class="bf-card-time-cell">{elapsed_html}</div>',
+                    unsafe_allow_html=True,
+                )
+            with prim_col:
+                if st.button(card.primary_action, key=f"prim_{card.id}",
+                             type="primary", use_container_width=True):
+                    _handle_send(card)
+            with edit_col:
+                if st.button("Edit", key=f"edit_{card.id}",
+                             use_container_width=True):
+                    st.session_state["expanded_card"] = card.id
+                    st.session_state[f"editing_{card.id}"] = True
+                    st.rerun()
+            with skip_col:
+                if st.button(card.skip_label, key=f"skip_{card.id}",
+                             type="tertiary", use_container_width=True):
+                    _handle_skip(card)
+
+        # Summary + collapsible extras
         st.markdown(
-            '<div class="bf-card-marker"></div>'
-            + _render_card_header_html(card, expanded=False)
-            + '<details class="bf-card-details">'
-            + '<summary class="bf-card-summary-row">'
-            + f'<div class="bf-card-summary">{summary_with_links}</div>'
-            + '<span class="bf-show-reasoning">'
-            + 'Show reasoning <span class="bf-chevron">&darr;</span>'
-            + '</span>'
-            + '</summary>'
+            '<details class="bf-card-details">'
+            '<summary class="bf-card-summary-row">'
+            f'<div class="bf-card-summary">{summary_with_links}</div>'
+            '<span class="bf-show-reasoning">'
+            'Show reasoning <span class="bf-chevron">&darr;</span>'
+            '</span>'
+            '</summary>'
             + _build_extras_html(card)
             + '</details>',
             unsafe_allow_html=True,
         )
-        _render_action_buttons(card)
 
 
 def _preserve_filter_query() -> str:
@@ -1745,7 +1857,12 @@ def render_queue_topbar(crumb_parts: list[tuple[str, bool]]) -> None:
     """Combined topbar: breadcrumb LEFT, ask bar RIGHT, single row.
 
     Called by render_shell as the queue's custom_topbar slot. The marker
-    div scopes the column-row CSS so it doesn't leak to other pages."""
+    div scopes the column-row CSS so it doesn't leak to other pages.
+
+    The ask bar is wrapped in st.form(clear_on_submit=True) so the
+    text_input clears automatically after each submit — without the
+    form, Streamlit retains widget state across reruns and second
+    submissions get garbled."""
     from ui.broker_shell import render_crumb_html
 
     cols = st.columns([1.6, 1])
@@ -1756,21 +1873,17 @@ def render_queue_topbar(crumb_parts: list[tuple[str, bool]]) -> None:
             unsafe_allow_html=True,
         )
     with cols[1]:
-        query = st.text_input(
-            "Ask BrokerFlow",
-            value="",
-            placeholder="Ask BrokerFlow anything…",
-            key="bf_ask_input",
-            label_visibility="collapsed",
-        )
-
-    # On submit: open the chat panel and queue the query
-    last = st.session_state.get("bf_ask_topbar_last", "")
-    if query and query != last:
-        st.session_state["bf_ask_topbar_last"] = query
-        st.session_state["chat_open"] = True
-        st.session_state["chat_pending_query"] = query
-        st.rerun()
+        with st.form("bf_ask_topbar_form", clear_on_submit=True,
+                     border=False):
+            query = st.text_input(
+                "Ask BrokerFlow",
+                placeholder="Ask BrokerFlow anything…",
+                key="bf_ask_input",
+                label_visibility="collapsed",
+            )
+            submitted = st.form_submit_button("Send", type="primary")
+            if submitted and query.strip():
+                _open_chat_with_query(query.strip())
 
 
 # ── Slide-up chat panel ──────────────────────────────────────────────────────
@@ -1847,24 +1960,39 @@ def _render_chat_panel() -> None:
 
         st.markdown('</div>', unsafe_allow_html=True)  # close bf-chat-scroll
 
-    # Footer input — separate Streamlit container, also fixed-positioned
-    # via :has(.bf-chat-input-marker)
+    # Footer input — st.form(clear_on_submit=True) so the input clears
+    # on every Send. Without the form, Streamlit retains the previous
+    # value and the second message gets dropped or garbled.
     with st.container():
         st.markdown('<div class="bf-chat-input-marker"></div>',
                     unsafe_allow_html=True)
-        followup = st.text_input(
-            "Follow-up",
-            value="",
-            placeholder="Ask anything…",
-            key="bf_chat_followup",
-            label_visibility="collapsed",
-        )
+        with st.form("bf_chat_followup_form", clear_on_submit=True,
+                     border=False):
+            followup = st.text_input(
+                "Follow-up",
+                placeholder="Ask anything…",
+                key="bf_chat_followup",
+                label_visibility="collapsed",
+            )
+            submitted = st.form_submit_button("Send", type="primary")
+            if submitted and followup.strip():
+                _submit_chat_query(followup.strip())
 
-    last_followup = st.session_state.get("bf_chat_followup_last", "")
-    if followup and followup != last_followup:
-        st.session_state["bf_chat_followup_last"] = followup
-        st.session_state["chat_pending_query"] = followup
-        st.rerun()
+
+def _open_chat_with_query(query: str) -> None:
+    """Open the chat panel and queue `query` as the first user message."""
+    print(f"[chat] open_chat_with_query: {query!r}")
+    st.session_state["chat_open"] = True
+    st.session_state["chat_pending_query"] = query
+    st.rerun()
+
+
+def _submit_chat_query(query: str) -> None:
+    """Submit a follow-up inside an already-open chat panel."""
+    history_len = len(st.session_state.get("ask_conversation", []))
+    print(f"[chat] submit_chat_query: {query!r} (history len before: {history_len})")
+    st.session_state["chat_pending_query"] = query
+    st.rerun()
 
 
 def _render_msg(role: str, content: str) -> None:
