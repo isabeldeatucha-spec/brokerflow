@@ -30,7 +30,10 @@ _CHARS_PER_TOKEN = 4
 # In-process cache to avoid hammering Supabase between Streamlit reruns.
 # We don't use st.cache_data here so this module stays UI-agnostic.
 _CACHE: dict = {"ts": 0.0, "ctx": ""}
-_CACHE_TTL_SEC = 60
+# 5 minutes — long enough that a broker switching between ask sessions
+# doesn't repeatedly pay the ~500ms Supabase round-trip. Short enough
+# that fresh ledger / events updates show up within a coffee break.
+_CACHE_TTL_SEC = 300
 
 
 def _client():
@@ -371,10 +374,15 @@ def build_context(query: Optional[str] = None, debug: bool = False) -> str:
     """Public entry — returns a markdown context string.
 
     Cached for _CACHE_TTL_SEC seconds to avoid hammering Supabase between
-    Streamlit reruns. Pass debug=True to dump the assembled context to
-    stdout (useful while iterating)."""
+    Streamlit reruns. `debug` only controls stdout printing; it does NOT
+    bypass the cache (the cache shape is identical either way). Bypassing
+    the cache for debug means the chat handler always pays the
+    ~500ms Supabase round-trip on the first 3 calls — which makes the
+    background warmup useless."""
     now = time.time()
-    if (now - _CACHE["ts"]) < _CACHE_TTL_SEC and _CACHE["ctx"] and not debug:
+    if (now - _CACHE["ts"]) < _CACHE_TTL_SEC and _CACHE["ctx"]:
+        if debug:
+            print("[ask_brokerflow] CONTEXT (cached, %d chars)" % len(_CACHE["ctx"]))
         return _CACHE["ctx"]
     ctx = _assemble(query, debug)
     _CACHE["ts"] = now

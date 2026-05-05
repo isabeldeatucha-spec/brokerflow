@@ -2214,7 +2214,26 @@ def _start_seed_pdfs_background() -> None:
         except Exception as exc:  # noqa: BLE001
             print(f"[seed_pdfs_bg] aborted: {type(exc).__name__}: {exc}")
 
-    threading.Thread(target=_gen, daemon=True).start()
+
+def _start_chat_context_warmup() -> None:
+    """Warm the Ask BrokerFlow context cache on first queue render so
+    the broker's first chat query doesn't pay the ~500ms Supabase
+    fetch cost. Runs in a daemon thread; fire-and-forget."""
+    if st.session_state.get("_ctx_warmup_started"):
+        return
+    st.session_state["_ctx_warmup_started"] = True
+
+    import threading
+
+    def _warmup():
+        try:
+            from agents.ask_brokerflow.context_builder import build_context
+            build_context()
+            print("[ctx_warmup] context cache warmed")
+        except Exception as exc:  # noqa: BLE001
+            print(f"[ctx_warmup] {type(exc).__name__}: {exc}")
+
+    threading.Thread(target=_warmup, daemon=True).start()
 
 
 def _inject_card_expand_persistence() -> None:
@@ -2396,15 +2415,24 @@ def _inject_chat_autoscroll() -> None:
 
 
 def _open_chat_with_query(query: str) -> None:
-    """Open the chat panel and queue `query` as the first user message."""
+    """Open the chat panel and queue `query` as the first user message.
+
+    No st.rerun() here — the form submit that called this is already
+    triggering a rerun. The current run continues to render_queue_view's
+    body, which renders the chat panel since chat_open is True. Saves
+    one full queue re-render per submit (~150-300ms)."""
     print(f"[chat] open_chat_with_query: {query!r}")
     st.session_state["chat_open"] = True
     st.session_state["chat_pending_query"] = query
-    st.rerun()
 
 
 def _submit_chat_query(query: str) -> None:
-    """Submit a follow-up inside an already-open chat panel."""
+    """Submit a follow-up inside an already-open chat panel.
+
+    Needs st.rerun() — unlike _open_chat_with_query, the followup
+    form lives INSIDE the panel which has already rendered its
+    messages. We need a rerun to re-render the panel with the new
+    pending query."""
     history_len = len(st.session_state.get("ask_conversation", []))
     print(f"[chat] submit_chat_query: {query!r} (history len before: {history_len})")
     st.session_state["chat_pending_query"] = query
@@ -2483,6 +2511,11 @@ def render_queue_view() -> None:
     # ready within ~300ms — long before the broker clicks "Open as
     # PDF" or "Download" inside a panel.
     _start_seed_pdfs_background()
+
+    # Warm the chat context cache in a background thread so the
+    # broker's first Ask BrokerFlow query doesn't pay the cold-cache
+    # ~500ms Supabase fetch latency. Idempotent.
+    _start_chat_context_warmup()
 
     # All ?nav=, ?open_doc=, ?close_doc=, ?chat_*= query params are
     # handled by broker_shell.consume_nav_query_param() in one pass
