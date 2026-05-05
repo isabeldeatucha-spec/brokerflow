@@ -706,7 +706,7 @@ def _render_hero() -> None:
               <div class="bf-queue-card-top">
                 <div class="bf-queue-card-meta">
                   <span class="bf-queue-card-tag">Pitch</span>
-                  <span class="bf-queue-card-context">Costco NW &middot; Brand X</span>
+                  <span class="bf-queue-card-context">Costco NW &middot; Brami</span>
                 </div>
                 <div class="bf-queue-card-actions bf-queue-card-actions--stack">
                   <button class="bf-queue-action">Approve</button>
@@ -715,7 +715,7 @@ def _render_hero() -> None:
                 </div>
               </div>
               <div class="bf-queue-card-body">
-                <em>&ldquo;Costco NW just confirmed Brand X for 142 stores.&rdquo;</em>
+                <em>&ldquo;Costco NW just confirmed Brami for 142 stores.&rdquo;</em>
                 Drafted the follow-up to the buyer with launch terms, demo plan,
                 and first PO timing. Reorder window opens in 14 days.
               </div>
@@ -742,14 +742,14 @@ def _render_hero() -> None:
               <div class="bf-queue-card-top">
                 <div class="bf-queue-card-meta">
                   <span class="bf-queue-card-tag">New item</span>
-                  <span class="bf-queue-card-context">Whole Foods &middot; Brand Y</span>
+                  <span class="bf-queue-card-context">Whole Foods &middot; Olipop</span>
                 </div>
                 <div class="bf-queue-card-actions">
                   <button class="bf-queue-action">Review fields</button>
                 </div>
               </div>
               <div class="bf-queue-card-body">
-                <em>&ldquo;Whole Foods accepted 6 new SKUs for Brand Y.&rdquo;</em>
+                <em>&ldquo;Whole Foods accepted 6 new SKUs for Olipop.&rdquo;</em>
                 UNFI new-item forms filled and ready. 4 fields need confirmation.
                 1 cert expires in 31 days.
               </div>
@@ -759,7 +759,7 @@ def _render_hero() -> None:
               <div class="bf-queue-card-top">
                 <div class="bf-queue-card-meta">
                   <span class="bf-queue-card-tag">Demo</span>
-                  <span class="bf-queue-card-context">CDS &middot; Sue</span>
+                  <span class="bf-queue-card-context">CDS &middot; Priya</span>
                 </div>
                 <div class="bf-queue-card-actions">
                   <button class="bf-queue-action">Send</button>
