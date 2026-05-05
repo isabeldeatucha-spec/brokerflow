@@ -207,6 +207,20 @@ _CSS = """
     color: var(--bf-fg);
     margin: 0 0 1.25rem 0;
 }
+/* Force every descendant of the H1 to inherit the parent's text scale.
+   Streamlit's global markdown styles (.stMarkdown span / div) otherwise
+   apply default body sizing that visibly shrinks line 2 below line 1. */
+.bf-hero-h1,
+.bf-hero-h1 * {
+    font-family: 'Playfair Display', Georgia, serif !important;
+    font-size: inherit !important;
+    font-weight: inherit !important;
+    line-height: inherit !important;
+    letter-spacing: inherit !important;
+    color: inherit !important;
+}
+/* The H1 itself sets the absolute scale; descendants inherit. */
+.bf-hero-h1 { font-size: 3rem !important; font-weight: 500 !important; }
 /* Force "of finished work." to stay on one line so the squiggle stays
    anchored under "finished work" and "of" never dangles by itself. */
 .bf-hero-h1-line2 { white-space: nowrap; }
@@ -610,7 +624,7 @@ _CSS = """
 @media (max-width: 720px) {
     .bf-investor-nav-inner { padding: 1rem 1.25rem; }
     .bf-hero-grid { padding: 2.5rem 0 1rem; row-gap: 2rem; }
-    .bf-hero-h1 { font-size: 2.25rem; max-width: none; }
+    .bf-hero-h1 { font-size: 2.25rem !important; max-width: none; }
     .bf-monday-headline { font-size: 1.3rem; }
     .bf-monday-row { grid-template-columns: 80px 1fr; gap: 0.75rem; }
     .bf-investor-h2 { font-size: 1.5rem; }
