@@ -307,7 +307,7 @@ def _render_sidebar(active_route: str, active_filter: str | None,
 
     sidebar_html = (
         '<aside class="bf-shell-sidebar">'
-        '<a class="bf-shell-wordmark" href="?nav=queue" target="_self">BrokerFlow</a>'
+        '<a class="bf-shell-wordmark" href="?goto=landing" target="_self">BrokerFlow</a>'
         '<div class="bf-shell-section">QUEUE</div>'
         f'{queue_html}'
         '<div class="bf-shell-section">AGENTS</div>'

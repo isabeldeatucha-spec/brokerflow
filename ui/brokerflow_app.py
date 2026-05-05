@@ -2465,6 +2465,7 @@ try:
     # HTML-link navigation triggers (no Streamlit button needed).
     if st.query_params.get("goto") == "landing":
         st.session_state["investor_entered"] = False
+        st.session_state["workspace"] = None
         st.query_params.clear()
         st.rerun()
     if st.query_params.get("goto") == "app":
