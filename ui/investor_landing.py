@@ -1,8 +1,8 @@
 """Investor-facing landing page shown before the broker-facing two-card workspace.
 
 Renders a single-page editorial pitch (sticky nav, two-column hero with
-queue mockup, Monday morning timeline, problem, product, agents w/ live +
-coming-soon status indicators). The sticky nav CTA flips
+queue mockup, Monday morning timeline, agents w/ live + coming-soon
+status indicators). The sticky nav CTA flips
 st.session_state.investor_entered via ?goto=app, after which the workspace
 router drops the user into the existing two-card workspace selector.
 
@@ -109,19 +109,19 @@ _CSS = """
     color: var(--bf-fg);
     font-family: 'Inter', sans-serif;
     line-height: 1.6;
-    max-width: 1080px;
+    max-width: 1280px;
     margin: 0 auto;
-    padding: 0 0 4rem;
+    padding: 0 1.25rem 4rem;
 }
 
 /* ── Hero — two-column with queue mockup ───────────────────────────── */
 .bf-hero-grid {
     display: grid;
-    grid-template-columns: 45% 55%;
+    grid-template-columns: minmax(420px, 40fr) minmax(560px, 55fr);
     grid-template-areas: "text mockup";
-    gap: 3rem;
+    column-gap: 5%;
     align-items: center;
-    padding: 3.5rem 0 2rem;
+    padding: 4rem 0 3rem;
 }
 .bf-hero-text { grid-area: text; }
 .bf-hero-mockup { grid-area: mockup; }
@@ -141,6 +141,9 @@ _CSS = """
     letter-spacing: -0.02em;
     color: var(--bf-fg);
     margin: 0 0 1.25rem 0;
+    /* Constrain so the headline always wraps before "of finished work."
+       — keeping the hand-drawn squiggle anchored under that phrase. */
+    max-width: 24ch;
 }
 .bf-squiggle-wrap {
     position: relative;
@@ -208,21 +211,25 @@ _CSS = """
     font-style: italic;
     font-size: 0.85rem;
     color: var(--bf-faint);
-    margin: 0.5rem 0 0 0;
+    margin: 0.35rem 0 0 0;
 }
 
 /* ── Queue mockup (right side of hero) ─────────────────────────────── */
 .bf-queue-mockup {
     background: #FFFFFF;
-    border: 1px solid var(--bf-fg);
-    border-radius: 2px;
-    padding: 1.25rem 1.25rem 0.5rem;
+    border: 1px solid var(--bf-border);
+    border-radius: 4px;
+    padding: 1.5rem 1.5rem 0.75rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    overflow: hidden;
 }
 .bf-queue-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding-bottom: 0.85rem;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    padding-bottom: 0.95rem;
     border-bottom: 1px solid var(--bf-border-soft);
 }
 .bf-queue-date {
@@ -231,7 +238,7 @@ _CSS = """
     font-size: 0.95rem;
     color: var(--bf-fg);
 }
-.bf-queue-filters { display: flex; gap: 0.4rem; }
+.bf-queue-filters { display: flex; gap: 0.4rem; flex-wrap: wrap; }
 .bf-queue-filter {
     font-family: 'Inter', sans-serif;
     font-size: 0.62rem;
@@ -250,7 +257,7 @@ _CSS = """
     font-weight: 600;
 }
 .bf-queue-card {
-    padding: 0.9rem 0;
+    padding: 0.95rem 0;
     border-bottom: 1px solid var(--bf-border-soft);
 }
 .bf-queue-card:last-child { border-bottom: none; }
@@ -258,8 +265,8 @@ _CSS = """
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 1rem;
-    margin-bottom: 0.45rem;
+    gap: 0.85rem;
+    margin-bottom: 0.5rem;
 }
 .bf-queue-card-meta {
     display: flex;
@@ -286,24 +293,31 @@ _CSS = """
 }
 .bf-queue-card-actions {
     display: flex;
+    flex-direction: row;
+    gap: 0.35rem;
+    flex-shrink: 0;
+    align-items: flex-start;
+}
+.bf-queue-card-actions--stack {
     flex-direction: column;
     gap: 0.3rem;
-    flex-shrink: 0;
 }
 .bf-queue-action {
     font-family: 'Inter', sans-serif;
-    font-size: 0.7rem;
+    font-size: 0.68rem;
     font-weight: 600;
     color: var(--bf-fg);
     background: var(--bf-action);
     border: none;
-    padding: 0.32rem 0.75rem;
+    padding: 0.3rem 0.6rem;
     border-radius: 999px;
     cursor: default;
+    white-space: nowrap;
 }
 .bf-queue-action--ghost {
     background: transparent;
     color: var(--bf-muted);
+    padding: 0.3rem 0.5rem;
 }
 .bf-queue-card-body {
     font-size: 0.82rem;
@@ -389,58 +403,6 @@ _CSS = """
     line-height: 1.35;
 }
 
-/* ── Problem stat row ──────────────────────────────────────────────── */
-.bf-investor-stat-row {
-    display: grid;
-    grid-template-columns: 1fr 1.4fr 1fr;
-    gap: 0;
-    align-items: center;
-    margin-top: 1.25rem;
-}
-.bf-investor-stat,
-.bf-investor-stat-center {
-    text-align: center;
-    padding: 1.5rem 0.5rem;
-}
-.bf-investor-stat-number {
-    font-family: 'Playfair Display', Georgia, serif;
-    font-size: 5rem;
-    font-weight: 400;
-    color: var(--bf-fg);
-    line-height: 1;
-    letter-spacing: -0.02em;
-}
-.bf-investor-stat-label {
-    font-family: 'Inter', sans-serif;
-    text-transform: uppercase;
-    font-size: 0.7rem;
-    letter-spacing: 0.18em;
-    color: var(--bf-faint);
-    margin-top: 0.85rem;
-}
-.bf-investor-stat-center-title {
-    font-family: 'Playfair Display', Georgia, serif;
-    font-size: 1.25rem;
-    font-weight: 500;
-    color: var(--bf-fg);
-}
-.bf-investor-stat-center-sub {
-    font-family: 'Playfair Display', Georgia, serif;
-    font-style: italic;
-    font-size: 0.95rem;
-    color: var(--bf-muted);
-    margin-top: 0.25rem;
-}
-.bf-investor-stat-center-body {
-    font-size: 0.85rem;
-    color: var(--bf-muted);
-    line-height: 1.6;
-    margin-top: 0.5rem;
-    max-width: 240px;
-    margin-left: auto;
-    margin-right: auto;
-}
-
 /* ── Card primitives ───────────────────────────────────────────────── */
 .bf-investor-card {
     background: var(--bf-card);
@@ -451,35 +413,6 @@ _CSS = """
 .bf-investor-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
-}
-
-/* ── Product workspaces ────────────────────────────────────────────── */
-.bf-investor-workspaces {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
-    margin-top: 1rem;
-}
-.bf-investor-workspace { padding: 2rem 1.75rem; }
-.bf-investor-workspace-title {
-    font-family: 'Playfair Display', Georgia, serif;
-    font-size: 1.4rem;
-    font-weight: 500;
-    color: var(--bf-fg);
-    margin: 0 0 0.4rem 0;
-}
-.bf-investor-workspace-tag {
-    font-family: 'Playfair Display', Georgia, serif;
-    font-style: italic;
-    font-size: 0.95rem;
-    color: var(--bf-muted);
-    margin: 0 0 1rem 0;
-}
-.bf-investor-workspace-body {
-    font-size: 0.9rem;
-    color: var(--bf-fg);
-    line-height: 1.65;
-    margin: 0;
 }
 
 /* ── Agents — orchestration diagram + grid ─────────────────────────── */
@@ -591,28 +524,29 @@ _CSS = """
     line-height: 1;
 }
 
-/* ── Mobile collapse ───────────────────────────────────────────────── */
-@media (max-width: 720px) {
-    .bf-investor-nav-inner { padding: 1rem 1.25rem; }
+/* ── Stack hero columns on tablet + mobile (<1024px) ───────────────── */
+@media (max-width: 1023px) {
     .bf-hero-grid {
         grid-template-columns: 1fr;
         grid-template-areas: "text" "mockup";
-        gap: 2rem;
-        padding: 2.5rem 0 1rem;
+        row-gap: 2.5rem;
+        padding: 3rem 0 2rem;
     }
-    .bf-hero-h1 { font-size: 2.25rem; }
+    .bf-hero-mockup { min-width: 100%; }
+}
+
+@media (max-width: 720px) {
+    .bf-investor-nav-inner { padding: 1rem 1.25rem; }
+    .bf-hero-grid { padding: 2.5rem 0 1rem; row-gap: 2rem; }
+    .bf-hero-h1 { font-size: 2.25rem; max-width: none; }
     .bf-monday-headline { font-size: 1.3rem; }
     .bf-monday-row { grid-template-columns: 80px 1fr; gap: 0.75rem; }
     .bf-investor-h2 { font-size: 1.5rem; }
-    .bf-investor-stat-row,
-    .bf-investor-workspaces,
-    .bf-investor-agents {
-        grid-template-columns: 1fr;
-    }
-    .bf-investor-stat-number { font-size: 3.5rem; }
+    .bf-investor-agents { grid-template-columns: 1fr; }
     .bf-investor-orch { display: none; }
     .bf-queue-card-top { flex-direction: column; align-items: flex-start; }
     .bf-queue-card-actions { flex-direction: row; }
+    .bf-queue-card-actions--stack { flex-direction: row; }
 }
 </style>
 """
@@ -644,7 +578,7 @@ def _render_hero() -> None:
         <div class="bf-hero-text">
           <div class="bf-hero-eyebrow">An AI workforce for CPG brokers</div>
           <div class="bf-hero-h1">
-            Wake up to a queue of
+            Wake up to a queue<br>of
             <span class="bf-squiggle-wrap">finished work{_SQUIGGLE_SVG}</span>.
           </div>
           <p class="bf-hero-body">
@@ -677,7 +611,7 @@ def _render_hero() -> None:
                   <span class="bf-queue-card-tag">Pitch</span>
                   <span class="bf-queue-card-context">Costco NW &middot; Brand X</span>
                 </div>
-                <div class="bf-queue-card-actions">
+                <div class="bf-queue-card-actions bf-queue-card-actions--stack">
                   <button class="bf-queue-action">Approve</button>
                   <button class="bf-queue-action bf-queue-action--ghost">Edit</button>
                   <button class="bf-queue-action bf-queue-action--ghost">Skip</button>
@@ -797,83 +731,6 @@ def _render_monday_morning() -> None:
     """)
 
 
-def _render_problem() -> None:
-    _md("""
-    <div class="bf-investor">
-      <section class="bf-investor-section">
-        <div class="bf-investor-eyebrow">The problem</div>
-        <div class="bf-investor-h2">
-          The broker is the center of gravity in CPG, and the most
-          under-tooled node in the chain.
-        </div>
-        <p class="bf-investor-sub">
-          Brokers waste 60%+ of their time on admin instead of selling.
-          Every flow runs through them &mdash; new-item forms, buyer
-          outreach, PO processing, deductions &mdash; manually, in
-          spreadsheets and email.
-        </p>
-        <div class="bf-investor-stat-row">
-          <div class="bf-investor-stat">
-            <div class="bf-investor-stat-number">20k+</div>
-            <div class="bf-investor-stat-label">F&amp;B brands</div>
-          </div>
-          <div class="bf-investor-stat-center">
-            <div class="bf-investor-stat-center-title">Brokers</div>
-            <div class="bf-investor-stat-center-sub">the workflow layer</div>
-            <div class="bf-investor-stat-center-body">
-              every flow runs through them: manually, in spreadsheets and email.
-            </div>
-          </div>
-          <div class="bf-investor-stat">
-            <div class="bf-investor-stat-number">60k+</div>
-            <div class="bf-investor-stat-label">retailers &amp; distributors</div>
-          </div>
-        </div>
-      </section>
-    </div>
-    """)
-
-
-def _render_product() -> None:
-    _md("""
-    <div class="bf-investor">
-      <section class="bf-investor-section">
-        <div class="bf-investor-eyebrow">The product</div>
-        <div class="bf-investor-h2">Two workspaces. One source of truth.</div>
-        <p class="bf-investor-sub">
-          Brokers spend their day in two modes: deciding which brands
-          to take on, and servicing the ones they already represent.
-          BrokerFlow gives each its own workspace, with agents doing
-          the work underneath.
-        </p>
-        <div class="bf-investor-workspaces">
-          <div class="bf-investor-card bf-investor-workspace">
-            <div class="bf-investor-workspace-title">Scout new brands</div>
-            <div class="bf-investor-workspace-tag">qualify before you take a meeting</div>
-            <p class="bf-investor-workspace-body">
-              Brand Scout pulls signals across Amazon, Instacart, Faire,
-              social, and trade press. Scores the brand on five criteria
-              &mdash; velocity, distribution, margin, story, promo
-              independence &mdash; and returns a verdict before you
-              spend a meeting on it.
-            </p>
-          </div>
-          <div class="bf-investor-card bf-investor-workspace">
-            <div class="bf-investor-workspace-title">Manage your book</div>
-            <div class="bf-investor-workspace-tag">service the brands you already represent</div>
-            <p class="bf-investor-workspace-body">
-              Drafts buyer-tailored pitches and one-pagers per persona,
-              then auto-fills the new-item paperwork retailers require
-              &mdash; Whole Foods, KeHE, Sprouts &mdash; from a single
-              canonical brand record.
-            </p>
-          </div>
-        </div>
-      </section>
-    </div>
-    """)
-
-
 def _agent_card(name: str, desc: str, tag: str, status: str) -> str:
     """Return one agent card. status: 'live' or 'soon'."""
     soon_class = " bf-investor-agent--soon" if status == "soon" else ""
@@ -949,7 +806,5 @@ def render_investor_landing() -> None:
     _render_nav()
     _render_hero()
     _render_monday_morning()
-    _render_problem()
-    _render_product()
     _render_agents()
     _render_bottom_padding()
