@@ -42,17 +42,20 @@ _LINKIFY_PATTERNS: list[tuple[str, str]] = [
 
 def _linkify_doc_refs(text: str, card_id: str, available_doc_types: set[str]) -> str:
     """Wrap inline doc-reference phrases in <a class="bf-doc-link">.
-    Only links to doc types the card actually produces."""
+    Only links to doc types the card actually produces.
+
+    Uses data-doc-id (not href URL navigation) so the JS panel handler
+    opens the panel instantly without a Streamlit rerun."""
     import re
     out = text
     for pattern, doc_type in _LINKIFY_PATTERNS:
         if doc_type not in available_doc_types:
             continue
-        href = f"?nav=queue&open_doc={card_id}:{doc_type}"
+        doc_id = f"{card_id}:{doc_type}"
         out = re.sub(
             pattern,
-            (lambda m, h=href: f'<a class="bf-doc-link" href="{h}" target="_self">'
-                              f'{m.group(0)}</a>'),
+            (lambda m, d=doc_id: f'<a class="bf-doc-link" href="#" '
+                                 f'data-doc-id="{d}">{m.group(0)}</a>'),
             out,
             count=1,
             flags=re.IGNORECASE,
@@ -60,129 +63,73 @@ def _linkify_doc_refs(text: str, card_id: str, available_doc_types: set[str]) ->
     return out
 
 
-def _render_attachments_row(card: "Card") -> None:
-    """Render the ATTACHMENTS row above action buttons in expanded view.
-    Pulls metadata from doc_storage for everything in card.docs."""
-    from agents._shared import doc_storage as _ds
-    items_html = []
-    for doc_type, label in card.docs:
-        info = _ds.get(card.id, doc_type)
-        # If the seed PDFs haven't been generated yet (first render), the
-        # entry might be missing — show a placeholder rather than crash.
-        meta = "PDF · — pages" if not info else (
-            f"PDF · {info['pages']} page{'s' if info['pages'] != 1 else ''}"
-        )
-        href = f"?nav=queue&open_doc={card.id}:{doc_type}"
-        items_html.append(
-            f'<a class="bf-attach-item" href="{href}" target="_self">'
-            f'<span class="bf-attach-icon">&#128196;</span>'
-            f'<span class="bf-attach-name">{label}</span>'
-            f'<span class="bf-attach-meta">{meta}</span>'
-            f'<span class="bf-attach-open">&#8599; Open</span>'
-            f'</a>'
-        )
-    st.markdown(
-        '<div class="bf-attach-row">'
-        '<div class="bf-attach-h">ATTACHMENTS</div>'
-        + "".join(items_html) +
-        '</div>',
-        unsafe_allow_html=True,
-    )
 
+def _render_all_doc_panels() -> None:
+    """Pre-render every card's doc previews as hidden HTML blocks plus
+    a dim overlay. JS toggles them on/off — clicking an attachment is
+    pure CSS, no Streamlit rerun, no re-render of the queue.
 
-def _render_doc_panel() -> None:
-    """Right-side document viewer.
-
-    Renders the document content as a structured native HTML preview
-    (NOT a PDF embed). The PDF is the forwardable artifact the broker
-    sends to a buyer; the in-app view uses the same data the PDF was
-    generated from, rendered in BrokerFlow typography."""
-    target = st.session_state.get("doc_open")
-    if not target:
-        return
-    card_id, doc_type = target.split(":", 1)
-    from agents._shared import doc_storage as _ds
+    PDFs are filename-predictable so the "Open as PDF" / "Download"
+    links work as soon as the background-thread PDF generator finishes
+    (kicked off at the top of render_queue_view)."""
     from agents._shared import document_data as _dd
     from ui import doc_preview as _dp
 
-    payload = _dd.get_payload(card_id, doc_type)
-    if not payload:
-        return
+    panels: list[str] = []
+    for card in SEED_CARDS:
+        if not card.docs:
+            continue
+        agent_label = "BrokerFlow"
+        if card.agent_origin:
+            agent_label = _AGENT_LABELS.get(card.agent_origin[0], "BrokerFlow")
 
-    eyebrow, title, subtitle, body_html = _dp.render_preview_body(
-        doc_type, payload,
-    )
+        for doc_type, _label in card.docs:
+            payload = _dd.get_payload(card.id, doc_type)
+            if not payload:
+                continue
+            eyebrow, title, subtitle, body_html = _dp.render_preview_body(
+                doc_type, payload,
+            )
+            doc_id = f"{card.id}:{doc_type}"
+            pdf_url = f"/app/static/agent_docs/{card.id}_{doc_type}.pdf"
+            subtitle_html = (
+                f'<div class="bf-doc-subtitle">{subtitle}</div>'
+                if subtitle else ""
+            )
+            panels.append(
+                f'<aside class="bf-doc-panel-html" data-doc-id="{doc_id}">'
+                '<div class="bf-doc-head">'
+                '<div class="bf-doc-head-text">'
+                f'<div class="bf-doc-eyebrow">{eyebrow}</div>'
+                f'<div class="bf-doc-title">{title}</div>'
+                f'{subtitle_html}'
+                '</div>'
+                '<div class="bf-doc-actions">'
+                f'<a class="bf-doc-action" href="{pdf_url}" target="_blank">'
+                '&#8599; Open as PDF</a>'
+                f'<a class="bf-doc-action" href="{pdf_url}" '
+                'download target="_blank">&darr; Download</a>'
+                '<a class="bf-doc-action bf-doc-action--close '
+                'bf-doc-close-btn" href="#">&times;</a>'
+                '</div>'
+                '</div>'
+                f'<div class="bf-doc-preview-body">{body_html}</div>'
+                '<div class="bf-doc-foot">'
+                f'<span>Generated by {agent_label} &middot; just now</span>'
+                '<a class="bf-doc-foot-regen" href="#">Regenerate</a>'
+                '</div>'
+                '</aside>'
+            )
 
-    # Agent label comes from the card's agent_origin (first one).
-    agent_label = "BrokerFlow"
-    agent_for_doc = "retailer_pitcher"
-    for c in SEED_CARDS:
-        if c.id == card_id and c.agent_origin:
-            agent_label = _AGENT_LABELS.get(c.agent_origin[0], "BrokerFlow")
-            break
-    # Resolve the right agent for PDF storage path
-    agent_for_doc = (
-        "retailer_pitcher" if doc_type in ("sell_sheet", "cost_build")
-        else "brand_scout"  if doc_type == "one_pager"
-        else "new_item_forms"
-    )
-
-    # Lazily generate THIS PDF only (cached after first call). Defers
-    # the cost from queue load to the first time the broker actually
-    # opens a doc panel — much faster initial render.
-    info = _ds.get(card_id, doc_type)
-    if not info:
-        try:
-            info = _ds.ensure_pdf(card_id, agent_for_doc, doc_type, payload)
-        except Exception as exc:  # noqa: BLE001
-            print(f"[doc_panel] lazy PDF generation failed: "
-                  f"{type(exc).__name__}: {exc}")
-            info = None
-
-    pdf_url = info["url"] if info else "#"
-
-    close_href = f"?nav=queue{_preserve_filter_query()}&close_doc=1"
-
-    # Inject preview-specific CSS once
-    st.markdown(_dp.PREVIEW_CSS, unsafe_allow_html=True)
-
-    # Dim overlay — clicking anywhere on it closes the panel
+    # Inject preview CSS + the overlay + every panel in ONE markdown
+    # block so all the panels and the overlay render as siblings
+    # children of the same stMarkdownContainer in the DOM.
     st.markdown(
-        f'<a href="{close_href}" target="_self" '
-        f'style="text-decoration:none;">'
-        f'<div class="bf-doc-overlay"></div></a>',
+        _dp.PREVIEW_CSS
+        + '<div class="bf-doc-overlay-html"></div>'
+        + "".join(panels),
         unsafe_allow_html=True,
     )
-
-    subtitle_html = (
-        f'<div class="bf-doc-subtitle">{subtitle}</div>' if subtitle else ""
-    )
-
-    with st.container():
-        st.markdown(
-            '<div class="bf-doc-marker"></div>'
-            '<div class="bf-doc-head">'
-            '<div class="bf-doc-head-text">'
-            f'<div class="bf-doc-eyebrow">{eyebrow}</div>'
-            f'<div class="bf-doc-title">{title}</div>'
-            f'{subtitle_html}'
-            '</div>'
-            '<div class="bf-doc-actions">'
-            f'<a class="bf-doc-action" href="{pdf_url}" target="_blank">'
-            '&#8599; Open as PDF</a>'
-            f'<a class="bf-doc-action" href="{pdf_url}" '
-            'download target="_blank">&darr; Download</a>'
-            f'<a class="bf-doc-action bf-doc-action--close" '
-            f'href="{close_href}" target="_self">&times;</a>'
-            '</div>'
-            '</div>'
-            f'<div class="bf-doc-preview-body">{body_html}</div>'
-            '<div class="bf-doc-foot">'
-            f'<span>Generated by {agent_label} &middot; just now</span>'
-            '<a class="bf-doc-foot-regen" href="#">Regenerate</a>'
-            '</div>',
-            unsafe_allow_html=True,
-        )
 
 
 # ── Seed data ────────────────────────────────────────────────────────────────
@@ -754,78 +701,51 @@ div[data-testid="stLayoutWrapper"]:has(.bf-ask-marker)::after {
     letter-spacing: 0.02em;
 }
 
-/* ── Document side panel (slides in from right) ─────────────────── */
-.bf-doc-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(10, 10, 10, 0.22);
-    z-index: 250;
-    animation: bf-fade-in 0.18s ease-out;
-}
+/* ── Document side panel (slides in from right) — pure HTML, no
+   Streamlit container required since panels are pre-rendered hidden
+   and toggled via JS. */
 @keyframes bf-fade-in {
     from { opacity: 0; }
     to { opacity: 1; }
-}
-
-div[data-testid="stLayoutWrapper"]:has(.bf-doc-marker) {
-    position: fixed !important;
-    top: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    left: auto !important;
-    width: 540px !important;
-    height: 100vh !important;
-    background: #FAFAF7 !important;
-    border-left: 1px solid #EAEAE4 !important;
-    border-top: none !important;
-    border-bottom: none !important;
-    border-right: none !important;
-    border-radius: 0 !important;
-    box-shadow: -16px 0 40px -8px rgba(10, 10, 10, 0.18) !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    z-index: 260 !important;
-    overflow: hidden !important;
-    animation: bf-doc-slide 0.22s ease-out;
 }
 @keyframes bf-doc-slide {
     from { transform: translateX(40px); opacity: 0.4; }
     to   { transform: translateX(0); opacity: 1; }
 }
-div[data-testid="stLayoutWrapper"]:has(.bf-doc-marker) > div[data-testid="stVerticalBlock"] {
-    border: none !important;
-    background: transparent !important;
-    padding: 0 !important;
-    height: 100% !important;
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 0 !important;
-    overflow: hidden !important;
+
+.bf-doc-overlay-html {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 10, 10, 0.22);
+    z-index: 250;
+    display: none;
 }
-/* All Streamlit wrappers down to our markdown div must also stretch + flex
-   so .bf-doc-body's flex:1 has a definite parent height to grow into */
-div[data-testid="stLayoutWrapper"]:has(.bf-doc-marker)
-  > div[data-testid="stVerticalBlock"]
-  > div[data-testid="stElementContainer"] {
-    height: 100% !important;
-    display: flex !important;
-    flex-direction: column !important;
-    flex: 1 1 auto !important;
-    min-height: 0 !important;
+.bf-doc-overlay-html.open {
+    display: block;
+    animation: bf-fade-in 0.18s ease-out;
 }
-div[data-testid="stLayoutWrapper"]:has(.bf-doc-marker)
-  div[data-testid="stMarkdown"],
-div[data-testid="stLayoutWrapper"]:has(.bf-doc-marker)
-  div[data-testid="stMarkdownContainer"] {
-    height: 100% !important;
-    display: flex !important;
-    flex-direction: column !important;
-    min-height: 0 !important;
+
+.bf-doc-panel-html {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 540px;
+    height: 100vh;
+    background: #FAFAF7;
+    border-left: 1px solid #EAEAE4;
+    box-shadow: -16px 0 40px -8px rgba(10, 10, 10, 0.18);
+    z-index: 260;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+}
+.bf-doc-panel-html.open {
+    display: flex;
+    animation: bf-doc-slide 0.22s ease-out;
 }
 @media (max-width: 820px) {
-    div[data-testid="stLayoutWrapper"]:has(.bf-doc-marker) {
-        width: 100vw !important;
-    }
+    .bf-doc-panel-html { width: 100vw; }
 }
 
 .bf-doc-head {
@@ -1889,7 +1809,8 @@ def _build_extras_html(card: Card) -> str:
         f'<ul class="bf-reasoning">{bullets_html}</ul>'
     )
 
-    # Attachments row
+    # Attachments row — data-doc-id triggers the JS panel handler;
+    # no Streamlit rerun on click.
     if card.docs:
         from agents._shared import doc_storage as _ds
         items_html = []
@@ -1898,9 +1819,9 @@ def _build_extras_html(card: Card) -> str:
             meta = "PDF · — pages" if not info else (
                 f"PDF · {info['pages']} page{'s' if info['pages'] != 1 else ''}"
             )
-            href = f"?nav=queue&open_doc={card.id}:{doc_type}"
+            doc_id = f"{card.id}:{doc_type}"
             items_html.append(
-                f'<a class="bf-attach-item" href="{href}" target="_self">'
+                f'<a class="bf-attach-item" href="#" data-doc-id="{doc_id}">'
                 f'<span class="bf-attach-icon">&#128196;</span>'
                 f'<span class="bf-attach-name">{label}</span>'
                 f'<span class="bf-attach-meta">{meta}</span>'
@@ -2153,6 +2074,107 @@ def _render_chat_panel() -> None:
                 _submit_chat_query(followup.strip())
 
 
+def _inject_doc_panel_handler() -> None:
+    """Bind click handlers for opening / closing the doc side panel
+    purely client-side. No Streamlit rerun → instant open/close.
+
+    Triggers (anywhere in the parent doc):
+      - .bf-attach-item[data-doc-id]   → open matching panel
+      - .bf-doc-link[data-doc-id]      → open matching panel
+      - .bf-doc-close-btn              → close panel
+      - click on .bf-doc-overlay-html  → close panel
+      - Esc key                        → close panel
+    """
+    import streamlit.components.v1 as components
+    components.html(
+        """
+        <script>
+        (function () {
+            const doc = window.parent.document;
+            if (doc.body.dataset.bfDocPanelHandler === '1') return;
+            doc.body.dataset.bfDocPanelHandler = '1';
+
+            function openPanel(docId) {
+                doc.querySelectorAll('.bf-doc-panel-html').forEach(p => {
+                    p.classList.remove('open');
+                });
+                const panel = doc.querySelector(
+                    '.bf-doc-panel-html[data-doc-id="' + docId + '"]'
+                );
+                if (!panel) return;
+                panel.classList.add('open');
+                const overlay = doc.querySelector('.bf-doc-overlay-html');
+                if (overlay) overlay.classList.add('open');
+                doc.body.style.overflow = 'hidden';
+            }
+            function closePanel() {
+                doc.querySelectorAll('.bf-doc-panel-html').forEach(p => {
+                    p.classList.remove('open');
+                });
+                const overlay = doc.querySelector('.bf-doc-overlay-html');
+                if (overlay) overlay.classList.remove('open');
+                doc.body.style.overflow = '';
+            }
+
+            doc.addEventListener('click', (e) => {
+                const trigger = e.target.closest('[data-doc-id]');
+                if (trigger && (
+                    trigger.classList.contains('bf-attach-item') ||
+                    trigger.classList.contains('bf-doc-link')
+                )) {
+                    e.preventDefault();
+                    openPanel(trigger.dataset.docId);
+                    return;
+                }
+                if (e.target.closest('.bf-doc-close-btn')) {
+                    e.preventDefault();
+                    closePanel();
+                    return;
+                }
+                if (e.target.closest('.bf-doc-overlay-html')) {
+                    e.preventDefault();
+                    closePanel();
+                }
+            }, true);
+
+            doc.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') closePanel();
+            });
+        })();
+        </script>
+        """,
+        height=0,
+    )
+
+
+def _start_seed_pdfs_background() -> None:
+    """Generate the seed PDFs in a background thread on first queue
+    render. Doesn't block the UI; PDFs are usually ready by the time
+    the broker actually clicks "Open as PDF" on a side panel."""
+    if st.session_state.get("_seed_pdfs_bg_started"):
+        return
+    st.session_state["_seed_pdfs_bg_started"] = True
+
+    import threading
+
+    def _gen():
+        try:
+            from agents._shared import doc_storage, document_data
+            for card_id, doc_type, agent, payload in (
+                document_data.all_seed_entries()
+            ):
+                try:
+                    doc_storage.ensure_pdf(card_id, agent, doc_type, payload)
+                except Exception as exc:  # noqa: BLE001
+                    print(f"[seed_pdfs_bg] {card_id}/{doc_type} failed: "
+                          f"{type(exc).__name__}: {exc}")
+            print("[seed_pdfs_bg] all seed PDFs generated")
+        except Exception as exc:  # noqa: BLE001
+            print(f"[seed_pdfs_bg] aborted: {type(exc).__name__}: {exc}")
+
+    threading.Thread(target=_gen, daemon=True).start()
+
+
 def _inject_card_expand_persistence() -> None:
     """Persist each card's <details> open state across Streamlit reruns.
 
@@ -2367,10 +2389,12 @@ def _md_to_html(md: str) -> str:
 def render_queue_view() -> None:
     st.markdown(_QUEUE_CSS, unsafe_allow_html=True)
 
-    # PDFs are generated on-demand when the user opens a doc panel
-    # (see _render_doc_panel). The in-app preview reads from the
-    # payload directly — no PDF needed for the visible queue. This
-    # keeps the initial "I'm a broker" → queue load fast.
+    # Background-thread the seed PDF generation. The in-app preview
+    # reads from the payload dict directly (no PDF needed to display
+    # the side panel), so this is fire-and-forget. PDFs are usually
+    # ready within ~300ms — long before the broker clicks "Open as
+    # PDF" or "Download" inside a panel.
+    _start_seed_pdfs_background()
 
     # All ?nav=, ?open_doc=, ?close_doc=, ?chat_*= query params are
     # handled by broker_shell.consume_nav_query_param() in one pass
@@ -2428,7 +2452,8 @@ def render_queue_view() -> None:
     if st.session_state.get("chat_open"):
         _render_chat_panel()
 
-    # Doc side panel renders LAST (highest z) so it overlays everything,
-    # including the chat panel
-    if st.session_state.get("doc_open"):
-        _render_doc_panel()
+    # All doc panels are pre-rendered as hidden HTML; JS toggles
+    # which one is visible. Open/close is instant — no Streamlit
+    # rerun, no re-render of the queue.
+    _render_all_doc_panels()
+    _inject_doc_panel_handler()
