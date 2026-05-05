@@ -369,13 +369,9 @@ _CSS = """
 .bf-queue-card-actions {
     display: flex;
     flex-direction: row;
-    gap: 0.35rem;
+    gap: 0.5rem;
     flex-shrink: 0;
-    align-items: flex-start;
-}
-.bf-queue-card-actions--stack {
-    flex-direction: column;
-    gap: 0.3rem;
+    align-items: center;
 }
 .bf-queue-action {
     font-family: 'Inter', sans-serif;
@@ -383,16 +379,23 @@ _CSS = """
     font-weight: 600;
     color: var(--bf-fg);
     background: var(--bf-action);
-    border: none;
-    padding: 0.3rem 0.6rem;
+    border: 1px solid var(--bf-action);
+    padding: 0.3rem 0.7rem;
     border-radius: 999px;
     cursor: default;
     white-space: nowrap;
+    line-height: 1.2;
+}
+.bf-queue-action--outline {
+    background: transparent;
+    color: var(--bf-fg);
+    border: 1px solid var(--bf-border);
 }
 .bf-queue-action--ghost {
     background: transparent;
     color: var(--bf-muted);
-    padding: 0.3rem 0.5rem;
+    border: none;
+    padding: 0.3rem 0.4rem;
 }
 .bf-queue-card-body {
     font-size: 0.82rem;
@@ -620,8 +623,7 @@ _CSS = """
     .bf-investor-agents { grid-template-columns: 1fr; }
     .bf-investor-orch { display: none; }
     .bf-queue-card-top { flex-direction: column; align-items: flex-start; }
-    .bf-queue-card-actions { flex-direction: row; }
-    .bf-queue-card-actions--stack { flex-direction: row; }
+    .bf-queue-card-actions { flex-direction: row; flex-wrap: wrap; }
 }
 </style>
 """
@@ -691,9 +693,9 @@ def _render_hero() -> None:
                   <span class="bf-queue-card-tag">Pitch</span>
                   <span class="bf-queue-card-context">Costco NW &middot; Brami</span>
                 </div>
-                <div class="bf-queue-card-actions bf-queue-card-actions--stack">
+                <div class="bf-queue-card-actions">
                   <button class="bf-queue-action">Approve</button>
-                  <button class="bf-queue-action bf-queue-action--ghost">Edit</button>
+                  <button class="bf-queue-action bf-queue-action--outline">Edit</button>
                   <button class="bf-queue-action bf-queue-action--ghost">Skip</button>
                 </div>
               </div>
