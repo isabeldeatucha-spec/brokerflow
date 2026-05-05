@@ -2502,16 +2502,19 @@ try:
     elif workspace == "queue":
         active_brand = st.session_state.get("queue_brand")
         active_filter = st.session_state.get("queue_filter", "today")
-        if active_brand:
-            crumb = [(active_brand.lower(), True)]
-        else:
-            crumb = [(active_filter.replace("_", " "), True)]
+        # Two-segment breadcrumb on the queue: "brokerflow / today" or
+        # "brokerflow / brami". The queue's custom topbar pulls them in
+        # alongside the ask bar so they sit on a single row.
+        leaf = active_brand.lower() if active_brand else active_filter.replace("_", " ")
+        crumb = [("brokerflow", False), (leaf, True)]
+        from ui.queue_view import render_queue_topbar
         render_shell(
             active_route="queue",
             crumb_parts=crumb,
             body=render_queue_view,
             active_filter=active_filter,
             active_brand=active_brand,
+            custom_topbar=render_queue_topbar,
         )
     elif workspace == "brand_scout":
         render_shell(

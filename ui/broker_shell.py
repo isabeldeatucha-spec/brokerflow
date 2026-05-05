@@ -144,6 +144,7 @@ def _shell_css() -> str:
     .bf-shell-topbar {
         padding: 0 0 18px;
         margin-bottom: 24px;
+        border-bottom: 1px solid #F2F2EE;
     }
     .bf-crumb {
         font-family: 'Instrument Serif', Georgia, serif;
@@ -327,17 +328,30 @@ def render_shell(
     active_filter: str | None = None,
     active_brand: str | None = None,
     show_ask: bool = True,
+    custom_topbar: Callable[[list[tuple[str, bool]]], None] | None = None,
 ) -> None:
     """Wrap a page in the shared broker shell.
 
     active_route: "queue" | "brand_scout" | "retailer_pitcher" | "admin_ops"
     crumb_parts:  list of (text, is_bold) tuples for the breadcrumb
     body:         zero-arg callable that renders the main page content
+    custom_topbar: optional callable that takes crumb_parts and renders a
+                   custom topbar instead of the default breadcrumb-only row.
+                   Used by the queue to put the ask bar on the same row.
     """
     st.markdown(_shell_css(), unsafe_allow_html=True)
     _render_sidebar(active_route, active_filter, active_brand)
-    _render_topbar(crumb_parts, show_ask=show_ask)
+    if custom_topbar:
+        custom_topbar(crumb_parts)
+    else:
+        _render_topbar(crumb_parts, show_ask=show_ask)
     body()
+
+
+def render_crumb_html(crumb_parts: list[tuple[str, bool]]) -> str:
+    """Public helper so a custom topbar can reuse the same breadcrumb
+    style as the default one."""
+    return _crumb_html(crumb_parts)
 
 
 def consume_nav_query_param() -> bool:
