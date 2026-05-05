@@ -52,6 +52,19 @@ _CSS = """
     background: #FAFAF7 !important;
 }
 
+/* Override the global 980px block-container cap so the hero has room.
+   inject_global_css() runs first; this rule wins by source order since
+   both use !important. Scoped only to this page (CSS only injected by
+   render_investor_landing). */
+.stApp .main .block-container,
+.stApp [data-testid="stMain"] .block-container,
+.stApp [data-testid="stMainBlockContainer"] {
+    max-width: 1320px !important;
+    padding-left: 1.75rem !important;
+    padding-right: 1.75rem !important;
+    padding-top: 0 !important;
+}
+
 :root {
     --bf-fg: #0A0A0A;
     --bf-muted: #6B6B6B;
@@ -123,8 +136,8 @@ _CSS = """
     align-items: center;
     padding: 4rem 0 3rem;
 }
-.bf-hero-text { grid-area: text; }
-.bf-hero-mockup { grid-area: mockup; }
+.bf-hero-text { grid-area: text; min-width: 0; }
+.bf-hero-mockup { grid-area: mockup; min-width: 0; max-width: 100%; }
 .bf-hero-eyebrow {
     font-family: 'Inter', sans-serif;
     text-transform: uppercase;
@@ -141,10 +154,10 @@ _CSS = """
     letter-spacing: -0.02em;
     color: var(--bf-fg);
     margin: 0 0 1.25rem 0;
-    /* Constrain so the headline always wraps before "of finished work."
-       — keeping the hand-drawn squiggle anchored under that phrase. */
-    max-width: 24ch;
 }
+/* Force "of finished work." to stay on one line so the squiggle stays
+   anchored under "finished work" and "of" never dangles by itself. */
+.bf-hero-h1-line2 { white-space: nowrap; }
 .bf-squiggle-wrap {
     position: relative;
     display: inline-block;
@@ -215,6 +228,10 @@ _CSS = """
 }
 
 /* ── Queue mockup (right side of hero) ─────────────────────────────── */
+.bf-queue-mockup,
+.bf-queue-mockup * {
+    box-sizing: border-box;
+}
 .bf-queue-mockup {
     background: #FFFFFF;
     border: 1px solid var(--bf-border);
@@ -222,6 +239,9 @@ _CSS = """
     padding: 1.5rem 1.5rem 0.75rem;
     box-shadow: 0 1px 3px rgba(0,0,0,0.04);
     overflow: hidden;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
 }
 .bf-queue-header {
     display: flex;
@@ -578,8 +598,8 @@ def _render_hero() -> None:
         <div class="bf-hero-text">
           <div class="bf-hero-eyebrow">An AI workforce for CPG brokers</div>
           <div class="bf-hero-h1">
-            Wake up to a queue<br>of
-            <span class="bf-squiggle-wrap">finished work{_SQUIGGLE_SVG}</span>.
+            Wake up to a queue<br>
+            <span class="bf-hero-h1-line2">of <span class="bf-squiggle-wrap">finished work{_SQUIGGLE_SVG}</span>.</span>
           </div>
           <p class="bf-hero-body">
             BrokerFlow runs end-to-end brand management for brokers. Agents
