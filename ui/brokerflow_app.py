@@ -2461,8 +2461,6 @@ FIRECRAWL_API_KEY=fc-...            # for Brand Scout web scraping""", language=
 if "workspace" not in st.session_state:
     st.session_state["workspace"] = None
 
-workspace = st.session_state["workspace"]
-
 try:
     # HTML-link navigation triggers (no Streamlit button needed).
     if st.query_params.get("goto") == "landing":
@@ -2471,8 +2469,23 @@ try:
         st.rerun()
     if st.query_params.get("goto") == "app":
         st.session_state["investor_entered"] = True
+        # "I'm a broker" lands directly on the queue.
+        st.session_state["workspace"] = "queue"
+        st.session_state["queue_filter"] = "today"
+        st.session_state["queue_brand"] = None
+        st.session_state["expanded_card"] = None
         st.query_params.clear()
         st.rerun()
+
+    # Sidebar nav links (?nav=queue|brand_scout|retailer_pitcher|admin_ops)
+    from ui.broker_shell import consume_nav_query_param, render_shell
+    from ui.queue_view import consume_expand_query, render_queue_view
+    if consume_nav_query_param():
+        st.rerun()
+    if consume_expand_query():
+        st.rerun()
+
+    workspace = st.session_state["workspace"]
 
     if st.query_params.get("page") == "docs":
         render_docs()
@@ -2481,20 +2494,56 @@ try:
             from ui.investor_landing import render_investor_landing
             render_investor_landing()
             st.stop()
-        render_landing_cards()
-    elif workspace == "existing_business":
-        render_back_nav()
-        render_existing_business_workspace()
+        # No chooser anymore — drop straight into the queue.
+        st.session_state["workspace"] = "queue"
+        st.session_state["queue_filter"] = "today"
+        st.rerun()
+    elif workspace == "queue":
+        active_brand = st.session_state.get("queue_brand")
+        active_filter = st.session_state.get("queue_filter", "today")
+        crumb = [("sedge", False)]
+        if active_brand:
+            crumb.append((active_brand.lower(), True))
+        else:
+            crumb.append((active_filter.replace("_", " "), True))
+        render_shell(
+            active_route="queue",
+            crumb_parts=crumb,
+            body=render_queue_view,
+            active_filter=active_filter,
+            active_brand=active_brand,
+        )
     elif workspace == "brand_scout":
-        render_back_nav()
-        render_brand_scout_workspace()
-    elif workspace in ("book/retailer_pitcher", "book/admin_ops"):
+        render_shell(
+            active_route="brand_scout",
+            crumb_parts=[("sedge", False), ("agents", False), ("brand scout", True)],
+            body=render_brand_scout_workspace,
+            show_ask=False,
+        )
+    elif workspace in ("retailer_pitcher", "book/retailer_pitcher"):
         from ui.per_agent_page import render_per_agent_page
-        render_per_agent_page(workspace.split("/")[1])
+        render_shell(
+            active_route="retailer_pitcher",
+            crumb_parts=[("sedge", False), ("agents", False),
+                         ("retailer pitcher", True)],
+            body=lambda: render_per_agent_page("retailer_pitcher"),
+            show_ask=False,
+        )
+    elif workspace in ("admin_ops", "book/admin_ops"):
+        from ui.per_agent_page import render_per_agent_page
+        render_shell(
+            active_route="admin_ops",
+            crumb_parts=[("sedge", False), ("agents", False),
+                         ("new item forms", True)],
+            body=lambda: render_per_agent_page("admin_ops"),
+            show_ask=False,
+        )
     elif workspace == "demo":
         from ui.demo_view import render_demo_view
         render_demo_view()
     else:
-        render_landing_cards()
+        # Unknown route → reset to queue.
+        st.session_state["workspace"] = "queue"
+        st.rerun()
 except Exception as _top_exc:
     _error_card(_top_exc)

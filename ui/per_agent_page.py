@@ -713,21 +713,10 @@ def render_per_agent_page(agent_key: str) -> None:
 
     meta = _AGENT_META[agent_key]
 
-    # ── Back navigation ────────────────────────────────────────────────────────
-    if st.button("← Your book of business", key="back_to_book"):
-        st.session_state["workspace"] = "existing_business"
-        st.rerun()
-
-    st.markdown(
-        f'<p style="font-size:12px; color:#8B8A83; margin-bottom:0;">'
-        f'Your book of business / {meta["label"]}</p>',
-        unsafe_allow_html=True,
-    )
-
-    # ── Hero ───────────────────────────────────────────────────────────────────
+    # Sidebar/shell handles navigation + breadcrumb. Keep just the hero.
     st.markdown(
         f'<h1 style="font-family:\'Instrument Serif\', Georgia, serif; '
-        f'font-size:40px; font-weight:400; margin:12px 0 4px;">{meta["label"]}</h1>',
+        f'font-size:40px; font-weight:400; margin:0 0 4px;">{meta["label"]}</h1>',
         unsafe_allow_html=True,
     )
     st.markdown(
