@@ -841,6 +841,21 @@ div[data-testid="stLayoutWrapper"]:has(.bf-ask-marker)::after {
 .bf-doc-foot-regen:hover { color: #1A1A18; text-decoration: underline; }
 
 /* ── Slide-up chat panel ────────────────────────────────────────── */
+/* Dim backdrop sitting behind the chat panel. Click closes the chat. */
+.bf-chat-backdrop {
+    position: fixed;
+    top: 0;
+    left: 240px;
+    right: 0;
+    bottom: 0;
+    background: rgba(10, 10, 10, 0.18);
+    z-index: 190;
+    animation: bf-fade-in 0.18s ease-out;
+}
+@media (max-width: 820px) {
+    .bf-chat-backdrop { left: 0; }
+}
+
 /* Streamlit container holding .bf-chat-marker becomes a fixed bottom panel.
    :has() scopes the absolute styling without leaking onto other pages.
    Width is explicit (calc) so right:0 doesn't get ignored when the
@@ -1025,7 +1040,7 @@ div[data-testid="stLayoutWrapper"]:has(.bf-chat-marker) .bf-chat-msgs-marker {
    is the only way to make a real flex/overflow region. */
 .bf-chat-msgs-marker { display: none; }
 
-div[data-testid="stLayoutWrapper"]:has(.bf-chat-msgs-marker) {
+div[data-testid="stLayoutWrapper"]:has(.bf-chat-marker) div[data-testid="stLayoutWrapper"]:has(.bf-chat-msgs-marker) {
     flex: 1 1 auto !important;
     min-height: 0 !important;
     overflow-y: auto !important;
@@ -1039,20 +1054,20 @@ div[data-testid="stLayoutWrapper"]:has(.bf-chat-msgs-marker) {
     /* Smooth scroll for the auto-scroll-to-bottom */
     scroll-behavior: smooth;
 }
-div[data-testid="stLayoutWrapper"]:has(.bf-chat-msgs-marker) > div[data-testid="stVerticalBlock"] {
+div[data-testid="stLayoutWrapper"]:has(.bf-chat-marker) div[data-testid="stLayoutWrapper"]:has(.bf-chat-msgs-marker) > div[data-testid="stVerticalBlock"] {
     border: none !important;
     background: transparent !important;
     padding: 0 !important;
     gap: 0 !important;
 }
-div[data-testid="stLayoutWrapper"]:has(.bf-chat-msgs-marker)::-webkit-scrollbar {
+div[data-testid="stLayoutWrapper"]:has(.bf-chat-marker) div[data-testid="stLayoutWrapper"]:has(.bf-chat-msgs-marker)::-webkit-scrollbar {
     width: 6px;
 }
-div[data-testid="stLayoutWrapper"]:has(.bf-chat-msgs-marker)::-webkit-scrollbar-thumb {
+div[data-testid="stLayoutWrapper"]:has(.bf-chat-marker) div[data-testid="stLayoutWrapper"]:has(.bf-chat-msgs-marker)::-webkit-scrollbar-thumb {
     background: #EAEAE4;
     border-radius: 99px;
 }
-div[data-testid="stLayoutWrapper"]:has(.bf-chat-msgs-marker)::-webkit-scrollbar-track {
+div[data-testid="stLayoutWrapper"]:has(.bf-chat-marker) div[data-testid="stLayoutWrapper"]:has(.bf-chat-msgs-marker)::-webkit-scrollbar-track {
     background: transparent;
 }
 
@@ -1243,6 +1258,17 @@ div[data-testid="stHorizontalBlock"]:has(.bf-queue-topbar-marker)
     clip: rect(0, 0, 0, 0) !important;
     pointer-events: none !important;
     opacity: 0 !important;
+}
+/* Streamlit's "Press Enter to submit form" hint that pops in next to
+   the input on focus — overlaps our placeholder. Suppress it
+   throughout the queue (we only have form inputs whose Enter
+   behavior is already obvious). */
+div[data-testid="InputInstructions"],
+[data-testid="stFormSubmitInstructions"] {
+    display: none !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    height: 0 !important;
 }
 
 .bf-queue-pills {
@@ -1986,6 +2012,19 @@ def _render_chat_panel() -> None:
     history: list[dict] = st.session_state.setdefault("ask_conversation", [])
     pending = st.session_state.pop("chat_pending_query", None)
 
+    # Dim backdrop behind the panel — clicking anywhere on it closes
+    # the chat. The backdrop sits between the queue (z=auto) and the
+    # panel (z=200) at z=190, so it dims the queue but not the panel.
+    close_href = (
+        f"?nav=queue{_preserve_filter_query()}&chat_close=1"
+    )
+    st.markdown(
+        f'<a href="{close_href}" target="_self" '
+        'style="text-decoration:none;">'
+        '<div class="bf-chat-backdrop"></div></a>',
+        unsafe_allow_html=True,
+    )
+
     with st.container():
         st.markdown(
             '<div class="bf-chat-marker"></div>'
@@ -2054,6 +2093,9 @@ def _render_chat_panel() -> None:
         # the messages container in the parent document. Sticks to the
         # bottom unless the user manually scrolls up >80px.
         _inject_chat_autoscroll()
+
+        # Esc key closes the chat panel
+        _inject_chat_esc_close()
 
     # Footer input — st.form(clear_on_submit=True) so the input clears
     # on every Send. Without the form, Streamlit retains the previous
@@ -2246,6 +2288,34 @@ def _inject_card_expand_persistence() -> None:
                         }
                     });
                 }
+            });
+        })();
+        </script>
+        """,
+        height=0,
+    )
+
+
+def _inject_chat_esc_close() -> None:
+    """Bind Esc-to-close for the chat panel. The close ✕ and the dim
+    backdrop (anchor wrapping a div) both already use URL navigation;
+    this adds keyboard parity."""
+    import streamlit.components.v1 as components
+    components.html(
+        """
+        <script>
+        (function () {
+            const doc = window.parent.document;
+            if (doc.body.dataset.bfChatEscBound === '1') return;
+            doc.body.dataset.bfChatEscBound = '1';
+            doc.addEventListener('keydown', (e) => {
+                if (e.key !== 'Escape') return;
+                // Only close if the chat panel is actually rendered
+                const panel = doc.querySelector('.bf-chat-marker');
+                if (!panel) return;
+                // Trigger the same URL-based close as the ✕ button
+                const closer = doc.querySelector('.bf-chat-close');
+                if (closer) closer.click();
             });
         })();
         </script>
