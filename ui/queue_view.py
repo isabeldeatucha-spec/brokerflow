@@ -18,6 +18,145 @@ def _esc(s: str) -> str:
     return s.replace("$", "&#36;")
 
 
+# Display labels for agent_origin / Drafted-by attribution.
+_AGENT_LABELS = {
+    "retailer_pitcher": "Retailer Pitcher",
+    "brand_scout":      "Brand Scout",
+    "new_item_forms":   "New Item Forms",
+}
+
+
+# Inline phrases we linkify into a clickable doc reference.
+# (regex pattern → doc_type to open)
+_LINKIFY_PATTERNS: list[tuple[str, str]] = [
+    (r"\bsell sheet \+ cost build attached\b",  "sell_sheet"),
+    (r"\bsell sheet attached\b",                "sell_sheet"),
+    (r"\brenewal sheet attached\b",             "sell_sheet"),
+    (r"\bone-pager\b",                          "one_pager"),
+    (r"\bUNFI new-item forms? filled\b",        "new_item_form"),
+    (r"\bKeHE new-item forms? drafted\b",       "new_item_form"),
+    (r"\bnew-item forms? filled and ready\b",   "new_item_form"),
+    (r"\bform drafted\b",                       "new_item_form"),
+]
+
+
+def _linkify_doc_refs(text: str, card_id: str, available_doc_types: set[str]) -> str:
+    """Wrap inline doc-reference phrases in <a class="bf-doc-link">.
+    Only links to doc types the card actually produces."""
+    import re
+    out = text
+    for pattern, doc_type in _LINKIFY_PATTERNS:
+        if doc_type not in available_doc_types:
+            continue
+        href = f"?nav=queue&open_doc={card_id}:{doc_type}"
+        out = re.sub(
+            pattern,
+            (lambda m, h=href: f'<a class="bf-doc-link" href="{h}" target="_self">'
+                              f'{m.group(0)}</a>'),
+            out,
+            count=1,
+            flags=re.IGNORECASE,
+        )
+    return out
+
+
+def _render_attachments_row(card: "Card") -> None:
+    """Render the ATTACHMENTS row above action buttons in expanded view.
+    Pulls metadata from doc_storage for everything in card.docs."""
+    from agents._shared import doc_storage as _ds
+    items_html = []
+    for doc_type, label in card.docs:
+        info = _ds.get(card.id, doc_type)
+        # If the seed PDFs haven't been generated yet (first render), the
+        # entry might be missing — show a placeholder rather than crash.
+        meta = "PDF · — pages" if not info else (
+            f"PDF · {info['pages']} page{'s' if info['pages'] != 1 else ''}"
+        )
+        href = f"?nav=queue&open_doc={card.id}:{doc_type}"
+        items_html.append(
+            f'<a class="bf-attach-item" href="{href}" target="_self">'
+            f'<span class="bf-attach-icon">&#128196;</span>'
+            f'<span class="bf-attach-name">{label}</span>'
+            f'<span class="bf-attach-meta">{meta}</span>'
+            f'<span class="bf-attach-open">&#8599; Open</span>'
+            f'</a>'
+        )
+    st.markdown(
+        '<div class="bf-attach-row">'
+        '<div class="bf-attach-h">ATTACHMENTS</div>'
+        + "".join(items_html) +
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def _render_doc_panel() -> None:
+    """Right-side document viewer. Renders only when doc_open is set in
+    session_state. Loads the PDF in an iframe pointing to the static URL."""
+    target = st.session_state.get("doc_open")
+    if not target:
+        return
+    card_id, doc_type = target.split(":", 1)
+    from agents._shared import doc_storage as _ds
+    info = _ds.get(card_id, doc_type)
+    if not info:
+        return
+
+    # Resolve display title from the card
+    title = doc_type.replace("_", " ").title()
+    for c in SEED_CARDS:
+        if c.id == card_id:
+            for dt, label in c.docs:
+                if dt == doc_type:
+                    title = f"{label} — {c.context}"
+                    break
+            break
+
+    # Resolve agent label from the card's first agent_origin entry
+    agent_label = "BrokerFlow"
+    for c in SEED_CARDS:
+        if c.id == card_id and c.agent_origin:
+            agent_label = _AGENT_LABELS.get(c.agent_origin[0], "BrokerFlow")
+            break
+
+    # Click-outside dismisses (anchor over the dim layer)
+    close_href = f"?nav=queue{_preserve_filter_query()}&close_doc=1"
+    st.markdown(
+        f'<a href="{close_href}" target="_self" '
+        f'style="text-decoration:none;">'
+        f'<div class="bf-doc-overlay"></div></a>',
+        unsafe_allow_html=True,
+    )
+
+    with st.container():
+        # Single markdown call so head/body/foot live in ONE
+        # stMarkdownContainer — Streamlit's per-element flex won't split
+        # the panel into multiple stretched siblings.
+        st.markdown(
+            '<div class="bf-doc-marker"></div>'
+            '<div class="bf-doc-head">'
+            f'<div class="bf-doc-title">{title}</div>'
+            '<div class="bf-doc-actions">'
+            f'<a class="bf-doc-action" href="{info["url"]}" target="_blank">'
+            '&#8599; Open in new tab</a>'
+            f'<a class="bf-doc-action" href="{info["url"]}" '
+            'download target="_blank">&darr; Download</a>'
+            f'<a class="bf-doc-action bf-doc-action--close" '
+            f'href="{close_href}" target="_self">&times;</a>'
+            '</div>'
+            '</div>'
+            '<div class="bf-doc-body">'
+            f'<iframe src="{info["url"]}#toolbar=1&navpanes=0" '
+            'title="document"></iframe>'
+            '</div>'
+            '<div class="bf-doc-foot">'
+            f'<span>Generated by {agent_label} &middot; just now</span>'
+            '<a class="bf-doc-foot-regen" href="#">Regenerate</a>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+
+
 # ── Seed data ────────────────────────────────────────────────────────────────
 
 @dataclass
@@ -29,14 +168,23 @@ class ReasoningBullet:
 @dataclass
 class Card:
     id: str
-    type: str            # "EMAIL" | "FOLLOW-UP" | "OPPORTUNITY" | "NEW BRAND"
+    type: str            # Topic tag: "PITCH" | "RENEWAL" | "NEW BRAND" | "NEW ITEM"
     needs_you: bool
-    context: str         # "Costco SE · Marcus"
+    context: str         # "Costco NW · Marcus"
     elapsed: str         # "2m"
     summary_html: str    # 1-2 sentences with <b>...</b> bolded numbers
     primary_action: str  # button label
     skip_label: str = "Skip"
     brand: str = ""      # filter key (matches sidebar BROKER_BRANDS)
+
+    # Agent attribution — list of agent keys that produced this card. Used by
+    # the WHY block "Drafted by:" line and by PDF generation. Order matters
+    # (e.g. NEW BRAND credits Brand Scout → Retailer Pitcher).
+    agent_origin: list[str] = field(default_factory=list)
+    # Documents this card produces. Each is a (doc_type, label) tuple matching
+    # pdf_generator template keys: "sell_sheet" | "one_pager" | "new_item_form"
+    # | "cost_build". Side panel resolves the URL via doc_storage.
+    docs: list[tuple[str, str]] = field(default_factory=list)
 
     # Expanded view
     from_email: str = ""
@@ -51,7 +199,7 @@ class Card:
 SEED_CARDS: list[Card] = [
     Card(
         id="card-1",
-        type="RETAILER PITCHER",
+        type="PITCH",
         needs_you=True,
         context="Costco NW · Marcus",
         elapsed="2m",
@@ -63,6 +211,8 @@ SEED_CARDS: list[Card] = [
         ),
         primary_action="Approve & send",
         brand="Brami",
+        agent_origin=["retailer_pitcher"],
+        docs=[("sell_sheet", "Sell sheet"), ("cost_build", "Cost build")],
         drafted_label="DRAFTED PITCH",
         drafted_to="marcus.alvarez@costco.com",
         drafted_subject="Brami × Costco NW — May reset, 142 stores",
@@ -109,7 +259,7 @@ SEED_CARDS: list[Card] = [
     ),
     Card(
         id="card-2",
-        type="BRAND SCOUT",
+        type="NEW BRAND",
         needs_you=True,
         context="Faire signal",
         elapsed="4h",
@@ -121,6 +271,8 @@ SEED_CARDS: list[Card] = [
         ),
         primary_action="Review verdict",
         brand="",
+        agent_origin=["brand_scout", "retailer_pitcher"],
+        docs=[("one_pager", "Brand one-pager")],
         drafted_label="DRAFTED ACTION",
         drafted_to="founders@steepsparkling.co",
         drafted_subject="Steep Sparkling × Nadia — quick intro",
@@ -168,7 +320,7 @@ SEED_CARDS: list[Card] = [
     ),
     Card(
         id="card-3",
-        type="NEW ITEM FORMS",
+        type="NEW ITEM",
         needs_you=False,
         context="Whole Foods · Olipop",
         elapsed="12m",
@@ -179,6 +331,8 @@ SEED_CARDS: list[Card] = [
         ),
         primary_action="Review fields",
         brand="Olipop",
+        agent_origin=["new_item_forms"],
+        docs=[("new_item_form", "UNFI new-item form")],
         drafted_label="FORMS DRAFTED",
         drafted_to="UNFI new-item portal — Olipop, 6 SKUs",
         drafted_subject="Olipop · Whole Foods · 6 SKUs · UNFI form package",
@@ -227,7 +381,7 @@ SEED_CARDS: list[Card] = [
     ),
     Card(
         id="card-4",
-        type="RETAILER PITCHER",
+        type="RENEWAL",
         needs_you=False,
         context="Sprouts · Danielle",
         elapsed="3h",
@@ -239,6 +393,8 @@ SEED_CARDS: list[Card] = [
         ),
         primary_action="Approve & send",
         brand="Spudsy",
+        agent_origin=["retailer_pitcher"],
+        docs=[("sell_sheet", "Renewal sheet")],
         drafted_label="DRAFTED PITCH",
         drafted_to="danielle.ortiz@sprouts.com",
         drafted_subject="Spudsy FY27 renewal — Sprouts BA",
@@ -275,7 +431,7 @@ SEED_CARDS: list[Card] = [
     ),
     Card(
         id="card-5",
-        type="BRAND SCOUT",
+        type="NEW BRAND",
         needs_you=False,
         context="Instacart signal",
         elapsed="1h",
@@ -287,6 +443,8 @@ SEED_CARDS: list[Card] = [
         ),
         primary_action="Review verdict",
         brand="",
+        agent_origin=["brand_scout", "retailer_pitcher"],
+        docs=[("one_pager", "Brand one-pager")],
         drafted_label="DRAFTED SUMMARY",
         drafted_to="Internal — Brand Scout note · Stride Bites",
         drafted_subject="Stride Bites — high velocity, thin margin",
@@ -332,7 +490,7 @@ SEED_CARDS: list[Card] = [
     ),
     Card(
         id="card-6",
-        type="NEW ITEM FORMS",
+        type="NEW ITEM",
         needs_you=False,
         context="KeHE · Tia Lupita",
         elapsed="6h",
@@ -344,6 +502,8 @@ SEED_CARDS: list[Card] = [
         ),
         primary_action="Review fields",
         brand="Tia Lupita",
+        agent_origin=["new_item_forms"],
+        docs=[("new_item_form", "KeHE new-item form")],
         drafted_label="FORM DRAFTED",
         drafted_to="KeHE new-item portal — Tia Lupita salsa verde 16oz",
         drafted_subject="Tia Lupita · KeHE · salsa verde 16oz · 38/42 filled",
@@ -474,6 +634,241 @@ div[data-testid="stLayoutWrapper"]:has(.bf-ask-marker)::after {
     pointer-events: none;
     z-index: 1;
 }
+
+/* ── Drafted-by line (in WHY block) ─────────────────────────────── */
+.bf-drafted-by {
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    color: #8B8A83;
+    margin: -2px 0 12px;
+}
+.bf-drafted-by-agent {
+    color: #1A1A18;
+    font-weight: 500;
+}
+.bf-drafted-by-time {
+    color: #B0AFA8;
+}
+
+/* ── Inline attached-doc reference ──────────────────────────────── */
+.bf-doc-link,
+.bf-doc-link:link,
+.bf-doc-link:visited {
+    color: #B07A1C;
+    text-decoration: underline;
+    text-decoration-color: #E8A33D;
+    text-underline-offset: 2px;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration-thickness: 1px;
+}
+.bf-doc-link:hover {
+    color: #8E5E10;
+    text-decoration-color: #1A1A18;
+}
+.bf-doc-link::after {
+    content: " ↗";
+    font-size: 10px;
+    color: #B07A1C;
+}
+
+/* ── Attachments row (in expanded card, above action buttons) ──── */
+.bf-attach-row {
+    border-top: 1px solid #F2F2EE;
+    padding: 16px 0 12px;
+    margin-top: 18px;
+}
+.bf-attach-h {
+    font-family: 'Inter', sans-serif;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #8B8A83;
+    margin-bottom: 10px;
+}
+.bf-attach-item,
+.bf-attach-item:link,
+.bf-attach-item:visited {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 8px 0;
+    text-decoration: none;
+    border-top: 1px solid #F2F2EE;
+}
+.bf-attach-item:first-of-type { border-top: none; }
+.bf-attach-item:hover .bf-attach-name { color: #1A1A18; }
+.bf-attach-icon {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    color: #8B8A83;
+    width: 22px;
+    text-align: center;
+}
+.bf-attach-name {
+    font-family: 'Inter', sans-serif;
+    font-size: 13.5px;
+    color: #57564F;
+    flex: 1;
+}
+.bf-attach-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #B0AFA8;
+    margin-right: 14px;
+}
+.bf-attach-open {
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    color: #B07A1C;
+    letter-spacing: 0.02em;
+}
+
+/* ── Document side panel (slides in from right) ─────────────────── */
+.bf-doc-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 10, 10, 0.22);
+    z-index: 250;
+    animation: bf-fade-in 0.18s ease-out;
+}
+@keyframes bf-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+div[data-testid="stLayoutWrapper"]:has(.bf-doc-marker) {
+    position: fixed !important;
+    top: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    left: auto !important;
+    width: 540px !important;
+    height: 100vh !important;
+    background: #FAFAF7 !important;
+    border-left: 1px solid #EAEAE4 !important;
+    border-top: none !important;
+    border-bottom: none !important;
+    border-right: none !important;
+    border-radius: 0 !important;
+    box-shadow: -16px 0 40px -8px rgba(10, 10, 10, 0.18) !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    z-index: 260 !important;
+    overflow: hidden !important;
+    animation: bf-doc-slide 0.22s ease-out;
+}
+@keyframes bf-doc-slide {
+    from { transform: translateX(40px); opacity: 0.4; }
+    to   { transform: translateX(0); opacity: 1; }
+}
+div[data-testid="stLayoutWrapper"]:has(.bf-doc-marker) > div[data-testid="stVerticalBlock"] {
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0 !important;
+    overflow: hidden !important;
+}
+/* All Streamlit wrappers down to our markdown div must also stretch + flex
+   so .bf-doc-body's flex:1 has a definite parent height to grow into */
+div[data-testid="stLayoutWrapper"]:has(.bf-doc-marker)
+  > div[data-testid="stVerticalBlock"]
+  > div[data-testid="stElementContainer"] {
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+}
+div[data-testid="stLayoutWrapper"]:has(.bf-doc-marker)
+  div[data-testid="stMarkdown"],
+div[data-testid="stLayoutWrapper"]:has(.bf-doc-marker)
+  div[data-testid="stMarkdownContainer"] {
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 0 !important;
+}
+@media (max-width: 820px) {
+    div[data-testid="stLayoutWrapper"]:has(.bf-doc-marker) {
+        width: 100vw !important;
+    }
+}
+
+.bf-doc-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 22px 26px 18px;
+    border-bottom: 1px solid #EAEAE4;
+}
+.bf-doc-title {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-size: 19px;
+    line-height: 1.25;
+    color: #1A1A18;
+    flex: 1;
+    min-width: 0;
+}
+.bf-doc-actions {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    flex-shrink: 0;
+}
+.bf-doc-action,
+.bf-doc-action:link,
+.bf-doc-action:visited {
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    color: #57564F;
+    text-decoration: none;
+    padding: 6px 10px;
+    border-radius: 6px;
+    transition: background 0.12s ease;
+    white-space: nowrap;
+}
+.bf-doc-action:hover { background: #F2F2EE; color: #1A1A18; }
+.bf-doc-action--close {
+    font-size: 18px;
+    line-height: 1;
+    padding: 4px 10px;
+    color: #8B8A83;
+}
+.bf-doc-body {
+    flex: 1 1 auto;
+    overflow: hidden;
+    background: #1A1A18;
+}
+.bf-doc-body iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: #1A1A18;
+}
+.bf-doc-foot {
+    flex: 0 0 auto;
+    border-top: 1px solid #EAEAE4;
+    padding: 12px 26px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'Inter', sans-serif;
+    font-size: 11.5px;
+    color: #8B8A83;
+}
+.bf-doc-foot-regen,
+.bf-doc-foot-regen:link {
+    color: #8B8A83;
+    text-decoration: none;
+}
+.bf-doc-foot-regen:hover { color: #1A1A18; text-decoration: underline; }
 
 /* ── Slide-up chat panel ────────────────────────────────────────── */
 /* Streamlit container holding .bf-chat-marker becomes a fixed bottom panel.
@@ -1105,8 +1500,12 @@ def _render_expanded(card: Card) -> None:
             unsafe_allow_html=True,
         )
 
+        avail_doc_types = {dt for dt, _ in card.docs}
+        summary_with_links = _linkify_doc_refs(
+            _esc(card.summary_html), card.id, avail_doc_types,
+        )
         st.markdown(
-            f'<div class="bf-card-summary">{_esc(card.summary_html)}</div>',
+            f'<div class="bf-card-summary">{summary_with_links}</div>',
             unsafe_allow_html=True,
         )
 
@@ -1142,18 +1541,21 @@ def _render_expanded(card: Card) -> None:
             )
         else:
             body_html = st.session_state.get(f"draft_body_{card.id}", card.drafted_body)
+            body_with_links = _linkify_doc_refs(
+                _esc(body_html), card.id, avail_doc_types,
+            )
             st.markdown(
                 '<div class="bf-draft-wrap">'
                 f'<div class="bf-draft-subject">Subject: {card.drafted_subject}</div>'
-                f'<div class="bf-draft-body">{_esc(body_html)}</div>'
+                f'<div class="bf-draft-body">{body_with_links}</div>'
                 '</div>',
                 unsafe_allow_html=True,
             )
 
-        # WHY block — Brand Scout cards say "FLAGGED", others say "DRAFTED"
+        # WHY block — NEW BRAND cards say "FLAGGED", others say "DRAFTED"
         why_label = (
             "WHY BROKERFLOW FLAGGED THIS"
-            if card.type == "BRAND SCOUT"
+            if card.type == "NEW BRAND"
             else "WHY BROKERFLOW DRAFTED THIS"
         )
         bullets_html = "".join(
@@ -1163,11 +1565,23 @@ def _render_expanded(card: Card) -> None:
             + '</li>'
             for b in card.reasoning
         )
+        drafted_by = " &rarr; ".join(_AGENT_LABELS.get(a, a) for a in card.agent_origin)
+        drafted_by_html = (
+            f'<div class="bf-drafted-by">'
+            f'Drafted by: <span class="bf-drafted-by-agent">{drafted_by}</span> '
+            f'<span class="bf-drafted-by-time">&middot; {card.elapsed} ago</span>'
+            f'</div>'
+        ) if drafted_by else ""
         st.markdown(
             f'<div class="bf-block-h">{why_label}</div>'
+            f'{drafted_by_html}'
             f'<ul class="bf-reasoning">{bullets_html}</ul>',
             unsafe_allow_html=True,
         )
+
+        # Attachments row (above action buttons)
+        if card.docs:
+            _render_attachments_row(card)
 
         st.markdown('<div style="margin-top:18px;"></div>', unsafe_allow_html=True)
         _render_action_buttons(card)
@@ -1380,18 +1794,19 @@ def _md_to_html(md: str) -> str:
 def render_queue_view() -> None:
     st.markdown(_QUEUE_CSS, unsafe_allow_html=True)
 
-    # URL-driven chat actions (close / clear)
-    if st.query_params.get("chat_close") == "1":
-        st.session_state["chat_open"] = False
-        st.session_state.pop("chat_pending_query", None)
-        st.query_params.clear()
-        st.rerun()
-    if st.query_params.get("chat_clear") == "1":
-        st.session_state["ask_conversation"] = []
-        st.session_state.pop("chat_pending_query", None)
-        st.session_state["bf_chat_followup_last"] = ""
-        st.query_params.clear()
-        st.rerun()
+    # Lazy-generate the seed PDFs once per session. Skipped if already on
+    # disk (idempotent). Doesn't block render — runs synchronously but
+    # is fast (~50ms total for the 6 seed cards) and only happens once.
+    try:
+        from ui.seed_docs import ensure_seed_docs
+        ensure_seed_docs()
+    except Exception as exc:  # noqa: BLE001
+        print(f"[queue_view] seed PDF generation failed: "
+              f"{type(exc).__name__}: {exc}")
+
+    # All ?nav=, ?expand=, ?open_doc=, ?close_doc=, ?chat_*= query
+    # params are now handled by broker_shell.consume_nav_query_param()
+    # in a single pass before render_queue_view() runs.
 
     _render_ask_bar()
 
@@ -1438,6 +1853,11 @@ def render_queue_view() -> None:
         else:
             _render_collapsed(card)
 
-    # Chat panel renders last so it overlays the queue
+    # Chat panel renders so it overlays the queue
     if st.session_state.get("chat_open"):
         _render_chat_panel()
+
+    # Doc side panel renders LAST (highest z) so it overlays everything,
+    # including the chat panel
+    if st.session_state.get("doc_open"):
+        _render_doc_panel()

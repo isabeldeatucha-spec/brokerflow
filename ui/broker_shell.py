@@ -341,22 +341,29 @@ def render_shell(
 
 
 def consume_nav_query_param() -> bool:
-    """Translate ?nav=... and ?expand=... query params into session state.
-    Returns True if the page should immediately rerun."""
-    nav      = st.query_params.get("nav")
-    filter_q = st.query_params.get("filter")
-    brand_q  = st.query_params.get("brand")
-    expand_q = st.query_params.get("expand")
+    """Translate ?nav=... ?expand=... ?open_doc=... ?close_doc=...
+    ?chat_close=... ?chat_clear=... query params into session state in
+    a single pass. Returns True if the page should immediately rerun."""
+    nav        = st.query_params.get("nav")
+    filter_q   = st.query_params.get("filter")
+    brand_q    = st.query_params.get("brand")
+    expand_q   = st.query_params.get("expand")
+    open_doc   = st.query_params.get("open_doc")
+    close_doc  = st.query_params.get("close_doc")
+    chat_close = st.query_params.get("chat_close")
+    chat_clear = st.query_params.get("chat_clear")
 
-    if not nav and not expand_q:
+    if not any([nav, expand_q, open_doc, close_doc, chat_close, chat_clear]):
         return False
 
     if nav == "queue":
         st.session_state["workspace"]    = "queue"
         st.session_state["queue_filter"] = filter_q or "today"
         st.session_state["queue_brand"]  = brand_q
-        # Only clear expansion when not navigating *into* a specific card.
-        st.session_state["expanded_card"] = expand_q or None
+        # Preserve expansion when only opening/closing a doc — otherwise
+        # clear it (no expand_q in URL means "navigate to top of queue").
+        if not (open_doc or close_doc):
+            st.session_state["expanded_card"] = expand_q or None
     elif nav == "brand_scout":
         st.session_state["workspace"] = "brand_scout"
     elif nav == "retailer_pitcher":
@@ -366,8 +373,18 @@ def consume_nav_query_param() -> bool:
     elif expand_q and not nav:
         # ?expand=card-id with no nav — just set expansion in current view.
         st.session_state["expanded_card"] = expand_q
-    else:
-        return False
+
+    if open_doc:
+        st.session_state["doc_open"] = open_doc
+    if close_doc == "1":
+        st.session_state.pop("doc_open", None)
+    if chat_close == "1":
+        st.session_state["chat_open"] = False
+        st.session_state.pop("chat_pending_query", None)
+    if chat_clear == "1":
+        st.session_state["ask_conversation"] = []
+        st.session_state.pop("chat_pending_query", None)
+        st.session_state["bf_chat_followup_last"] = ""
 
     st.query_params.clear()
     return True

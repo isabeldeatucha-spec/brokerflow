@@ -15,3 +15,6 @@ mem0/
 .dave-run.md
 done_state.png
 empty_state.png
+
+# Lazily generated agent PDFs (regenerated on first queue render).
+ui/static/agent_docs/

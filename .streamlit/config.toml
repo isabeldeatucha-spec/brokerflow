@@ -1,0 +1,4 @@
+[server]
+# Serve files from <app_dir>/static/ at /app/static/<path>.
+# Used by the side panel to load generated PDFs (see ui/static/agent_docs/).
+enableStaticServing = true
