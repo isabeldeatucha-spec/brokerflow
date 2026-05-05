@@ -2183,31 +2183,49 @@ def _inject_card_expand_persistence() -> None:
     (Send / Skip / Edit), Streamlit reruns and emits fresh HTML —
     which defaults all <details> to closed. This script syncs each
     card's open state to localStorage on toggle and restores it on
-    every render so card state survives reruns."""
+    every render so card state survives reruns.
+
+    On a "fresh entry" (after navigating from landing), the persistence
+    is wiped so the broker doesn't see a card pre-expanded from a
+    previous session. queue_fresh_entry is set to True by the goto=app
+    and goto=landing handlers and consumed here."""
     import streamlit.components.v1 as components
+    fresh_entry = bool(st.session_state.pop("queue_fresh_entry", False))
+    fresh_js = "true" if fresh_entry else "false"
     components.html(
         """
         <script>
         (function () {
+            const FRESH = """ + fresh_js + """;
             const doc = window.parent.document;
             const cards = doc.querySelectorAll(
                 '.bf-card-details[data-card-id]'
             );
             if (!cards.length) return;
 
-            // Clean up stale localStorage entries for cards that are
-            // no longer in the DOM (e.g. sent/skipped). Without this
-            // an "approved" card would silently re-open if it ever
-            // returned to the queue.
-            const visibleIds = new Set(
-                Array.from(cards).map(c => c.dataset.cardId)
-            );
-            for (let i = localStorage.length - 1; i >= 0; i--) {
-                const key = localStorage.key(i);
-                if (key && key.startsWith('bf-card-open-')) {
-                    const cid = key.slice('bf-card-open-'.length);
-                    if (!visibleIds.has(cid)) {
+            // On fresh queue entry, wipe ALL bf-card-open-* entries
+            // so the user doesn't see a card pre-expanded from a
+            // previous browser session.
+            if (FRESH) {
+                for (let i = localStorage.length - 1; i >= 0; i--) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith('bf-card-open-')) {
                         localStorage.removeItem(key);
+                    }
+                }
+            } else {
+                // Otherwise just clean up entries for cards that are
+                // no longer visible (sent/skipped).
+                const visibleIds = new Set(
+                    Array.from(cards).map(c => c.dataset.cardId)
+                );
+                for (let i = localStorage.length - 1; i >= 0; i--) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith('bf-card-open-')) {
+                        const cid = key.slice('bf-card-open-'.length);
+                        if (!visibleIds.has(cid)) {
+                            localStorage.removeItem(key);
+                        }
                     }
                 }
             }

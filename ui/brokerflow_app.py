@@ -2466,6 +2466,9 @@ try:
     if st.query_params.get("goto") == "landing":
         st.session_state["investor_entered"] = False
         st.session_state["workspace"] = None
+        # Mark next queue render as a fresh entry so cards start
+        # collapsed (don't restore previous-session expand state).
+        st.session_state["queue_fresh_entry"] = True
         st.query_params.clear()
         st.rerun()
     if st.query_params.get("goto") == "app":
@@ -2475,6 +2478,7 @@ try:
         st.session_state["queue_filter"] = "today"
         st.session_state["queue_brand"] = None
         st.session_state["expanded_card"] = None
+        st.session_state["queue_fresh_entry"] = True
         st.query_params.clear()
         st.rerun()
 
