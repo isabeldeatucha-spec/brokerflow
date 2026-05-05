@@ -1548,6 +1548,65 @@ div[data-testid="stLayoutWrapper"]:has(.bf-card-details[open]) {
     border-top: 1px solid #F2F2EE;
 }
 
+/* Edit-mode summary gets the same blue accent as the open <details>
+   summary so the active card is visually obvious. */
+.bf-card-summary--editing {
+    border-left: 3px solid #2D5F8A;
+    padding-left: 14px;
+    margin: 6px 0 16px;
+}
+
+/* Read-only subject label above the editable body */
+.bf-edit-subject {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 10px 16px;
+    background: #FAFAF7;
+    border: 1px solid #EAEAE4;
+    border-radius: 8px 8px 0 0;
+    border-bottom: none;
+    font-family: 'Inter', sans-serif;
+    font-size: 13.5px;
+    color: #1A1A18;
+    margin-bottom: 0;
+}
+.bf-edit-subject-label {
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #8B8A83;
+    flex-shrink: 0;
+}
+.bf-edit-subject-value {
+    font-weight: 500;
+}
+
+/* Style the Streamlit textarea inside the edit-mode card to feel
+   continuous with the subject row above it. */
+div[data-testid="stLayoutWrapper"]:has(.bf-card-edit-mode)
+  .stTextArea textarea {
+    background: #FFFFFF !important;
+    border: 1px solid #EAEAE4 !important;
+    border-top: none !important;
+    border-radius: 0 0 8px 8px !important;
+    padding: 16px !important;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 14px !important;
+    line-height: 1.6 !important;
+    color: #1A1A18 !important;
+    box-shadow: none !important;
+    margin-bottom: 14px !important;
+    min-height: 240px !important;
+}
+div[data-testid="stLayoutWrapper"]:has(.bf-card-edit-mode)
+  .stTextArea textarea:focus {
+    border-color: #1A1A18 !important;
+    border-top: none !important;
+    outline: none !important;
+}
+
 /* Expanded blocks */
 .bf-block-h {
     font-family: 'Inter', sans-serif;
@@ -1770,15 +1829,29 @@ def _handle_skip(card: Card) -> None:
 
 
 def _handle_edit(card: Card) -> None:
-    """Edit handler — for v1, opens the card and toasts a hint that
-    inline edit is coming next. The persist-open script ensures the
-    card stays expanded after the rerun so the broker can read the
-    drafted body."""
-    print(f"[edit] requested for {card.id}")
-    # Mark card as expanded so the JS persist script keeps it open
-    # after this rerun.
-    st.session_state.setdefault("queue_open_cards", set()).add(card.id)
-    st.toast(f"Editing {card.context} · inline edit coming soon")
+    """Enter edit mode — swaps the static drafted-reply HTML for a
+    Streamlit textarea on the next render."""
+    print(f"[edit] start for {card.id}")
+    st.session_state[f"editing_{card.id}"] = True
+    st.rerun()
+
+
+def _handle_save_edit(card: Card) -> None:
+    """Persist the textarea value (already in session_state via
+    widget binding) and exit edit mode."""
+    print(f"[edit] save for {card.id}")
+    st.session_state[f"editing_{card.id}"] = False
+    st.toast(f"Saved · {card.context}")
+    st.rerun()
+
+
+def _handle_cancel_edit(card: Card) -> None:
+    """Discard pending edits and revert the body to the original
+    drafted_body. Removing the session_state key unbinds the textarea
+    value so the next render falls back to the seed text."""
+    print(f"[edit] cancel for {card.id}")
+    st.session_state[f"editing_{card.id}"] = False
+    st.session_state.pop(f"draft_body_{card.id}", None)
     st.rerun()
 
 
@@ -1796,9 +1869,13 @@ def _build_extras_html(card: Card) -> str:
             f'<div class="bf-from">{_esc(card.from_body)}</div>'
         )
 
-    # DRAFTED block
+    # DRAFTED block — prefer the saved (edited) body from session_state
+    # if the broker has edited this card; fall back to the seed body.
+    current_body = st.session_state.get(
+        f"draft_body_{card.id}", card.drafted_body,
+    )
     body_with_links = _linkify_doc_refs(
-        _esc(card.drafted_body), card.id, avail_doc_types,
+        _esc(current_body), card.id, avail_doc_types,
     )
     parts.append(
         f'<div class="bf-block-h">{card.drafted_label} '
@@ -1865,16 +1942,17 @@ def _build_extras_html(card: Card) -> str:
 
 
 def _render_card_unified(card: Card) -> None:
-    """Single render for all cards. Extras live in a <details> so expand
-    is a pure CSS state change — no Streamlit rerun, no re-fetch.
+    """Single render for all cards.
 
-    Layout:
-        [container border=True]
-          [HEADER ROW columns]
-            LEFT col: tag + needs + context
-            RIGHT col: time | primary | edit | skip   (compact pills)
-          [summary + <details> with extras]
+    Two modes:
+      - Normal: header + summary + <details> with FROM/DRAFTED/WHY/
+        ATTACHMENTS. Expand is pure CSS (instant, no rerun).
+      - Edit: header + summary + always-expanded extras with the
+        drafted body replaced by a Streamlit st.text_area. Primary
+        and Edit buttons swap to Save and Cancel.
     """
+    is_editing = bool(st.session_state.get(f"editing_{card.id}", False))
+
     avail_doc_types = {dt for dt, _ in card.docs}
     summary_with_links = _linkify_doc_refs(
         _esc(card.summary_html), card.id, avail_doc_types,
@@ -1903,8 +1981,6 @@ def _render_card_unified(card: Card) -> None:
 
         # Header row — left flexes, right column is sized by the
         # nested action row's fixed widths (CSS sets flex-basis).
-        # Outer ratio is just a starting guess; the action group is
-        # pixel-pinned so the right edge always lands at card padding.
         left_col, right_col = st.columns([3, 2])
         with left_col:
             st.markdown(header_left_html, unsafe_allow_html=True)
@@ -1917,34 +1993,158 @@ def _render_card_unified(card: Card) -> None:
                     f'<div class="bf-card-time-cell">{elapsed_html}</div>',
                     unsafe_allow_html=True,
                 )
-            with prim_col:
-                if st.button(card.primary_action, key=f"prim_{card.id}",
-                             type="primary", use_container_width=True):
-                    _handle_send(card)
-            with edit_col:
-                if st.button("Edit", key=f"edit_{card.id}",
-                             use_container_width=True):
-                    _handle_edit(card)
-            with skip_col:
-                if st.button(card.skip_label, key=f"skip_{card.id}",
-                             type="tertiary", use_container_width=True):
-                    _handle_skip(card)
+            if is_editing:
+                with prim_col:
+                    if st.button("Save", key=f"save_{card.id}",
+                                 type="primary", use_container_width=True):
+                        _handle_save_edit(card)
+                with edit_col:
+                    if st.button("Cancel", key=f"cancel_{card.id}",
+                                 use_container_width=True):
+                        _handle_cancel_edit(card)
+                with skip_col:
+                    if st.button(card.skip_label, key=f"skip_{card.id}",
+                                 type="tertiary", use_container_width=True):
+                        _handle_skip(card)
+            else:
+                with prim_col:
+                    if st.button(card.primary_action, key=f"prim_{card.id}",
+                                 type="primary", use_container_width=True):
+                        _handle_send(card)
+                with edit_col:
+                    if st.button("Edit", key=f"edit_{card.id}",
+                                 use_container_width=True):
+                        _handle_edit(card)
+                with skip_col:
+                    if st.button(card.skip_label, key=f"skip_{card.id}",
+                                 type="tertiary", use_container_width=True):
+                        _handle_skip(card)
 
-        # Summary + collapsible extras. data-card-id lets the
-        # restore-open-state script remember which cards the user had
-        # expanded across Streamlit reruns (Send/Skip/Edit clicks).
+        if is_editing:
+            _render_card_edit_mode(card, summary_with_links)
+        else:
+            # Summary + collapsible extras. data-card-id lets the
+            # restore-open-state script remember which cards the user
+            # had expanded across Streamlit reruns.
+            st.markdown(
+                f'<details class="bf-card-details" data-card-id="{card.id}">'
+                '<summary class="bf-card-summary-row">'
+                f'<div class="bf-card-summary">{summary_with_links}</div>'
+                '<span class="bf-show-reasoning">'
+                'Show reasoning <span class="bf-chevron">&darr;</span>'
+                '</span>'
+                '</summary>'
+                + _build_extras_html(card)
+                + '</details>',
+                unsafe_allow_html=True,
+            )
+
+
+def _render_card_edit_mode(card: Card, summary_with_links: str) -> None:
+    """Always-expanded edit view: same blocks as the static expanded
+    view, but the drafted body is a Streamlit text_area so the broker
+    can rewrite it. Subject stays read-only above the textarea."""
+    avail_doc_types = {dt for dt, _ in card.docs}
+
+    # Summary (with the same active-card blue accent border as <details>[open])
+    st.markdown(
+        '<div class="bf-card-extras bf-card-edit-mode">'
+        f'<div class="bf-card-summary bf-card-summary--editing">'
+        f'{summary_with_links}</div>',
+        unsafe_allow_html=True,
+    )
+
+    # FROM block (only if email card)
+    if card.from_email:
         st.markdown(
-            f'<details class="bf-card-details" data-card-id="{card.id}">'
-            '<summary class="bf-card-summary-row">'
-            f'<div class="bf-card-summary">{summary_with_links}</div>'
-            '<span class="bf-show-reasoning">'
-            'Show reasoning <span class="bf-chevron">&darr;</span>'
-            '</span>'
-            '</summary>'
-            + _build_extras_html(card)
-            + '</details>',
+            f'<div class="bf-block-h">FROM {card.from_email}</div>'
+            f'<div class="bf-from">{_esc(card.from_body)}</div>',
             unsafe_allow_html=True,
         )
+
+    # DRAFTED block header + read-only subject
+    st.markdown(
+        f'<div class="bf-block-h">{card.drafted_label} '
+        f'&middot; TO {card.drafted_to}</div>'
+        '<div class="bf-edit-subject">'
+        f'<span class="bf-edit-subject-label">Subject</span>'
+        f'<span class="bf-edit-subject-value">{card.drafted_subject}</span>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+    # Editable body — Streamlit widget, value persists across reruns
+    # via the session_state key.
+    current_body = st.session_state.get(
+        f"draft_body_{card.id}", card.drafted_body,
+    )
+    st.text_area(
+        "Edit drafted body",
+        value=current_body,
+        key=f"draft_body_{card.id}",
+        height=320,
+        label_visibility="collapsed",
+    )
+
+    # WHY block (same as normal mode)
+    why_label = (
+        "WHY BROKERFLOW FLAGGED THIS"
+        if card.type == "NEW BRAND"
+        else "WHY BROKERFLOW DRAFTED THIS"
+    )
+    bullets_html = "".join(
+        '<li>'
+        f'<span class="bf-reason-text">{_esc(b.text)}</span>'
+        + (f'<span class="bf-reason-src">&#8599; {b.source}</span>'
+           if b.source else '')
+        + '</li>'
+        for b in card.reasoning
+    )
+    drafted_by = " &rarr; ".join(
+        _AGENT_LABELS.get(a, a) for a in card.agent_origin
+    )
+    drafted_by_html = (
+        f'<div class="bf-drafted-by">'
+        f'Drafted by: <span class="bf-drafted-by-agent">{drafted_by}</span> '
+        f'<span class="bf-drafted-by-time">&middot; {card.elapsed} ago</span>'
+        f'</div>'
+    ) if drafted_by else ""
+
+    parts = [
+        f'<div class="bf-block-h">{why_label}</div>'
+        f'{drafted_by_html}'
+        f'<ul class="bf-reasoning">{bullets_html}</ul>'
+    ]
+
+    # Attachments row
+    if card.docs:
+        from agents._shared import doc_storage as _ds
+        items_html = []
+        for doc_type, label in card.docs:
+            info = _ds.get(card.id, doc_type)
+            meta = "PDF · — pages" if not info else (
+                f"PDF · {info['pages']} page"
+                f"{'s' if info['pages'] != 1 else ''}"
+            )
+            doc_id = f"{card.id}:{doc_type}"
+            items_html.append(
+                f'<a class="bf-attach-item" href="#" '
+                f'data-doc-id="{doc_id}">'
+                f'<span class="bf-attach-icon">&#128196;</span>'
+                f'<span class="bf-attach-name">{label}</span>'
+                f'<span class="bf-attach-meta">{meta}</span>'
+                f'<span class="bf-attach-open">&#8599; Open</span>'
+                f'</a>'
+            )
+        parts.append(
+            '<div class="bf-attach-row">'
+            '<div class="bf-attach-h">ATTACHMENTS</div>'
+            + "".join(items_html) +
+            '</div>'
+        )
+
+    parts.append('</div>')  # close bf-card-extras
+    st.markdown("".join(parts), unsafe_allow_html=True)
 
 
 def _preserve_filter_query() -> str:
