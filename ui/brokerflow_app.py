@@ -2501,11 +2501,10 @@ try:
     elif workspace == "queue":
         active_brand = st.session_state.get("queue_brand")
         active_filter = st.session_state.get("queue_filter", "today")
-        crumb = [("sedge", False)]
         if active_brand:
-            crumb.append((active_brand.lower(), True))
+            crumb = [(active_brand.lower(), True)]
         else:
-            crumb.append((active_filter.replace("_", " "), True))
+            crumb = [(active_filter.replace("_", " "), True)]
         render_shell(
             active_route="queue",
             crumb_parts=crumb,
@@ -2516,7 +2515,7 @@ try:
     elif workspace == "brand_scout":
         render_shell(
             active_route="brand_scout",
-            crumb_parts=[("sedge", False), ("agents", False), ("brand scout", True)],
+            crumb_parts=[("agents", False), ("brand scout", True)],
             body=render_brand_scout_workspace,
             show_ask=False,
         )
@@ -2524,8 +2523,7 @@ try:
         from ui.per_agent_page import render_per_agent_page
         render_shell(
             active_route="retailer_pitcher",
-            crumb_parts=[("sedge", False), ("agents", False),
-                         ("retailer pitcher", True)],
+            crumb_parts=[("agents", False), ("retailer pitcher", True)],
             body=lambda: render_per_agent_page("retailer_pitcher"),
             show_ask=False,
         )
@@ -2533,8 +2531,7 @@ try:
         from ui.per_agent_page import render_per_agent_page
         render_shell(
             active_route="admin_ops",
-            crumb_parts=[("sedge", False), ("agents", False),
-                         ("new item forms", True)],
+            crumb_parts=[("agents", False), ("new item forms", True)],
             body=lambda: render_per_agent_page("admin_ops"),
             show_ask=False,
         )
