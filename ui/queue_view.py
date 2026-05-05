@@ -475,85 +475,243 @@ div[data-testid="stLayoutWrapper"]:has(.bf-ask-marker)::after {
     z-index: 1;
 }
 
-/* ── Ask response card ──────────────────────────────────────────── */
-.bf-ask-response {
-    background: #FFFFFF;
-    border: 1px solid #EAEAE4;
-    border-radius: 12px;
-    padding: 24px 26px 20px;
-    margin: 12px 0 28px;
+/* ── Slide-up chat panel ────────────────────────────────────────── */
+/* Streamlit container holding .bf-chat-marker becomes a fixed bottom panel.
+   :has() scopes the absolute styling without leaking onto other pages.
+   Width is explicit (calc) so right:0 doesn't get ignored when the
+   inner stLayoutWrapper is already 100% wide in normal flow. */
+div[data-testid="stLayoutWrapper"]:has(.bf-chat-marker) {
+    position: fixed !important;
+    left: 240px !important;
+    right: 0 !important;
+    bottom: 80px !important;          /* leave room for fixed input bar */
+    width: calc(100vw - 240px) !important;
+    height: calc(70vh - 80px) !important;
+    background: #FAFAF7 !important;
+    border-top: 1px solid #EAEAE4 !important;
+    border-left: none !important;
+    border-right: none !important;
+    border-bottom: none !important;
+    border-radius: 16px 16px 0 0 !important;
+    box-shadow: 0 -16px 40px -16px rgba(10, 10, 10, 0.12) !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    z-index: 200 !important;
+    overflow: hidden !important;
+    animation: bf-chat-slide 0.22s ease-out;
 }
-.bf-ask-response-head {
+div[data-testid="stLayoutWrapper"]:has(.bf-chat-marker) > div[data-testid="stVerticalBlock"] {
+    border: none !important;
+    background: transparent !important;
+    padding: 24px 36px 24px !important;
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0 !important;
+    overflow: hidden !important;
+}
+@keyframes bf-chat-slide {
+    from { transform: translateY(20px); opacity: 0.6; }
+    to   { transform: translateY(0); opacity: 1; }
+}
+@media (max-width: 820px) {
+    div[data-testid="stLayoutWrapper"]:has(.bf-chat-marker) {
+        left: 0 !important;
+        height: 88vh !important;
+    }
+}
+
+/* Chat panel header */
+.bf-chat-head {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-bottom: 14px;
+    justify-content: space-between;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #F2F2EE;
 }
-.bf-ask-response-brand {
+.bf-chat-head-l {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+.bf-chat-newchat,
+.bf-chat-newchat:link,
+.bf-chat-newchat:visited {
     font-family: 'Inter', sans-serif;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: #1A1A18;
+    font-size: 12px;
+    color: #57564F;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
-.bf-ask-response-spark {
-    color: #E8A33D;
-    font-size: 13px;
+.bf-chat-newchat:hover { color: #1A1A18; }
+.bf-chat-newchat-plus {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px; height: 18px;
+    border: 1px solid #D6D6D2;
+    border-radius: 50%;
+    font-size: 12px;
     line-height: 1;
+    color: #57564F;
 }
-.bf-ask-response-body {
+.bf-chat-close,
+.bf-chat-close:link,
+.bf-chat-close:visited {
+    font-family: 'Inter', sans-serif;
+    font-size: 18px;
+    color: #8B8A83;
+    text-decoration: none;
+    line-height: 1;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: background 0.12s ease;
+}
+.bf-chat-close:hover { background: #F2F2EE; color: #1A1A18; }
+.bf-chat-sub {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-style: italic;
+    font-size: 14px;
+    color: #8B8A83;
+    margin: 10px 0 18px;
+}
+
+/* Chat messages area — flex-grows to fill remaining space, scrolls */
+div[data-testid="stLayoutWrapper"]:has(.bf-chat-marker) .bf-chat-msgs-marker {
+    display: none;
+}
+.bf-chat-msg-user {
+    align-self: flex-end;
+    max-width: 75%;
+    background: #1A1A18;
+    color: #FAFAF7;
+    border-radius: 18px 18px 4px 18px;
+    padding: 10px 16px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    margin: 6px 0 14px auto;
+    width: fit-content;
+}
+.bf-chat-msg-assistant {
     font-family: 'Instrument Serif', Georgia, serif;
     font-size: 17px;
-    line-height: 1.65;
+    line-height: 1.7;
     color: #1A1A18;
+    margin: 6px 0 22px;
+    max-width: 92%;
 }
-.bf-ask-response-body p { margin: 0 0 14px; font-size: inherit; color: inherit; }
-.bf-ask-response-body p:last-child { margin-bottom: 0; }
-.bf-ask-response-body ol {
+.bf-chat-msg-assistant p {
+    font-family: 'Instrument Serif', Georgia, serif !important;
+    font-size: inherit !important;
+    color: inherit !important;
+    margin: 0 0 12px !important;
+}
+.bf-chat-msg-assistant p:last-child { margin-bottom: 0; }
+.bf-chat-msg-assistant strong,
+.bf-chat-msg-assistant b {
+    font-family: 'Instrument Serif', Georgia, serif !important;
+    font-weight: 600 !important;
+    color: #1A1A18 !important;
+}
+.bf-chat-msg-assistant ul,
+.bf-chat-msg-assistant ol {
+    margin: 0 0 12px;
     padding-left: 22px;
-    margin: 0 0 16px;
 }
-.bf-ask-response-body li {
-    font-family: 'Instrument Serif', Georgia, serif;
-    font-size: 16px;
-    color: #1A1A18;
-    line-height: 1.6;
-    margin-bottom: 12px;
+.bf-chat-msg-assistant li {
+    font-family: 'Instrument Serif', Georgia, serif !important;
+    font-size: 16px !important;
+    line-height: 1.65 !important;
+    color: #1A1A18 !important;
+    margin-bottom: 6px;
 }
-.bf-ask-response-body li b,
-.bf-ask-response-body p b {
-    font-weight: 500;
-    color: #1A1A18;
+
+@keyframes bf-chat-cursor {
+    0%, 49%   { opacity: 1; }
+    50%, 100% { opacity: 0; }
 }
-.bf-ask-response-body a,
-.bf-ask-response-body a:link {
-    color: #B07A1C;
-    text-decoration: none;
-    font-weight: 500;
+.bf-chat-cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1em;
+    background: #1A1A18;
+    margin-left: 2px;
+    vertical-align: text-bottom;
+    animation: bf-chat-cursor 1s step-end infinite;
 }
-.bf-ask-response-body a:hover { text-decoration: underline; }
-.bf-ask-response-foot {
-    margin-top: 16px;
-    padding-top: 14px;
-    border-top: 1px solid #F2F2EE;
+
+/* The scroll container inside the panel — wraps message stack */
+.bf-chat-scroll {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 4px 0 16px;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    color: #8B8A83;
-    letter-spacing: 0.04em;
+    flex-direction: column;
 }
-.bf-ask-dismiss,
-.bf-ask-dismiss:link {
+.bf-chat-scroll::-webkit-scrollbar { width: 4px; }
+.bf-chat-scroll::-webkit-scrollbar-thumb { background: #EAEAE4; border-radius: 99px; }
+
+/* Footer input bar — fixed to viewport bottom, just above the panel's
+   content area. Sits on top of the panel (same z stack) but pinned. */
+div[data-testid="stLayoutWrapper"]:has(.bf-chat-input-marker) {
+    position: fixed !important;
+    left: 240px !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: calc(100vw - 240px) !important;
+    height: 80px !important;
+    background: #FAFAF7 !important;
+    border: none !important;
+    border-top: 1px solid #EAEAE4 !important;
+    padding: 16px 36px !important;
+    margin: 0 !important;
+    box-shadow: 0 -4px 16px -8px rgba(10, 10, 10, 0.08) !important;
+    border-radius: 0 !important;
+    z-index: 201 !important;
+    display: flex !important;
+    align-items: center !important;
+}
+div[data-testid="stLayoutWrapper"]:has(.bf-chat-input-marker) > div[data-testid="stVerticalBlock"] {
+    border: none !important;
+    padding: 0 !important;
+    background: transparent !important;
+    gap: 0 !important;
+}
+div[data-testid="stLayoutWrapper"]:has(.bf-chat-input-marker) .stTextInput input {
+    width: 100% !important;
+    background: #FFFFFF !important;
+    border: 1px solid #EAEAE4 !important;
+    border-radius: 999px !important;
+    padding: 12px 90px 12px 20px !important;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 14px !important;
+    color: #1A1A18 !important;
+    box-shadow: none !important;
+}
+div[data-testid="stLayoutWrapper"]:has(.bf-chat-input-marker) .stTextInput input:focus {
+    border-color: #1A1A18 !important;
+    outline: none !important;
+}
+div[data-testid="stLayoutWrapper"]:has(.bf-chat-input-marker)::after {
+    content: "Send  ↵";
+    position: absolute;
+    right: 26px;
+    top: 50%;
+    transform: translateY(-50%);
     font-family: 'Inter', sans-serif;
-    font-size: 11px;
-    color: #8B8A83;
-    text-decoration: none;
-    letter-spacing: 0;
+    font-size: 12px;
+    font-weight: 500;
+    color: #1A1A18;
+    background: #E8A33D;
+    padding: 6px 12px;
+    border-radius: 999px;
+    pointer-events: none;
+    z-index: 1;
+    letter-spacing: 0.02em;
 }
-.bf-ask-dismiss:hover { color: #1A1A18; }
 
 .bf-queue-section-row {
     display: flex;
@@ -1044,90 +1202,194 @@ def consume_expand_query() -> bool:
 
 
 def _render_ask_bar() -> None:
-    """Full-width Ask BrokerFlow input + canned response card.
-
-    The input is a Streamlit st.text_input restyled into a pill via
-    :has(.bf-ask-marker). On submit (Enter), the value is matched
-    against keyword rules and a response is stashed in session state."""
-    placeholder = (
-        "Ask BrokerFlow anything... e.g. How much Olipop accrual is left this year?"
-    )
-
+    """Top ask bar — typing + Enter opens the chat panel with that query
+    submitted as the first user message."""
     with st.container():
         st.markdown('<div class="bf-ask-marker"></div>', unsafe_allow_html=True)
         query = st.text_input(
             "Ask BrokerFlow",
             value="",
-            placeholder=placeholder,
+            placeholder="Ask BrokerFlow anything…",
             key="bf_ask_input",
             label_visibility="collapsed",
         )
 
-    # Process new submissions exactly once
-    last_submitted = st.session_state.get("bf_ask_last_submitted", "")
-    if query and query != last_submitted:
-        st.session_state["bf_ask_last_submitted"] = query
-        st.session_state["bf_ask_response"] = _generate_ask_response(query)
+    # On submit: open the panel and queue the query for processing
+    last = st.session_state.get("bf_ask_topbar_last", "")
+    if query and query != last:
+        st.session_state["bf_ask_topbar_last"] = query
+        st.session_state["chat_open"] = True
+        st.session_state["chat_pending_query"] = query
+        st.rerun()
 
-    response = st.session_state.get("bf_ask_response")
-    if response:
+
+# ── Slide-up chat panel ──────────────────────────────────────────────────────
+
+def _render_chat_panel() -> None:
+    """Fixed-bottom slide-up chat panel. Renders only when chat_open=True.
+
+    Conversation lives in st.session_state.ask_conversation as a list of
+    {"role": "user"|"assistant", "content": str}. Streaming uses an
+    st.empty() placeholder updated per token."""
+    history: list[dict] = st.session_state.setdefault("ask_conversation", [])
+    pending = st.session_state.pop("chat_pending_query", None)
+
+    with st.container():
+        st.markdown('<div class="bf-chat-marker"></div>', unsafe_allow_html=True)
+
+        # Header
         st.markdown(
-            '<div class="bf-ask-response">'
-            '<div class="bf-ask-response-head">'
-            '<span class="bf-ask-response-spark">&#10022;</span>'
-            '<span class="bf-ask-response-brand">BrokerFlow</span>'
+            '<div class="bf-chat-head">'
+            '<div class="bf-chat-head-l">'
+            f'<a class="bf-chat-newchat" href="?nav=queue'
+            f'{_preserve_filter_query()}&chat_clear=1" target="_self">'
+            '<span class="bf-chat-newchat-plus">+</span> Ask BrokerFlow'
+            '</a>'
             '</div>'
-            f'<div class="bf-ask-response-body">{response["body_html"]}</div>'
-            '<div class="bf-ask-response-foot">'
-            f'<span>Sources: {response["sources"]}</span>'
-            f'<a class="bf-ask-dismiss" href="?nav=queue'
-            f'{_preserve_filter_query()}&dismiss_ask=1" target="_self">Dismiss &times;</a>'
+            f'<a class="bf-chat-close" href="?nav=queue'
+            f'{_preserve_filter_query()}&chat_close=1" target="_self">&times;</a>'
             '</div>'
-            '</div>',
+            '<div class="bf-chat-sub">I see all your brands, accruals, '
+            'POs, demos, and email history.</div>'
+            '<div class="bf-chat-scroll">',
+            unsafe_allow_html=True,
+        )
+
+        # Render frozen conversation history
+        for msg in history:
+            _render_msg(msg["role"], msg["content"])
+
+        # If a query is pending: render it as a user bubble + start streaming
+        if pending:
+            history.append({"role": "user", "content": pending})
+            _render_msg("user", pending)
+
+            placeholder = st.empty()
+            full = ""
+            try:
+                from agents.ask_brokerflow import stream_ask
+                # History EXCLUDES the just-appended pending turn
+                prior = history[:-1]
+                for tok in stream_ask(pending, prior):
+                    full += tok
+                    placeholder.markdown(
+                        '<div class="bf-chat-msg-assistant">'
+                        + _md_to_html(full) +
+                        '<span class="bf-chat-cursor"></span></div>',
+                        unsafe_allow_html=True,
+                    )
+            except Exception as exc:  # noqa: BLE001
+                print(f"[chat_panel] stream failed: "
+                      f"{type(exc).__name__}: {str(exc)[:200]}")
+                full = full or (
+                    "BrokerFlow is taking longer than usual. "
+                    "Try rephrasing or ask again."
+                )
+
+            # Freeze final response
+            placeholder.markdown(
+                '<div class="bf-chat-msg-assistant">'
+                + _md_to_html(full) +
+                '</div>',
+                unsafe_allow_html=True,
+            )
+            history.append({"role": "assistant", "content": full})
+
+        st.markdown('</div>', unsafe_allow_html=True)  # close bf-chat-scroll
+
+    # Footer input — separate Streamlit container, also fixed-positioned
+    # via :has(.bf-chat-input-marker)
+    with st.container():
+        st.markdown('<div class="bf-chat-input-marker"></div>',
+                    unsafe_allow_html=True)
+        followup = st.text_input(
+            "Follow-up",
+            value="",
+            placeholder="Ask anything…",
+            key="bf_chat_followup",
+            label_visibility="collapsed",
+        )
+
+    last_followup = st.session_state.get("bf_chat_followup_last", "")
+    if followup and followup != last_followup:
+        st.session_state["bf_chat_followup_last"] = followup
+        st.session_state["chat_pending_query"] = followup
+        st.rerun()
+
+
+def _render_msg(role: str, content: str) -> None:
+    if role == "user":
+        st.markdown(
+            f'<div class="bf-chat-msg-user">{_esc(content)}</div>',
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            f'<div class="bf-chat-msg-assistant">{_md_to_html(content)}</div>',
             unsafe_allow_html=True,
         )
 
 
-_BRAND_SUGGESTION_BODY = (
-    "<p>Based on your current book and what's trending across Faire, "
-    "Instacart, and Amazon over the last 30 days, here are 3 brands "
-    "worth a meeting:</p>"
-    "<ol>"
-    "<li><b>Poppi</b> — prebiotic soda, 4.8× velocity lift on Instacart, "
-    "&#36;34M raised Series B. Margins tight (18%) but distribution "
-    "white space in your Costco BA territory. Score: 82/100.</li>"
-    "<li><b>Fishwife</b> — tinned fish, indexing 3.2× on Faire in PNW "
-    "where you have strong Costco NW relationships. Promo independence "
-    "clean. Score: 79/100.</li>"
-    "<li><b>Magic Spoon</b> — high-protein cereal, expanding into UNFI "
-    "natural channel where you have 4 active brands. Recently dropped "
-    "their previous broker. Score: 76/100.</li>"
-    "</ol>"
-    '<p><a href="#">Want me to draft intro pitches for any of these?</a></p>'
-)
+def _md_to_html(md: str) -> str:
+    """Light markdown → HTML for streaming responses. Handles bold, lists,
+    paragraphs. Stays simple to avoid pulling a heavy markdown dep."""
+    if not md:
+        return ""
+    text = _esc(md)
 
-_GENERIC_BODY = (
-    "<p>I can help you with brand suggestions, accrual balances, pitch "
-    "drafts, and more. Try asking <b>&ldquo;What new brands should I "
-    "scout?&rdquo;</b> to see what I can do.</p>"
-)
+    # **bold** → <strong>
+    import re
+    text = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", text)
+    # _italic_ or *italic* → <em>  (single-char, not greedy)
+    text = re.sub(r"(?<!\*)\*([^*\n]+)\*(?!\*)", r"<em>\1</em>", text)
 
+    # Convert bullet lists block-by-block
+    out_lines: list[str] = []
+    in_ul = False
+    for line in text.split("\n"):
+        bullet = re.match(r"^\s*[-•]\s+(.*)", line)
+        numbered = re.match(r"^\s*\d+[\.\)]\s+(.*)", line)
+        if bullet or numbered:
+            if not in_ul:
+                out_lines.append("<ul>")
+                in_ul = True
+            item = (bullet or numbered).group(1)
+            out_lines.append(f"<li>{item}</li>")
+        else:
+            if in_ul:
+                out_lines.append("</ul>")
+                in_ul = False
+            out_lines.append(line)
+    if in_ul:
+        out_lines.append("</ul>")
 
-def _generate_ask_response(query: str) -> dict:
-    q = query.lower()
-    triggers = ("new brand", "suggest", "scout", "find")
-    if any(t in q for t in triggers):
-        return {"body_html": _BRAND_SUGGESTION_BODY, "sources": "3 · 1.2s"}
-    return {"body_html": _GENERIC_BODY, "sources": "0 · 0.4s"}
+    # Paragraphs from blank-line separated blocks
+    blocks = "\n".join(out_lines).split("\n\n")
+    html_blocks = []
+    for b in blocks:
+        b = b.strip()
+        if not b:
+            continue
+        if b.startswith("<ul>") or b.startswith("<ol>") or b.startswith("<li>"):
+            html_blocks.append(b)
+        else:
+            html_blocks.append("<p>" + b.replace("\n", "<br>") + "</p>")
+    return "\n".join(html_blocks)
 
 
 def render_queue_view() -> None:
     st.markdown(_QUEUE_CSS, unsafe_allow_html=True)
 
-    # Dismiss-ask URL action — clears the response without changing other state
-    if st.query_params.get("dismiss_ask") == "1":
-        st.session_state.pop("bf_ask_response", None)
-        st.session_state.pop("bf_ask_last_submitted", None)
+    # URL-driven chat actions (close / clear)
+    if st.query_params.get("chat_close") == "1":
+        st.session_state["chat_open"] = False
+        st.session_state.pop("chat_pending_query", None)
+        st.query_params.clear()
+        st.rerun()
+    if st.query_params.get("chat_clear") == "1":
+        st.session_state["ask_conversation"] = []
+        st.session_state.pop("chat_pending_query", None)
+        st.session_state["bf_chat_followup_last"] = ""
         st.query_params.clear()
         st.rerun()
 
@@ -1175,3 +1437,7 @@ def render_queue_view() -> None:
             _render_expanded(card)
         else:
             _render_collapsed(card)
+
+    # Chat panel renders last so it overlays the queue
+    if st.session_state.get("chat_open"):
+        _render_chat_panel()

@@ -231,3 +231,121 @@ def install() -> None:
 
 
 install()
+
+
+# ── Streaming chat ─────────────────────────────────────────────────────────
+# New entry point used by Ask BrokerFlow. Yields text chunks as they arrive
+# from the underlying provider (Gemini or Claude). Existing agents keep
+# using anthropic.messages.create(...) — this is additive.
+
+def stream_chat(
+    *,
+    messages: list[dict],
+    system: str | None = None,
+    model: str = "claude-sonnet-4-5",
+    max_tokens: int = 1024,
+    temperature: float | None = 0.4,
+):
+    """Stream tokens from the configured provider.
+
+    messages: [{"role": "user"|"assistant", "content": "..."}]
+    Yields str chunks. On error, yields a single fallback message string.
+    """
+    provider = _provider()
+    try:
+        if provider == "gemini":
+            yield from _stream_gemini(
+                messages=messages, system=system, model=model,
+                max_tokens=max_tokens, temperature=temperature,
+            )
+        else:
+            yield from _stream_claude(
+                messages=messages, system=system, model=model,
+                max_tokens=max_tokens, temperature=temperature,
+            )
+    except Exception as exc:  # noqa: BLE001
+        print(f"[llm_shim.stream_chat] provider={provider} failed: "
+              f"{type(exc).__name__}: {str(exc)[:200]}")
+        yield (
+            "BrokerFlow is taking longer than usual. "
+            "Try rephrasing or ask again."
+        )
+
+
+def _stream_gemini(
+    *, messages: list[dict], system: str | None, model: str,
+    max_tokens: int, temperature: float | None,
+):
+    from google import genai
+    from google.genai import types as genai_types
+
+    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+
+    contents: list[str] = []
+    for m in messages:
+        role = m.get("role", "user")
+        content = m.get("content", "")
+        if isinstance(content, list):
+            content = "\n".join(
+                c.get("text", "") if isinstance(c, dict) else str(c)
+                for c in content
+            )
+        prefix = "User: " if role == "user" else "Assistant: "
+        contents.append(prefix + content)
+    joined = "\n\n".join(contents) if contents else ""
+
+    config_kwargs: dict[str, Any] = {
+        "max_output_tokens": max(max_tokens, 2048),
+    }
+    if system:
+        config_kwargs["system_instruction"] = system
+    if temperature is not None:
+        config_kwargs["temperature"] = temperature
+    try:
+        config_kwargs["thinking_config"] = genai_types.ThinkingConfig(
+            thinking_budget=0,
+        )
+    except Exception:
+        pass
+
+    stream = client.models.generate_content_stream(
+        model=_map_model(model),
+        contents=joined,
+        config=genai_types.GenerateContentConfig(**config_kwargs),
+    )
+    any_token = False
+    for chunk in stream:
+        text = getattr(chunk, "text", None)
+        if text:
+            any_token = True
+            yield text
+    if not any_token:
+        yield "I didn't catch that — could you rephrase?"
+
+
+def _stream_claude(
+    *, messages: list[dict], system: str | None, model: str,
+    max_tokens: int, temperature: float | None,
+):
+    import anthropic  # type: ignore
+    real = getattr(anthropic, "_real_Anthropic", None) or anthropic.Anthropic
+    client = real()
+
+    kwargs: dict[str, Any] = {
+        "model": model,
+        "max_tokens": max_tokens,
+        "messages": messages,
+    }
+    if system:
+        kwargs["system"] = system
+    if temperature is not None:
+        kwargs["temperature"] = temperature
+
+    any_token = False
+    with client.messages.stream(**kwargs) as stream:
+        for text in stream.text_stream:
+            if text:
+                any_token = True
+                yield text
+    if not any_token:
+        yield "I didn't catch that — could you rephrase?"
