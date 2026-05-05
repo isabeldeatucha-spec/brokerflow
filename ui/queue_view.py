@@ -1026,19 +1026,21 @@ div[data-testid="stLayoutWrapper"]:has(.bf-chat-marker) .bf-chat-msgs-marker {
 }
 .bf-chat-msg-assistant {
     font-family: 'Instrument Serif', Georgia, serif;
-    font-size: 17px;
-    line-height: 1.7;
+    font-size: 16px;
+    line-height: 1.5;
     color: #1A1A18;
-    margin: 6px 0 22px;
+    margin: 4px 0 16px;
     max-width: 92%;
 }
+/* Tight spacing — match a scannable note, not a double-spaced doc */
 .bf-chat-msg-assistant p {
     font-family: 'Instrument Serif', Georgia, serif !important;
     font-size: inherit !important;
     color: inherit !important;
-    margin: 0 0 12px !important;
+    line-height: 1.5 !important;
+    margin: 0 0 10px !important;
 }
-.bf-chat-msg-assistant p:last-child { margin-bottom: 0; }
+.bf-chat-msg-assistant p:last-child { margin-bottom: 0 !important; }
 .bf-chat-msg-assistant strong,
 .bf-chat-msg-assistant b {
     font-family: 'Instrument Serif', Georgia, serif !important;
@@ -1047,15 +1049,23 @@ div[data-testid="stLayoutWrapper"]:has(.bf-chat-marker) .bf-chat-msgs-marker {
 }
 .bf-chat-msg-assistant ul,
 .bf-chat-msg-assistant ol {
-    margin: 0 0 12px;
-    padding-left: 22px;
+    margin: 6px 0 10px !important;
+    padding-left: 22px !important;
 }
 .bf-chat-msg-assistant li {
     font-family: 'Instrument Serif', Georgia, serif !important;
-    font-size: 16px !important;
-    line-height: 1.65 !important;
+    font-size: inherit !important;
+    line-height: 1.5 !important;
     color: #1A1A18 !important;
-    margin-bottom: 6px;
+    margin: 2px 0 !important;
+}
+.bf-chat-msg-assistant li > p { margin: 0 !important; }
+.bf-chat-msg-assistant h1,
+.bf-chat-msg-assistant h2,
+.bf-chat-msg-assistant h3 {
+    font-family: 'Instrument Serif', Georgia, serif !important;
+    margin: 14px 0 6px !important;
+    line-height: 1.3 !important;
 }
 
 @keyframes bf-chat-cursor {
@@ -1072,16 +1082,43 @@ div[data-testid="stLayoutWrapper"]:has(.bf-chat-marker) .bf-chat-msgs-marker {
     animation: bf-chat-cursor 1s step-end infinite;
 }
 
-/* The scroll container inside the panel — wraps message stack */
-.bf-chat-scroll {
-    flex: 1 1 auto;
-    overflow-y: auto;
-    padding: 4px 0 16px;
-    display: flex;
-    flex-direction: column;
+/* Scrollable conversation area inside the panel.
+   Streamlit-managed container (st.container) gets the marker so the
+   :has() selector applies — open/close raw HTML divs don't actually
+   wrap subsequent stMarkdown blocks in the DOM, so a real container
+   is the only way to make a real flex/overflow region. */
+.bf-chat-msgs-marker { display: none; }
+
+div[data-testid="stLayoutWrapper"]:has(.bf-chat-msgs-marker) {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding: 4px 0 24px !important;
+    margin: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    /* Smooth scroll for the auto-scroll-to-bottom */
+    scroll-behavior: smooth;
 }
-.bf-chat-scroll::-webkit-scrollbar { width: 4px; }
-.bf-chat-scroll::-webkit-scrollbar-thumb { background: #EAEAE4; border-radius: 99px; }
+div[data-testid="stLayoutWrapper"]:has(.bf-chat-msgs-marker) > div[data-testid="stVerticalBlock"] {
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    gap: 0 !important;
+}
+div[data-testid="stLayoutWrapper"]:has(.bf-chat-msgs-marker)::-webkit-scrollbar {
+    width: 6px;
+}
+div[data-testid="stLayoutWrapper"]:has(.bf-chat-msgs-marker)::-webkit-scrollbar-thumb {
+    background: #EAEAE4;
+    border-radius: 99px;
+}
+div[data-testid="stLayoutWrapper"]:has(.bf-chat-msgs-marker)::-webkit-scrollbar-track {
+    background: transparent;
+}
 
 /* Footer input bar — fixed to viewport bottom, just above the panel's
    content area. Sits on top of the panel (same z stack) but pinned. */
@@ -1898,10 +1935,8 @@ def _render_chat_panel() -> None:
     pending = st.session_state.pop("chat_pending_query", None)
 
     with st.container():
-        st.markdown('<div class="bf-chat-marker"></div>', unsafe_allow_html=True)
-
-        # Header
         st.markdown(
+            '<div class="bf-chat-marker"></div>'
             '<div class="bf-chat-head">'
             '<div class="bf-chat-head-l">'
             f'<a class="bf-chat-newchat" href="?nav=queue'
@@ -1913,52 +1948,60 @@ def _render_chat_panel() -> None:
             f'{_preserve_filter_query()}&chat_close=1" target="_self">&times;</a>'
             '</div>'
             '<div class="bf-chat-sub">I see all your brands, accruals, '
-            'POs, demos, and email history.</div>'
-            '<div class="bf-chat-scroll">',
+            'POs, demos, and email history.</div>',
             unsafe_allow_html=True,
         )
 
-        # Render frozen conversation history
-        for msg in history:
-            _render_msg(msg["role"], msg["content"])
-
-        # If a query is pending: render it as a user bubble + start streaming
-        if pending:
-            history.append({"role": "user", "content": pending})
-            _render_msg("user", pending)
-
-            placeholder = st.empty()
-            full = ""
-            try:
-                from agents.ask_brokerflow import stream_ask
-                # History EXCLUDES the just-appended pending turn
-                prior = history[:-1]
-                for tok in stream_ask(pending, prior):
-                    full += tok
-                    placeholder.markdown(
-                        '<div class="bf-chat-msg-assistant">'
-                        + _md_to_html(full) +
-                        '<span class="bf-chat-cursor"></span></div>',
-                        unsafe_allow_html=True,
-                    )
-            except Exception as exc:  # noqa: BLE001
-                print(f"[chat_panel] stream failed: "
-                      f"{type(exc).__name__}: {str(exc)[:200]}")
-                full = full or (
-                    "BrokerFlow is taking longer than usual. "
-                    "Try rephrasing or ask again."
-                )
-
-            # Freeze final response
-            placeholder.markdown(
-                '<div class="bf-chat-msg-assistant">'
-                + _md_to_html(full) +
-                '</div>',
+        # Scrollable conversation area — nested st.container so we get a
+        # real DOM wrapper for flex:1 + overflow-y:auto via :has() scoping.
+        with st.container():
+            st.markdown(
+                '<div class="bf-chat-msgs-marker"></div>',
                 unsafe_allow_html=True,
             )
-            history.append({"role": "assistant", "content": full})
 
-        st.markdown('</div>', unsafe_allow_html=True)  # close bf-chat-scroll
+            # Render frozen conversation history
+            for msg in history:
+                _render_msg(msg["role"], msg["content"])
+
+            # If a query is pending: render user bubble + start streaming
+            if pending:
+                history.append({"role": "user", "content": pending})
+                _render_msg("user", pending)
+
+                placeholder = st.empty()
+                full = ""
+                try:
+                    from agents.ask_brokerflow import stream_ask
+                    prior = history[:-1]
+                    for tok in stream_ask(pending, prior):
+                        full += tok
+                        placeholder.markdown(
+                            '<div class="bf-chat-msg-assistant">'
+                            + _md_to_html(full) +
+                            '<span class="bf-chat-cursor"></span></div>',
+                            unsafe_allow_html=True,
+                        )
+                except Exception as exc:  # noqa: BLE001
+                    print(f"[chat_panel] stream failed: "
+                          f"{type(exc).__name__}: {str(exc)[:200]}")
+                    full = full or (
+                        "BrokerFlow is taking longer than usual. "
+                        "Try rephrasing or ask again."
+                    )
+
+                placeholder.markdown(
+                    '<div class="bf-chat-msg-assistant">'
+                    + _md_to_html(full) +
+                    '</div>',
+                    unsafe_allow_html=True,
+                )
+                history.append({"role": "assistant", "content": full})
+
+        # Auto-scroll-to-bottom: install a one-time MutationObserver on
+        # the messages container in the parent document. Sticks to the
+        # bottom unless the user manually scrolls up >80px.
+        _inject_chat_autoscroll()
 
     # Footer input — st.form(clear_on_submit=True) so the input clears
     # on every Send. Without the form, Streamlit retains the previous
@@ -1977,6 +2020,77 @@ def _render_chat_panel() -> None:
             submitted = st.form_submit_button("Send", type="primary")
             if submitted and followup.strip():
                 _submit_chat_query(followup.strip())
+
+
+def _inject_chat_autoscroll() -> None:
+    """Pin the chat scroll area to the bottom as new content arrives.
+
+    Uses an iframe-isolated script (st.components.v1.html) that reaches
+    into the parent document. A MutationObserver watches the messages
+    container; on every mutation, it scrolls to bottom — unless the
+    user has manually scrolled up more than 80px from the bottom, in
+    which case it leaves them alone.
+
+    Re-rendered every chat panel pass; the script's data-attribute
+    guard prevents binding more than one observer."""
+    import streamlit.components.v1 as components
+    components.html(
+        """
+        <script>
+        (function () {
+            const doc = window.parent.document;
+            // Find the scroll container in the parent app
+            const marker = doc.querySelector('.bf-chat-msgs-marker');
+            if (!marker) return;
+            const scroller = marker.closest(
+                'div[data-testid="stLayoutWrapper"]'
+            );
+            if (!scroller) return;
+
+            // Don't re-bind if we've already attached an observer
+            if (scroller.dataset.bfAutoscrollBound === '1') {
+                // Still nudge scroll to bottom on this fresh render
+                if (!scroller.dataset.bfUserScrolled) {
+                    scroller.scrollTop = scroller.scrollHeight;
+                }
+                return;
+            }
+            scroller.dataset.bfAutoscrollBound = '1';
+
+            // Initial scroll
+            scroller.scrollTop = scroller.scrollHeight;
+
+            // Track user scroll intent — if they scroll up more than
+            // 80px from the bottom, stop auto-scrolling. If they
+            // scroll back to within 40px, resume.
+            scroller.addEventListener('scroll', () => {
+                const fromBottom = scroller.scrollHeight
+                                 - scroller.scrollTop
+                                 - scroller.clientHeight;
+                if (fromBottom > 80) {
+                    scroller.dataset.bfUserScrolled = '1';
+                } else if (fromBottom < 40) {
+                    delete scroller.dataset.bfUserScrolled;
+                }
+            }, { passive: true });
+
+            // Pin to bottom on every content mutation, unless user
+            // is reading further up.
+            const obs = new MutationObserver(() => {
+                if (!scroller.dataset.bfUserScrolled) {
+                    scroller.scrollTop = scroller.scrollHeight;
+                }
+            });
+            obs.observe(scroller, {
+                childList: true,
+                subtree: true,
+                characterData: true,
+            });
+        })();
+        </script>
+        """,
+        height=0,
+    )
 
 
 def _open_chat_with_query(query: str) -> None:
@@ -2041,8 +2155,11 @@ def _md_to_html(md: str) -> str:
     if in_ul:
         out_lines.append("</ul>")
 
-    # Paragraphs from blank-line separated blocks
-    blocks = "\n".join(out_lines).split("\n\n")
+    # Paragraphs from blank-line separated blocks. Collapse runs of 2+
+    # blank lines so excess whitespace from the LLM doesn't yield empty
+    # <p> tags (which used to inflate vertical spacing).
+    joined = re.sub(r"\n{2,}", "\n\n", "\n".join(out_lines))
+    blocks = joined.split("\n\n")
     html_blocks = []
     for b in blocks:
         b = b.strip()
@@ -2052,7 +2169,7 @@ def _md_to_html(md: str) -> str:
             html_blocks.append(b)
         else:
             html_blocks.append("<p>" + b.replace("\n", "<br>") + "</p>")
-    return "\n".join(html_blocks)
+    return "".join(html_blocks)
 
 
 def render_queue_view() -> None:
