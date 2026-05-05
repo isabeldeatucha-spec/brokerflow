@@ -82,39 +82,91 @@ _CSS = """
     position: sticky;
     top: 0;
     z-index: 100;
-    background: #FAFAF7;
+    background: rgba(250, 250, 247, 0.94);
+    backdrop-filter: saturate(140%) blur(8px);
+    -webkit-backdrop-filter: saturate(140%) blur(8px);
     border-bottom: 1px solid var(--bf-border-soft);
     margin: -1rem -2rem 0;
 }
 .bf-investor-nav-inner {
     max-width: 1080px;
     margin: 0 auto;
-    padding: 1rem 2rem;
-    display: flex;
+    padding: 0.9rem 2rem;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
     align-items: center;
-    justify-content: flex-end;
+    column-gap: 2rem;
 }
+.bf-investor-nav-wordmark,
+.bf-investor-nav-wordmark:link,
+.bf-investor-nav-wordmark:visited {
+    font-family: 'Playfair Display', Georgia, serif !important;
+    font-size: 1.15rem !important;
+    font-weight: 500 !important;
+    color: var(--bf-fg) !important;
+    letter-spacing: -0.01em !important;
+    text-decoration: none !important;
+    line-height: 1 !important;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.55rem;
+}
+.bf-investor-nav-wordmark:hover { color: var(--bf-fg) !important; opacity: 0.75; }
+.bf-investor-nav-tag {
+    font-family: 'JetBrains Mono', monospace !important;
+    font-size: 0.65rem !important;
+    color: var(--bf-faint) !important;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 400 !important;
+}
+.bf-investor-nav-links {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1.75rem;
+}
+.bf-investor-nav-link,
+.bf-investor-nav-link:link,
+.bf-investor-nav-link:visited {
+    font-family: 'Inter', sans-serif !important;
+    font-size: 0.85rem !important;
+    font-weight: 400 !important;
+    color: var(--bf-muted) !important;
+    text-decoration: none !important;
+    transition: color 0.15s ease;
+}
+.bf-investor-nav-link:hover { color: var(--bf-fg) !important; }
 .bf-investor-nav-cta,
 .bf-investor-nav-cta:link,
 .bf-investor-nav-cta:visited,
 .bf-investor-nav-cta:active {
     font-family: 'Inter', sans-serif !important;
-    font-size: 0.9rem !important;
+    font-size: 0.85rem !important;
     font-weight: 500 !important;
     color: #FFFFFF !important;
     background: var(--bf-fg) !important;
-    padding: 0.6rem 1.4rem !important;
+    padding: 0.55rem 1.25rem !important;
     border-radius: 999px !important;
     text-decoration: none !important;
     border: 1px solid var(--bf-fg) !important;
     display: inline-block !important;
     transition: background 0.15s ease, opacity 0.15s ease !important;
+    justify-self: end;
 }
 .bf-investor-nav-cta:hover {
     background: #1F1F1F !important;
     color: #FFFFFF !important;
     text-decoration: none !important;
     opacity: 0.92;
+}
+
+@media (max-width: 760px) {
+    .bf-investor-nav-inner {
+        grid-template-columns: auto auto;
+        column-gap: 1rem;
+    }
+    .bf-investor-nav-links { display: none; }
 }
 
 /* ── Page wrapper ──────────────────────────────────────────────────── */
@@ -585,16 +637,27 @@ def _render_nav() -> None:
     _md("""
     <header class="bf-investor-nav">
       <div class="bf-investor-nav-inner">
+        <a class="bf-investor-nav-wordmark" href="#bf-top">
+          BrokerFlow
+          <span class="bf-investor-nav-tag">v1 &middot; wireframe</span>
+        </a>
+        <nav class="bf-investor-nav-links">
+          <a class="bf-investor-nav-link" href="#bf-agents">Workforce</a>
+          <a class="bf-investor-nav-link" href="#bf-monday-morning">How it works</a>
+          <a class="bf-investor-nav-link" href="#bf-for-brokers">For brokers</a>
+          <a class="bf-investor-nav-link" href="#bf-pricing">Pricing</a>
+        </nav>
         <a class="bf-investor-nav-cta" href="?goto=app" target="_self">I'm a broker &rarr;</a>
       </div>
     </header>
+    <div id="bf-top"></div>
     """)
 
 
 def _render_hero() -> None:
     _md(f"""
     <div class="bf-investor">
-      <section class="bf-hero-grid">
+      <section class="bf-hero-grid" id="bf-for-brokers">
         <div class="bf-hero-text">
           <div class="bf-hero-eyebrow">An AI workforce for CPG brokers</div>
           <div class="bf-hero-h1">
@@ -799,7 +862,7 @@ def _render_agents() -> None:
 
     _md(f"""
     <div class="bf-investor">
-      <section class="bf-investor-section">
+      <section class="bf-investor-section" id="bf-agents">
         <div class="bf-investor-eyebrow">Under the hood</div>
         <div class="bf-investor-h2">An orchestrated agent team.</div>
         <p class="bf-investor-sub">
@@ -817,7 +880,7 @@ def _render_agents() -> None:
 
 
 def _render_bottom_padding() -> None:
-    _md('<div class="bf-investor" style="padding-bottom:6rem;"></div>')
+    _md('<div class="bf-investor" id="bf-pricing" style="padding-bottom:6rem;"></div>')
 
 
 def render_investor_landing() -> None:
