@@ -93,9 +93,13 @@ _CSS = """
     margin: 0 auto;
     padding: 0.9rem 2rem;
     display: grid;
-    grid-template-columns: auto 1fr auto;
+    /* Three columns so the wordmark sits perfectly centered horizontally
+       (middle "auto" column) regardless of CTA width. The first column is
+       a flex spacer matching the right column, so the wordmark stays
+       optically centered even though the CTA only lives on the right. */
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
-    column-gap: 2rem;
+    column-gap: 1rem;
 }
 .bf-investor-nav-wordmark,
 .bf-investor-nav-wordmark:link,
@@ -110,6 +114,8 @@ _CSS = """
     display: inline-flex;
     align-items: baseline;
     gap: 0.55rem;
+    grid-column: 2;
+    justify-self: center;
 }
 .bf-investor-nav-wordmark:hover { color: var(--bf-fg) !important; opacity: 0.75; }
 .bf-investor-nav-tag {
@@ -120,23 +126,6 @@ _CSS = """
     letter-spacing: 0.1em;
     font-weight: 400 !important;
 }
-.bf-investor-nav-links {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 1.75rem;
-}
-.bf-investor-nav-link,
-.bf-investor-nav-link:link,
-.bf-investor-nav-link:visited {
-    font-family: 'Inter', sans-serif !important;
-    font-size: 0.85rem !important;
-    font-weight: 400 !important;
-    color: var(--bf-muted) !important;
-    text-decoration: none !important;
-    transition: color 0.15s ease;
-}
-.bf-investor-nav-link:hover { color: var(--bf-fg) !important; }
 .bf-investor-nav-cta,
 .bf-investor-nav-cta:link,
 .bf-investor-nav-cta:visited,
@@ -152,6 +141,7 @@ _CSS = """
     border: 1px solid var(--bf-fg) !important;
     display: inline-block !important;
     transition: background 0.15s ease, opacity 0.15s ease !important;
+    grid-column: 3;
     justify-self: end;
 }
 .bf-investor-nav-cta:hover {
@@ -163,10 +153,9 @@ _CSS = """
 
 @media (max-width: 760px) {
     .bf-investor-nav-inner {
-        grid-template-columns: auto auto;
-        column-gap: 1rem;
+        grid-template-columns: auto 1fr auto;
     }
-    .bf-investor-nav-links { display: none; }
+    .bf-investor-nav-tag { display: none; }
 }
 
 /* ── Page wrapper ──────────────────────────────────────────────────── */
@@ -655,12 +644,6 @@ def _render_nav() -> None:
           BrokerFlow
           <span class="bf-investor-nav-tag">v1 &middot; wireframe</span>
         </a>
-        <nav class="bf-investor-nav-links">
-          <a class="bf-investor-nav-link" href="#bf-agents">Workforce</a>
-          <a class="bf-investor-nav-link" href="#bf-monday-morning">How it works</a>
-          <a class="bf-investor-nav-link" href="#bf-for-brokers">For brokers</a>
-          <a class="bf-investor-nav-link" href="#bf-pricing">Pricing</a>
-        </nav>
         <a class="bf-investor-nav-cta" href="?goto=app" target="_self">I'm a broker &rarr;</a>
       </div>
     </header>
@@ -671,7 +654,7 @@ def _render_nav() -> None:
 def _render_hero() -> None:
     _md(f"""
     <div class="bf-investor">
-      <section class="bf-hero-grid" id="bf-for-brokers">
+      <section class="bf-hero-grid">
         <div class="bf-hero-text">
           <div class="bf-hero-eyebrow">An AI workforce for CPG brokers</div>
           <div class="bf-hero-h1">
@@ -876,7 +859,7 @@ def _render_agents() -> None:
 
     _md(f"""
     <div class="bf-investor">
-      <section class="bf-investor-section" id="bf-agents">
+      <section class="bf-investor-section">
         <div class="bf-investor-eyebrow">Under the hood</div>
         <div class="bf-investor-h2">An orchestrated agent team.</div>
         <p class="bf-investor-sub">
@@ -894,7 +877,7 @@ def _render_agents() -> None:
 
 
 def _render_bottom_padding() -> None:
-    _md('<div class="bf-investor" id="bf-pricing" style="padding-bottom:6rem;"></div>')
+    _md('<div class="bf-investor" style="padding-bottom:6rem;"></div>')
 
 
 def render_investor_landing() -> None:
