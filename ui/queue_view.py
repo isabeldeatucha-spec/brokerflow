@@ -1374,27 +1374,94 @@ div[data-testid="stLayoutWrapper"]:has(.bf-card-marker) > div[data-testid="stVer
 }
 /* New header-row layout: tag/context left + inline actions right.
    Streamlit places these inside an stHorizontalBlock; the card marker
-   scopes the styling. */
+   scopes the styling.
+
+   Key alignment rules:
+   - Tag pills are min-width so PITCH/NEW BRAND/NEW ITEM/RENEWAL all
+     occupy the same horizontal slot.
+   - NEEDS YOU is always in the DOM; cards without it render an
+     invisible placeholder so context starts at the same x.
+   - Action group columns are fixed-pixel via flex-basis so every
+     Skip/Edit/primary right-edge lines up across all cards.
+   - All header-row flex children align-items: center → vertical
+     baseline matches across tags, context, time, and buttons.
+   - 48px min-height makes cards visually rhyme regardless of which
+     buttons they contain. */
+
 .bf-card-header-l {
     display: flex;
     align-items: center;
     gap: 8px;
-    flex-wrap: wrap;
-    min-height: 30px;
+    flex-wrap: nowrap;
+    min-height: 32px;
 }
 .bf-card-time-cell {
     display: flex;
     align-items: center;
     justify-content: flex-end;
     height: 100%;
-    min-height: 30px;
+    min-height: 32px;
+    width: 100%;
 }
-/* Tighten the column gap inside the card header */
+
+/* Outer header row (left content + right action group) */
 div[data-testid="stLayoutWrapper"]:has(.bf-card-marker)
-  div[data-testid="stHorizontalBlock"] {
-    gap: 8px !important;
+  > div[data-testid="stVerticalBlock"]
+  > div[data-testid="stHorizontalBlock"]:first-of-type {
+    gap: 12px !important;
     align-items: center !important;
     margin-bottom: 8px !important;
+    min-height: 48px !important;
+}
+
+/* Inner action row (time + primary + edit + skip) — gap 12px, right-
+   aligned, vertically centered. */
+div[data-testid="stLayoutWrapper"]:has(.bf-card-marker)
+  div[data-testid="stHorizontalBlock"]
+  div[data-testid="stHorizontalBlock"] {
+    gap: 12px !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    flex-wrap: nowrap !important;
+}
+
+/* Pixel-pin each action column. Streamlit columns use flex; we
+   override basis + max-width so widths are absolute. */
+div[data-testid="stLayoutWrapper"]:has(.bf-card-marker)
+  div[data-testid="stHorizontalBlock"]
+  div[data-testid="stHorizontalBlock"]
+  > div[data-testid="stColumn"]:nth-child(1) {
+    flex: 0 0 48px !important;
+    max-width: 48px !important;
+    min-width: 48px !important;
+    width: 48px !important;
+}
+div[data-testid="stLayoutWrapper"]:has(.bf-card-marker)
+  div[data-testid="stHorizontalBlock"]
+  div[data-testid="stHorizontalBlock"]
+  > div[data-testid="stColumn"]:nth-child(2) {
+    flex: 0 0 160px !important;
+    max-width: 160px !important;
+    min-width: 160px !important;
+    width: 160px !important;
+}
+div[data-testid="stLayoutWrapper"]:has(.bf-card-marker)
+  div[data-testid="stHorizontalBlock"]
+  div[data-testid="stHorizontalBlock"]
+  > div[data-testid="stColumn"]:nth-child(3) {
+    flex: 0 0 80px !important;
+    max-width: 80px !important;
+    min-width: 80px !important;
+    width: 80px !important;
+}
+div[data-testid="stLayoutWrapper"]:has(.bf-card-marker)
+  div[data-testid="stHorizontalBlock"]
+  div[data-testid="stHorizontalBlock"]
+  > div[data-testid="stColumn"]:nth-child(4) {
+    flex: 0 0 60px !important;
+    max-width: 60px !important;
+    min-width: 60px !important;
+    width: 60px !important;
 }
 .bf-tagrow {
     display: flex;
@@ -1406,26 +1473,54 @@ div[data-testid="stLayoutWrapper"]:has(.bf-card-marker)
     font-family: 'Inter', sans-serif;
     font-size: 10.5px;
     font-weight: 600;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     color: #1A1A18;
     background: #F2F2EE;
-    padding: 3px 8px;
+    padding: 5px 8px;
     border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    line-height: 1;
+    white-space: nowrap;
+}
+/* Topic tag (PITCH / RENEWAL / NEW BRAND / NEW ITEM) — exact width
+   so the NEEDS YOU slot starts at the same x on every card,
+   regardless of tag text length. NEW BRAND is the longest at ~80px
+   text + 20px padding ≈ 100px, so 110 gives a small buffer. */
+.bf-tag.bf-tag--type {
+    width: 110px;
+    min-width: 110px;
+    max-width: 110px;
 }
 .bf-tag--needs {
     background: #FBE9E7;
     color: #B23A22;
+    width: 100px;
+    min-width: 100px;
+    max-width: 100px;
+}
+/* Reserve the NEEDS YOU slot even when the card doesn't need
+   attention — keeps the context text x-position consistent. */
+.bf-tag--needs-placeholder {
+    visibility: hidden;
 }
 .bf-context {
     font-family: 'Inter', sans-serif;
     font-size: 12.5px;
     color: #8B8A83;
+    line-height: 1.2;
+    flex-shrink: 1;
+    min-width: 0;
 }
 .bf-elapsed {
     font-family: 'JetBrains Mono', monospace;
     font-size: 11.5px;
     color: #B0AFA8;
+    line-height: 1.2;
 }
 
 .bf-card-summary {
@@ -1809,13 +1904,17 @@ def _render_card_unified(card: Card) -> None:
         _esc(card.summary_html), card.id, avail_doc_types,
     )
 
+    # Always render a NEEDS YOU slot — visible if card.needs_you, else
+    # invisible placeholder. Reserves layout space so the context text
+    # starts at the same x-position on every card.
+    needs_visibility_class = "" if card.needs_you else " bf-tag--needs-placeholder"
     needs_tag = (
-        '<span class="bf-tag bf-tag--needs">NEEDS YOU</span>'
-        if card.needs_you else ""
+        f'<span class="bf-tag bf-tag--needs{needs_visibility_class}">'
+        'NEEDS YOU</span>'
     )
     header_left_html = (
         '<div class="bf-card-header-l">'
-        f'<span class="bf-tag">{card.type}</span>'
+        f'<span class="bf-tag bf-tag--type">{card.type}</span>'
         f'{needs_tag}'
         f'<span class="bf-context">{card.context}</span>'
         '</div>'
@@ -1826,13 +1925,16 @@ def _render_card_unified(card: Card) -> None:
         st.markdown('<div class="bf-card-marker"></div>',
                     unsafe_allow_html=True)
 
-        # Header row — left content + right (time + 3 inline buttons)
-        left_col, right_col = st.columns([1, 1.05])
+        # Header row — left flexes, right column is sized by the
+        # nested action row's fixed widths (CSS sets flex-basis).
+        # Outer ratio is just a starting guess; the action group is
+        # pixel-pinned so the right edge always lands at card padding.
+        left_col, right_col = st.columns([3, 2])
         with left_col:
             st.markdown(header_left_html, unsafe_allow_html=True)
         with right_col:
             time_col, prim_col, edit_col, skip_col = st.columns(
-                [0.45, 1.4, 0.65, 0.6]
+                [0.48, 1.6, 0.8, 0.6]
             )
             with time_col:
                 st.markdown(
